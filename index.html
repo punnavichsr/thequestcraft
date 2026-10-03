@@ -75,6 +75,9 @@
   .hp-hero{ display:flex; justify-content:space-between; gap:8px; width:100%; padding:8px 10px; background:#140e26; color:var(--text);
     border:2px solid #4c3970; border-radius:6px; cursor:pointer; font-weight:700; font-size:13px; text-align:left; }
   .hp-hero small{ color:var(--text-dim); font-weight:600; white-space:nowrap; }
+  .hp-hero small{ margin-left:auto; }
+  .hp-del{ color:var(--text-dim); padding:0 4px; border-radius:4px; }
+  .hp-del:hover{ color:var(--danger); background:#0006; }
   .hp-hero.sel{ border-color:var(--gold); box-shadow:0 0 10px rgba(255,215,94,.4); }
   .hp-empty{ color:var(--text-dim); font-size:13px; font-weight:600; text-align:center; padding:10px 0; }
   #hp-msg{ grid-column:1/-1; min-height:16px; text-align:center; font-size:12px; font-weight:700; color:var(--danger); }
@@ -776,11 +779,37 @@ function renderHeroList(){
     b.className='hp-hero'+(n===hpSelected?' sel':'');
     const nm=document.createElement('span'); nm.textContent=n+(n===activeProfile?' ★':'');
     const lv=document.createElement('small'); lv.textContent='LV '+(h.level||1);
-    b.appendChild(nm); b.appendChild(lv);
-    b.addEventListener('click',()=>{ hpSelected=n; renderHeroList(); });
+    const del=document.createElement('span'); del.className='hp-del'; del.textContent='✕'; del.title='Delete this hero';
+    b.appendChild(nm); b.appendChild(lv); b.appendChild(del);
+    b.addEventListener('click',e=>{
+      if(e.target===del){ if(confirm('Delete hero "'+n+'"? This cannot be undone.')) deleteHero(n); return; }
+      hpSelected=n; renderHeroList();
+    });
     list.appendChild(b);
   });
   document.getElementById('hp-change').disabled=!hpSelected;
+}
+// Remove a hero from this device (and from the signed-in account, if it is saved there)
+async function deleteHero(name){
+  try{ localStorage.removeItem('questology_save_'+name); }catch(e){}
+  if(name===activeProfile){
+    clearTimeout(cloudTimer); activeProfile='';
+    try{ localStorage.removeItem('questology_active'); }catch(e){}
+    const f=freshState(); hero=f.hero; tasks=f.tasks; questsDone=f.questsDone;
+    updateHeroSlot(); renderAll();
+  }
+  if(hpSelected===name) hpSelected='';
+  if(currentUser){
+    const qc=cloudData(), heroes={...(qc.heroes||{})};
+    if(heroes[name]){
+      delete heroes[name];
+      try{
+        const {data,error}=await sb.auth.updateUser({data:{questcraft:{active:(qc.active===name?'':qc.active),heroes}}});
+        if(!error && data && data.user) currentUser=data.user;
+      }catch(err){ console.error(err); }
+    }
+  }
+  renderHeroList();
 }
 function useHero(name){
   save();                                  // keep the hero you were playing
@@ -910,7 +939,7 @@ async function renderLeaderboard(){
       if(e.banned) status='<span class="lb-status banned">BANNED</span>';
       else if(xpm>=15) status='<span class="lb-status flagged">⚠️ SUSPICIOUS</span>';
       else if(xpm>=10) status='<span class="lb-status flagged">FLAGGED</span>';
-      row.innerHTML=`<div class="lb-rank">${medal}</div><div class="lb-av">🧙</div><div class="lb-name">${escapeHtml(e.username||'Unknown')}<small>LV ${e.level||1}</small></div><div class="lb-xp">${xpm} XP</div>${status}`;
+      row.innerHTML=`<div class="lb-rank">${medal}</div><div class="lb-av">🧙</div><div class="lb-name">${escapeHtml((e.username||'Unknown').includes('@')?'Adventurer':(e.username||'Unknown'))}<small>LV ${e.level||1}</small></div><div class="lb-xp">${xpm} XP</div>${status}`;
       list.appendChild(row);
     });
   }catch(err){console.error(err);list.innerHTML='<div class="empty-note">Error loading leaderboard</div>';}
@@ -968,7 +997,7 @@ function completeChecklist(){
   showToast('✅ QUEST COMPLETE!',`+${xpGain} XP`);
   document.getElementById('quiz-overlay').classList.remove('active');
   renderQuestStatus();
-  if(currentUser){ try{sb.from('leaderboard').insert([{username:currentUser.email,xp:hero.totalXP,level:hero.level,banned:false}]);}catch(err){console.error(err);} }
+  if(currentUser){ try{sb.from('leaderboard').insert([{username:activeProfile||'Adventurer',xp:hero.totalXP,level:hero.level,banned:false}]);}catch(err){console.error(err);} }
   save();
 }
 
