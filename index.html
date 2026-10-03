@@ -90,6 +90,12 @@
   .hub-card .desc{ font-size:14px; color:var(--text-dim); font-weight:600; line-height:1.4; }
   .c-sched{ --hc:#5EC8FF; --hc-light:#BFE9FF; --hc-glow:rgba(94,200,255,.45); }
   .c-board{ --hc:#FFD75E; --hc-light:#FFF0BC; --hc-glow:rgba(255,215,94,.45); }
+  .c-plan{ --hc:#3EE486; --hc-light:#C4F7D9; --hc-glow:rgba(62,228,134,.45); }
+  /* PLANNER (the Level-Up Planner page shown inside the game) */
+  #planner-screen .area-wrap{ max-width:1100px; }
+  #planner-screen .area-head{ padding-left:96px; }
+  #planner-frame{ width:100%; height:calc(100vh - 190px); min-height:520px; border:2px solid var(--panel-border); border-radius:12px; background:#12141c; display:block; }
+  body:has(#planner-screen.active) #btn-stats{ display:none !important; }
   .c-quest{ --hc:#B98CFF; --hc-light:#DFC9FF; --hc-glow:rgba(155,107,255,.5); }
 
   /* ---------- AREA SHARED ---------- */
@@ -483,6 +489,10 @@
       <div class="hub-icon">⚔️</div><h3>QUESTS</h3>
       <div class="desc">Battle knowledge challenges and collect XP.</div>
     </button>
+    <button class="hub-card c-plan" data-area="planner">
+      <div class="hub-icon">🧍</div><h3>PLANNER</h3>
+      <div class="desc">Stopwatch, timetable, stats & your own AI helper.</div>
+    </button>
   </div>
 </div>
 
@@ -512,6 +522,17 @@
       <span class="area-title">🏆 LEADERBOARD</span>
     </div>
     <div class="lb-list" id="lb-list"></div>
+  </div>
+</div>
+
+<!-- PLANNER (loads planner.html inside the game) -->
+<div class="screen area" id="planner-screen">
+  <div class="area-wrap">
+    <div class="area-head">
+      <button class="btn-back" data-back>◀ HUB</button>
+      <span class="area-title">🧍 PLANNER</span>
+    </div>
+    <iframe id="planner-frame" title="Level-Up Planner"></iframe>
   </div>
 </div>
 
@@ -551,7 +572,8 @@
 <script>
 const SUPABASE_URL = 'https://gndzjvgpydjchpqqhrns.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_rCcAuXMJ92-IZU7Hs53QOQ_o53sslUa';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// named 'sb' because the Supabase library already uses the name 'supabase'
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Fireflies
 const flies=document.getElementById('fireflies');
@@ -596,12 +618,12 @@ async function signInOrUp(){
   if(!email || !password){msg.innerHTML='<div class="error">Enter email & password</div>'; return;}
   try{
     if(authMode==='signup'){
-      const {error}=await supabase.auth.signUp({email,password});
+      const {error}=await sb.auth.signUp({email,password});
       if(error) throw error;
       msg.innerHTML='<div class="success">✓ Account created! Now sign in.</div>';
       authMode='signin'; document.getElementById('login-title').textContent='SIGN IN'; document.getElementById('btn-toggle-mode').textContent='NEW ACCOUNT'; document.getElementById('login-password').value='';
     }else{
-      const {data,error}=await supabase.auth.signInWithPassword({email,password});
+      const {data,error}=await sb.auth.signInWithPassword({email,password});
       if(error) throw error;
       currentUser=data.user;
       document.getElementById('login-email').value=''; document.getElementById('login-password').value='';
@@ -612,7 +634,7 @@ async function signInOrUp(){
   }catch(err){msg.innerHTML='<div class="error">❌ '+err.message+'</div>';}
 }
 async function signOut(){
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
   currentUser=null;
   updateAuthUI();
 }
@@ -754,7 +776,7 @@ function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','
 async function renderLeaderboard(){
   const list=document.getElementById('lb-list');
   try{
-    const {data,error}=await supabase.from('leaderboard').select('*').order('xp',{ascending:false}).limit(50);
+    const {data,error}=await sb.from('leaderboard').select('*').order('xp',{ascending:false}).limit(50);
     if(error) throw error;
     const local={username:activeProfile||'Guest',xp:hero.totalXP,level:hero.level,banned:false,you:true};
     let entries=(data||[]).map(e=>({...e,you:false}));
@@ -830,7 +852,7 @@ function completeChecklist(){
   showToast('✅ QUEST COMPLETE!',`+${xpGain} XP`);
   document.getElementById('quiz-overlay').classList.remove('active');
   renderQuestStatus();
-  if(currentUser){ try{supabase.from('leaderboard').insert([{username:currentUser.email,xp:hero.totalXP,level:hero.level,banned:false}]);}catch(err){console.error(err);} }
+  if(currentUser){ try{sb.from('leaderboard').insert([{username:currentUser.email,xp:hero.totalXP,level:hero.level,banned:false}]);}catch(err){console.error(err);} }
   save();
 }
 
@@ -842,6 +864,7 @@ document.querySelectorAll('.hub-card').forEach(c=>{
     if(area==='schedule') renderTasks();
     if(area==='leaderboard') renderLeaderboard();
     if(area==='quests') renderQuestStatus();
+    if(area==='planner'){ const f=document.getElementById('planner-frame'); if(!f.getAttribute('src')) f.src='planner.html'; }
     showScreen(area+'-screen');
   });
 });
@@ -852,7 +875,7 @@ async function renderAdminPanel(){
   if(!currentUser || currentUser.email!=='punnavich.sr@gmail.com') return;
   const panel=document.getElementById('admin-panel');
   try{
-    const {data,error}=await supabase.from('leaderboard').select('*').filter('banned',eq,false).order('xp',{ascending:false});
+    const {data,error}=await sb.from('leaderboard').select('*').filter('banned','eq',false).order('xp',{ascending:false});
     if(error) throw error;
     const list=document.getElementById('admin-list');list.innerHTML='';
     const flagged=(data||[]).filter(e=>{
@@ -868,7 +891,7 @@ async function renderAdminPanel(){
     });
     list.querySelectorAll('[data-ban]').forEach(b=>b.addEventListener('click',async()=>{
       const id=b.dataset.ban;
-      await supabase.from('leaderboard').update({banned:true}).eq('id',id);
+      await sb.from('leaderboard').update({banned:true}).eq('id',id);
       renderAdminPanel();
     }));
   }catch(err){console.error(err);}
