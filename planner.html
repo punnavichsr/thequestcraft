@@ -44,6 +44,9 @@
   }
   .mode.active { background: var(--accent); color: #0b0d14; box-shadow: 0 0 18px var(--accent); }
 
+  .embedded .modes { display: none; }   /* opened from the game: no tab bar */
+  .embedded .ai-btn { grid-column: 3; }  /* keep the AI button in the top-right corner */
+
   /* ---------- Main layout ---------- */
   main { max-width: 760px; margin: 0 auto; padding: 8px 16px 32px; }
   .view { animation: pop .2s ease-out; }
@@ -989,6 +992,8 @@ Only include actions the user asked for or agreed to. Never show this format oth
     const id = { timetable: "tableView", stopwatch: "watchView", planner: "plannerView" }[name];
     const btn = id && document.querySelector(`.mode[data-view="${id}"]`);
     if (btn) btn.click();
+    // inside the game, each screen is its own thing: hide the top tab bar
+    document.body.classList.add("embedded");
   }
 
   // ================= START =================
