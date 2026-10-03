@@ -96,6 +96,7 @@
   #planner-screen .area-head{ padding-left:96px; }
   #planner-frame{ width:100%; height:calc(100vh - 190px); min-height:520px; border:2px solid var(--panel-border); border-radius:12px; background:#12141c; display:block; }
   body:has(#planner-screen.active) #btn-stats{ display:none !important; }
+  #sp-badge{ display:none !important; } /* old skill-point badge: no longer used */
   .c-quest{ --hc:#B98CFF; --hc-light:#DFC9FF; --hc-glow:rgba(155,107,255,.5); }
 
   /* ---------- AREA SHARED ---------- */
@@ -372,7 +373,7 @@
 <button id="btn-home" title="Quit to title">🏠 HOME</button>
 
 <!-- SIDE STATS BUTTON -->
-<button id="btn-stats" title="Hero Stats">⚔ STATS<span class="sp-badge" id="sp-badge" style="display:none;">0</span></button>
+<button id="btn-stats" title="Your stats">⚔ STATS<span class="sp-badge" id="sp-badge" style="display:none;">0</span></button>
 
 <!-- STATS PANEL -->
 <div id="stats-panel">
@@ -479,7 +480,7 @@
   <div class="hub-grid">
     <button class="hub-card c-sched" data-area="schedule">
       <div class="hub-icon">📋</div><h3>SCHEDULE</h3>
-      <div class="desc">Plan tasks, set due dates & priority. Finish them for XP.</div>
+      <div class="desc">Plan your day on the timetable, hour by hour.</div>
     </button>
     <button class="hub-card c-board" data-area="leaderboard">
       <div class="hub-icon">🏆</div><h3>LEADERBOARD</h3>
@@ -530,7 +531,7 @@
   <div class="area-wrap">
     <div class="area-head">
       <button class="btn-back" data-back>◀ HUB</button>
-      <span class="area-title">🧍 PLANNER</span>
+      <span class="area-title" id="planner-title">🧍 PLANNER</span>
     </div>
     <iframe id="planner-frame" title="Level-Up Planner"></iframe>
   </div>
@@ -727,7 +728,8 @@ document.querySelectorAll('.btn-up').forEach(btn=>btn.addEventListener('click',(
 }));
 
 const statsPanel=document.getElementById('stats-panel');
-document.getElementById('btn-stats').addEventListener('click',()=>{statsPanel.classList.toggle('open');renderHeroUI();});
+// The STATS button now opens the planner's stats (IQ, Strength, ...) instead of the old Hero Stats panel
+document.getElementById('btn-stats').addEventListener('click',()=>{statsPanel.classList.remove('open');openPlanner('stats','📊 STATS');});
 document.getElementById('stats-close').addEventListener('click',()=>statsPanel.classList.remove('open'));
 
 // ========== SCHEDULE ==========
@@ -858,13 +860,22 @@ function completeChecklist(){
 
 
 // ========== HUB CARDS ==========
+// Opens planner.html inside the game, on the tab we ask for
+function openPlanner(tab,title){
+  const f=document.getElementById('planner-frame');
+  const go=()=>{ try{ f.contentWindow.openTab(tab); }catch(err){ console.error(err); } };
+  if(!f.getAttribute('src')){ f.addEventListener('load',go,{once:true}); f.src='planner.html'; }
+  else go();
+  document.getElementById('planner-title').textContent=title;
+  showScreen('planner-screen');
+}
 document.querySelectorAll('.hub-card').forEach(c=>{
   c.addEventListener('click',async()=>{
     const area=c.dataset.area;
-    if(area==='schedule') renderTasks();
+    if(area==='schedule'){ openPlanner('timetable','📋 SCHEDULE'); return; }
     if(area==='leaderboard') renderLeaderboard();
     if(area==='quests') renderQuestStatus();
-    if(area==='planner'){ const f=document.getElementById('planner-frame'); if(!f.getAttribute('src')) f.src='planner.html'; }
+    if(area==='planner'){ openPlanner('stopwatch','🧍 PLANNER'); return; }
     showScreen(area+'-screen');
   });
 });
