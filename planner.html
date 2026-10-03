@@ -981,6 +981,16 @@ Only include actions the user asked for or agreed to. Never show this format oth
   };
   document.querySelectorAll(".chip").forEach(c => c.onclick = () => askAI(c.textContent));
 
+  // The QuestCraft game calls this to jump straight to a tab: "timetable", "stopwatch", "planner" or "stats"
+  function openTab(name) {
+    const overlay = document.getElementById("overlay");
+    if (name === "stats") { overlay.classList.add("show"); return; }   // open the STATS popup
+    overlay.classList.remove("show");
+    const id = { timetable: "tableView", stopwatch: "watchView", planner: "plannerView" }[name];
+    const btn = id && document.querySelector(`.mode[data-view="${id}"]`);
+    if (btn) btn.click();
+  }
+
   // ================= START =================
   showAiName();
   refreshTypeSelects();
