@@ -355,6 +355,10 @@
   .login-form .btn-signin{ background:var(--sky); color:#031B1F; }
   .login-form .btn-toggle{ background:transparent; color:var(--text-dim); border:2px solid var(--panel-border); }
   .login-form .error{ color:var(--danger); font-size:12px; margin-top:8px; text-align:center; }
+  .login-form .btn-full{ width:100%; margin-bottom:8px; }
+  .login-form button:disabled{ opacity:.5; cursor:default; }
+  .login-form h3.code-title{ font-size:9px; line-height:1.8; text-align:center; }
+  .login-form input.code-input{ font-family:'Press Start 2P',monospace; font-size:18px; letter-spacing:10px; text-align:center; padding-left:10px; }
   .login-form .success{ color:var(--emerald); font-size:12px; margin-top:8px; text-align:center; }
   .btn-cloud-login{ font-family:'Press Start 2P',monospace; font-size:9px; color:var(--sky); background:transparent;
     border:2px solid var(--panel-border); padding:8px 12px; cursor:pointer; margin-bottom:12px;
@@ -474,14 +478,24 @@
   <div class="login-section">
     <button class="btn-cloud-login" id="btn-toggle-login">🔐 SIGN IN TO CLOUD</button>
     <div class="login-form" id="login-form">
-      <h3 id="login-title">SIGN IN</h3>
-      <div class="login-hint">Ask a parent to sign in with you.</div>
-      <input type="email" id="login-email" placeholder="Parent's email">
-      <input type="password" id="login-password" placeholder="QuestCraft password (make a new one)">
-      <div class="login-hint">Never type the password of the email account itself.</div>
-      <div class="btn-row">
-        <button class="btn-signin" id="btn-auth">SIGN IN</button>
-        <button class="btn-toggle" id="btn-toggle-mode">NEW ACCOUNT</button>
+      <!-- Step 1: type your email -->
+      <div id="login-step-email">
+        <h3 id="login-title">SIGN IN</h3>
+        <div class="login-hint">Ask a parent to sign in with you.</div>
+        <input type="email" id="login-email" placeholder="Parent's email" autocomplete="email">
+        <div class="login-hint">We'll email a 6-digit code. No password needed. New emails get a new account automatically.</div>
+        <button class="btn-signin btn-full" id="btn-send-code">SEND CODE</button>
+      </div>
+      <!-- Step 2: type the 6-digit code from the email -->
+      <div id="login-step-code" style="display:none">
+        <h3 class="code-title">Please Enter The Code Sent To Your Email</h3>
+        <div class="login-hint" id="code-sent-to"></div>
+        <input type="text" id="login-code" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+        <button class="btn-signin btn-full" id="btn-verify-code">VERIFY</button>
+        <div class="btn-row">
+          <button class="btn-toggle" id="btn-resend-code">RESEND</button>
+          <button class="btn-toggle" id="btn-change-email">CHANGE EMAIL</button>
+        </div>
       </div>
       <div id="login-msg"></div>
     </div>
@@ -627,7 +641,7 @@ const SP_PER_LEVEL=2, STAT_MAX=8;
 // ========== STATE ==========
 let hero={level:1,xpIntoLevel:0,totalXP:0,skillPoints:0,stats:{power:0,shield:0,wisdom:0}};
 let tasks=[], questsDone={math:false,sci:false,eng:false,soc:false};
-let activeProfile='', currentUser=null, authMode='signin';
+let activeProfile='', currentUser=null;
 let run={current:null,qIndex:0,flags:[],streak:0,shieldCharges:0,hintCharges:0,doubleXP:false};
 
 const xpNeeded=()=>hero.level*5;
@@ -681,28 +695,74 @@ function pullCloud(){
 }
 
 // ========== SUPABASE AUTH ==========
-async function signInOrUp(){
-  const email=document.getElementById('login-email').value.trim();
-  const password=document.getElementById('login-password').value.trim();
-  const msg=document.getElementById('login-msg');
-  if(!email || !password){msg.innerHTML='<div class="error">Enter email & password</div>'; return;}
+// Sign in with a 6-digit code sent by email (no password)
+let pendingEmail='', resendTimer=null;
+const $=id=>document.getElementById(id);
+function setLoginMsg(kind,text){
+  const msg=$('login-msg'); msg.innerHTML='';
+  if(!text) return;
+  const d=document.createElement('div'); d.className=kind; d.textContent=text;   // textContent = safe, no HTML tricks
+  msg.appendChild(d);
+}
+function showLoginStep(step){
+  $('login-step-email').style.display=(step==='email'?'':'none');
+  $('login-step-code').style.display=(step==='code'?'':'none');
+}
+function startResendCooldown(seconds){
+  const btn=$('btn-resend-code'); clearInterval(resendTimer);
+  let left=seconds; btn.disabled=true; btn.textContent='RESEND ('+left+')';
+  resendTimer=setInterval(()=>{
+    left--;
+    if(left<=0){ clearInterval(resendTimer); btn.disabled=false; btn.textContent='RESEND'; }
+    else btn.textContent='RESEND ('+left+')';
+  },1000);
+}
+async function sendCode(isResend){
+  const email=isResend?pendingEmail:$('login-email').value.trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ setLoginMsg('error','❌ Enter a real email address'); return; }
+  const btn=isResend?$('btn-resend-code'):$('btn-send-code');
+  btn.disabled=true; setLoginMsg('success','Sending code...');
   try{
-    if(authMode==='signup'){
-      const {error}=await sb.auth.signUp({email,password});
-      if(error) throw error;
-      msg.innerHTML='<div class="success">✓ Account created! Now sign in.</div>';
-      authMode='signin'; document.getElementById('login-title').textContent='SIGN IN'; document.getElementById('btn-toggle-mode').textContent='NEW ACCOUNT'; document.getElementById('login-password').value='';
-    }else{
-      const {data,error}=await sb.auth.signInWithPassword({email,password});
-      if(error) throw error;
-      currentUser=data.user;
-      document.getElementById('login-email').value=''; document.getElementById('login-password').value='';
-      document.getElementById('login-form').classList.remove('show');
-      msg.innerHTML='';
-      updateAuthUI();
-      pullCloud();
-    }
-  }catch(err){msg.innerHTML='<div class="error">❌ '+err.message+'</div>';}
+    const {error}=await sb.auth.signInWithOtp({email, options:{shouldCreateUser:true}});
+    if(error) throw error;
+    pendingEmail=email;
+    $('code-sent-to').textContent='Sent to '+email+'. Check spam too!';
+    $('login-code').value='';
+    showLoginStep('code');
+    setLoginMsg('success','✓ Code sent!');
+    startResendCooldown(60);   // Supabase allows 1 code per 60 seconds
+    $('login-code').focus();
+  }catch(err){
+    console.error(err);
+    setLoginMsg('error','❌ '+err.message);
+    if(isResend) btn.disabled=false;
+  }finally{
+    if(!isResend) btn.disabled=false;
+  }
+}
+async function verifyCode(){
+  const token=$('login-code').value.replace(/\D/g,'');
+  if(token.length!==6){ setLoginMsg('error','❌ The code has 6 numbers'); return; }
+  const btn=$('btn-verify-code'); btn.disabled=true; setLoginMsg('success','Checking code...');
+  try{
+    const {data,error}=await sb.auth.verifyOtp({email:pendingEmail, token, type:'email'});
+    if(error) throw error;
+    currentUser=data.user;
+    resetLoginForm();
+    $('login-form').classList.remove('show');
+    updateAuthUI();
+    pullCloud();
+  }catch(err){
+    console.error(err);
+    setLoginMsg('error','❌ That code didn\'t work. Check it, or tap RESEND for a new one.');
+    $('login-code').select();
+  }finally{ btn.disabled=false; }
+}
+function resetLoginForm(){
+  pendingEmail=''; clearInterval(resendTimer);
+  $('btn-resend-code').disabled=false; $('btn-resend-code').textContent='RESEND';
+  $('login-email').value=''; $('login-code').value='';
+  setLoginMsg('',''); showLoginStep('email');
 }
 async function signOut(){
   await sb.auth.signOut();
@@ -717,19 +777,22 @@ function updateAuthUI(){
     form.style.display='none'; btnToggle.style.display='none'; btnLogout.style.display='block';
     setCloudNote('☁ Signed in. Your heroes are saved to your account.');
   }else{
-    form.style.display=''; form.classList.remove('show'); btnToggle.style.display='block'; btnLogout.style.display='none';
+    form.style.display=''; form.classList.remove('show'); resetLoginForm(); btnToggle.style.display='block'; btnLogout.style.display='none';
     setCloudNote('Not signed in. Your hero is saved on this device only.');
   }
 }
 
 document.getElementById('btn-toggle-login').addEventListener('click',()=>document.getElementById('login-form').classList.toggle('show'));
-document.getElementById('btn-toggle-mode').addEventListener('click',()=>{authMode=(authMode==='signin'?'signup':'signin');
-  document.getElementById('login-title').textContent=(authMode==='signin'?'SIGN IN':'CREATE ACCOUNT');
-  document.getElementById('btn-toggle-mode').textContent=(authMode==='signin'?'NEW ACCOUNT':'HAVE ACCOUNT?');
-  document.getElementById('login-email').value=''; document.getElementById('login-password').value='';
+document.getElementById('btn-send-code').addEventListener('click',()=>sendCode(false));
+document.getElementById('login-email').addEventListener('keydown',e=>{if(e.key==='Enter') sendCode(false);});
+document.getElementById('btn-verify-code').addEventListener('click',verifyCode);
+document.getElementById('btn-resend-code').addEventListener('click',()=>sendCode(true));
+document.getElementById('btn-change-email').addEventListener('click',resetLoginForm);
+document.getElementById('login-code').addEventListener('input',e=>{
+  e.target.value=e.target.value.replace(/\D/g,'').slice(0,6);   // numbers only
+  if(e.target.value.length===6) verifyCode();                    // auto-check when all 6 are typed
 });
-document.getElementById('btn-auth').addEventListener('click',signInOrUp);
-document.getElementById('login-password').addEventListener('keydown',e=>{if(e.key==='Enter') signInOrUp();});
+document.getElementById('login-code').addEventListener('keydown',e=>{if(e.key==='Enter') verifyCode();});
 document.getElementById('btn-logout').addEventListener('click',signOut);
 
 // ========== SCREEN NAV ==========
