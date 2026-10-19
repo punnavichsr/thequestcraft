@@ -426,6 +426,7 @@
   .lb-admin .b-ban{ background:var(--danger); color:#fff; }
   .lb-admin .b-unban{ background:var(--emerald); color:#0A2415; }
   .lb-admin .b-clear{ background:var(--sky); color:#031B1F; }
+  .lb-admin .b-reset,.admin-row .btn-reset{ background:var(--mystic); color:#fff; }
   .lb-admin button:disabled{ opacity:.4; cursor:default; }
   .lb-status.warned{ background:rgba(255,215,94,.25); color:var(--gold); }
   .lb-status.cleared{ background:rgba(94,200,255,.2); color:var(--sky); }
@@ -709,6 +710,16 @@ const QUESTS={
   soc:{name:'CHRONOS',icon:'🏛️',color:'q-his',desc:'History Tasks'}
 };
 const XP_PER_TASK=5;
+// Auto-Admin: the fastest an honest player could really finish each task (in seconds).
+// Finishing a quest faster than its tasks add up to = automatic warning.
+const TASK_MIN_SECONDS={
+  'Complete all your homework':30,
+  'Study for your Exams or Quizzes':60,
+  'Do your favorite hobby or exercise':60,
+  'Preread (Random Chance)':60,
+  'Read 1 book and Summarize':120
+};
+const minSecondsFor=list=>list.reduce((sum,t)=>sum+(TASK_MIN_SECONDS[t.name]||30),0);
 const SP_PER_LEVEL=2, STAT_MAX=8;
 
 // ========== STATE ==========
@@ -1066,23 +1077,35 @@ const ADMIN_EMAILS=['ss53753@samsenwit.ac.th','punnavich.sr@gmail.com'];
 const isAdmin=()=>!!(currentUser && ADMIN_EMAILS.includes((currentUser.email||'').toLowerCase()));
 const WARN_TEXT='Your progress looks unusual. Please play fair, or your account may be banned.';
 const LAST_WARN_TEXT='LAST WARNING: your progress looks unusual again. If it happens one more time, your account will be terminated.';
-const REFLAG_XP=10;   // a cleared player is flagged again after gaining this much more XP
+
 // a player is "flagged" by XP unless the admin cleared or banned them
+// flagged = has a warning you haven't cleared (from you or the Auto-Admin)
 function flagLevel(e){
-  if(e.banned) return '';
-  const xp=e.xp||0;
-  if(e.cleared) return (xp-(e.cleared_xp||0))>=REFLAG_XP?'SUSPICIOUS AGAIN':'';
-  return xp>=15?'SUSPICIOUS':xp>=10?'FLAGGED':'';
+  if(e.banned || !e.warned) return '';
+  return (e.warn_count||0)>=2?'SUSPICIOUS AGAIN':'SUSPICIOUS';
 }
+const warnedBy=e=>e.warned_by==='auto'?'🤖 Auto-Admin':'Admin';
 const isLastWarning=e=>(e.warn_count||0)>=1;
 function displayName(e){ const n=e.username||'Unknown'; return n.includes('@')?'Adventurer':n; }
+
+const readSeen=k=>{ try{ return localStorage.getItem(k)||null; }catch(e){ return null; } };
+// Auto-Admin: a quest finished faster than its tasks could take
+async function autoWarnTooFast(seconds,needed){
+  if(!currentUser) return;
+  try{
+    await syncLeaderboard();
+    const {error}=await sb.rpc('auto_warn_too_fast',{seconds,needed});
+    if(error) throw error;
+    await checkMyWarning();
+  }catch(err){ console.error('auto-warn failed',err); }
+}
 
 // Save your score to the leaderboard (one row per account)
 async function syncLeaderboard(){
   if(!currentUser || !activeProfile) return;
   try{
     const {error}=await sb.from('leaderboard').upsert(
-      {user_id:currentUser.id, username:activeProfile, xp:hero.totalXP, level:hero.level},
+      {user_id:currentUser.id, username:activeProfile, xp:hero.totalXP, level:hero.level, xp_reset_ack:readSeen('qc_reset_seen')},
       {onConflict:'user_id'});
     if(error) throw error;
   }catch(err){ console.error('leaderboard save failed',err); }
@@ -1111,17 +1134,20 @@ async function moderate(id,action){
   const e=(lbCache||[]).find(r=>r.id===id)||{};
   const last=isLastWarning(e);
   const changes={
-    warn:{warned:true, warned_at:new Date().toISOString(), warn_message:last?LAST_WARN_TEXT:WARN_TEXT, warn_count:(e.warn_count||0)+1},
+    warn:{warned:true, warned_at:new Date().toISOString(), warn_message:last?LAST_WARN_TEXT:WARN_TEXT, warn_count:(e.warn_count||0)+1, warned_by:'admin'},
+    reset:{xp:0, level:1, xp_reset_at:new Date().toISOString()},
     ban:{banned:true},
     unban:{banned:false},
     clear:{cleared:true, cleared_xp:e.xp||0, warned:false}
   }[action];
   if(!changes || !isAdmin()) return;
+  if(action==='reset' && !confirm(`Reset ${displayName(e)} to Level 1 and 0 XP?`)) return;
   try{
     const {error}=await sb.from('leaderboard').update(changes).eq('id',id);
     if(error) throw error;
-    showToast({warn:last?'⚠️ LAST WARNING SENT':'⚠️ PLAYER WARNED',ban:'🚫 PLAYER BANNED',unban:'✅ PLAYER UNBANNED',clear:'✅ SUSPICION REMOVED'}[action],'');
+    showToast({warn:last?'⚠️ LAST WARNING SENT':'⚠️ PLAYER WARNED',ban:'🚫 PLAYER BANNED',unban:'✅ PLAYER UNBANNED',clear:'✅ SUSPICION REMOVED',reset:'🔄 XP RESET'}[action],'');
   }catch(err){ console.error(err); showToast('❌ ACTION FAILED',err.message||''); }
+  if(action==='reset' && currentUser && e.user_id===currentUser.id) await checkMyWarning();
   refreshModerationViews(true);
 }
 function adminButtons(e){
@@ -1130,6 +1156,7 @@ function adminButtons(e){
     ${e.banned?`<button class="b-unban" data-mod="unban" data-id="${e.id}">↩ UNBAN</button>`
               :`<button class="b-ban" data-mod="ban" data-id="${e.id}">🚫 BAN</button>`}
     <button class="b-clear" data-mod="clear" data-id="${e.id}">✅ CLEAR</button>
+    <button class="b-reset" data-mod="reset" data-id="${e.id}">🔄 RESET XP</button>
   </div>`;
 }
 function wireModButtons(root){
@@ -1167,15 +1194,21 @@ async function renderLeaderboard(useCache){
       let status='';
       if(e.banned) status='<span class="lb-status banned">BANNED</span>';
       else if(flag==='SUSPICIOUS') status='<span class="lb-status flagged">⚠️ SUSPICIOUS</span>';
-      else if(flag==='FLAGGED') status='<span class="lb-status flagged">FLAGGED</span>';
       else if(flag==='SUSPICIOUS AGAIN') status='<span class="lb-status flagged">⚠️ SUSPICIOUS AGAIN</span>';
-      if(admin && e.warned && !e.banned) status+='<span class="lb-status warned">WARNED</span>';
       const front=(admin && !e.local)?adminButtons(e):onlineTag(e);
       row.innerHTML=`<div class="lb-rank">${medal}</div><div class="lb-av">🧙</div>${front}<div class="lb-name">${escapeHtml(displayName(e))}${e.you?'<span class="you-tag">YOU</span>':''}<small>LV ${e.level||1}</small></div><div class="lb-xp">${e.xp||0} XP</div>${status}`;
       list.appendChild(row);
     });
     wireModButtons(list);
   }catch(err){console.error(err);list.innerHTML='<div class="empty-note">Error loading leaderboard</div>';}
+}
+
+// ---- an admin reset this account's XP ----
+function applyXpReset(stamp){
+  hero=freshState().hero;
+  try{ localStorage.setItem('qc_reset_seen',stamp); }catch(e){}
+  save(); updateHeroSlot(); renderAll();
+  showToast('🔄 XP RESET','An admin reset your XP to 0');
 }
 
 // ---- banned players cannot play ----
@@ -1198,8 +1231,9 @@ let myBanned=false;
 async function checkMyWarning(){
   if(!currentUser){ setBannedUI(false); return; }
   try{
-    const {data}=await sb.from('leaderboard').select('banned,warned,warned_at,warn_message,warn_count').eq('user_id',currentUser.id).maybeSingle();
+    const {data}=await sb.from('leaderboard').select('banned,warned,warned_at,warn_message,warn_count,xp_reset_at').eq('user_id',currentUser.id).maybeSingle();
     setBannedUI(!!(data && data.banned));
+    if(data && data.xp_reset_at && readSeen('qc_reset_seen')!==data.xp_reset_at) applyXpReset(data.xp_reset_at);
     if(myBanned) return;
     if(!data || !data.warned || !data.warned_at) return;
     const last=(data.warn_count||0)>=2;
@@ -1233,6 +1267,7 @@ function openQuiz(key){
   run.hintCharges=hero.stats.wisdom;
   run.doubleXP=false;
   run.checklistTasks=generateChecklist();
+  run.startedAt=Date.now();
   save();
   document.getElementById('quiz-planet-tag').textContent=QUESTS[key].name;
   document.getElementById('quiz-overlay').classList.add('active');
@@ -1251,7 +1286,7 @@ function renderChecklist(){
   const completed=tasks.filter(t=>t.done).length;
   document.getElementById('quiz-qcount').textContent=`${completed} / ${tasks.length}`;
   document.getElementById('quiz-progress').style.width=`${(completed/tasks.length)*100}%`;
-  document.getElementById('quiz-body').innerHTML=`<div class="qtext">${QUESTS[key].name} CHECKLIST</div><div class="options" id="quiz-options" style="flex-direction:column; gap:12px;"></div><div class="modal-actions" style="justify-content:center;"><button class="btn-start" id="checklist-done" style="opacity:${completed===tasks.length?1:0.5}; pointer-events:${completed===tasks.length?'auto':'none'}" ${completed!==tasks.length?'disabled':''}>COMPLETE QUEST ▶</button></div>`;
+  document.getElementById('quiz-body').innerHTML=`<div class="qtext">${QUESTS[key].name} CHECKLIST</div><div class="login-hint" style="text-align:center;margin:-4px 0 10px">⏱️ Do your tasks <b>after</b> starting the quest. Finishing too fast gets an automatic warning.</div><div class="options" id="quiz-options" style="flex-direction:column; gap:12px;"></div><div class="modal-actions" style="justify-content:center;"><button class="btn-start" id="checklist-done" style="opacity:${completed===tasks.length?1:0.5}; pointer-events:${completed===tasks.length?'auto':'none'}" ${completed!==tasks.length?'disabled':''}>COMPLETE QUEST ▶</button></div>`;
   const wrap=document.getElementById('quiz-options');
   tasks.forEach((t,i)=>{
     const b=document.createElement('button');b.className='task-check'+(t.done?' on':'');b.style.width='100%';b.style.padding='14px';b.style.textAlign='left';b.style.border='2px solid var(--panel-border)';b.style.background='var(--panel-2)';b.style.clip='polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)';b.style.display='flex';b.style.alignItems='center';b.style.gap='12px';b.style.cursor='pointer';b.style.transition='all .12s ease';b.style.color='var(--text-light)';b.innerHTML=`<div style="width:26px; height:26px; flex-shrink:0; border:2px solid var(--panel-border); background:var(--panel-2); display:flex; align-items:center; justify-content:center; color:var(--emerald); font-weight:900; font-size:16px; border-radius:6px;" class="check-box${t.done?' on':''}">✓</div><span style="flex:1; font-size:16px; font-weight:700;">${t.name}</span>`;
@@ -1263,8 +1298,11 @@ function completeChecklist(){
   const key=run.current;
   const tasks=run.checklistTasks;
   const xpGain=tasks.length*XP_PER_TASK;
+  const seconds=Math.round((Date.now()-(run.startedAt||Date.now()))/1000);
+  const needed=minSecondsFor(tasks);
   questsDone[key]=true;
   addXP(xpGain);
+  if(seconds<needed) autoWarnTooFast(seconds,needed);
   showToast('✅ QUEST COMPLETE!',`+${xpGain} XP`);
   document.getElementById('quiz-overlay').classList.remove('active');
   renderQuestStatus();
@@ -1312,17 +1350,18 @@ async function renderAdminPanel(useCache){
       row.className='admin-row clickable'+(openFlagId===e.id?' open':'');
       const online=e.user_id&&onlineIds.has(e.user_id);
       row.innerHTML=`<div class="email">${online?'<span class="online-dot" style="display:inline-block;margin-right:6px"></span>':''}${escapeHtml(displayName(e))}</div>
-        <div style="color:var(--text-dim);font-size:11px;">XP: <span class="xpm">${e.xp||0}</span> (${flagLevel(e)})${e.warned?' · WARNED':''}</div>
+        <div style="color:var(--text-dim);font-size:11px;">XP: <span class="xpm">${e.xp||0}</span> (${flagLevel(e)}) · by ${warnedBy(e)}</div>
         <div class="details">
           Level: <b>${e.level||1}</b><br>
           Status: <b>${online?'🟢 Online now':'Offline'}</b><br>
-          Warnings given: <b>${e.warn_count||0}</b>${e.warned_at?' (last: '+new Date(e.warned_at).toLocaleString()+')':''}<br>
+          Warnings given: <b>${e.warn_count||0}</b>${e.warned_at?' (last by '+warnedBy(e)+', '+new Date(e.warned_at).toLocaleString()+')':''}<br>
           Joined: <b>${e.created_at?new Date(e.created_at).toLocaleDateString():'?'}</b><br>
           Last update: <b>${e.updated_at?new Date(e.updated_at).toLocaleString():'?'}</b>
           <div class="action-row">
             <button class="btn-warn" data-mod="warn" data-id="${e.id}">⚠️ ${isLastWarning(e)?'LAST WARNING':'WARN'}</button>
             <button class="btn-ban" data-mod="ban" data-id="${e.id}">🚫 BAN</button>
             <button class="btn-clear" data-mod="clear" data-id="${e.id}">✅ CLEAR</button>
+            <button class="btn-reset" data-mod="reset" data-id="${e.id}">🔄 RESET XP</button>
           </div>
         </div>`;
       row.addEventListener('click',()=>{ openFlagId=(openFlagId===e.id?null:e.id); renderAdminPanel(true); });
