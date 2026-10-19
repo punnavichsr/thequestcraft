@@ -373,7 +373,7 @@
     padding:14px; max-width:380px; max-height:60vh; overflow-y:auto;
     clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
     box-shadow:0 0 20px rgba(255,92,122,.3); }
-  body.in-game #admin-panel{ display:block; }
+  body.in-game.is-admin #admin-panel{ display:block; }
   .admin-title{ font-family:'Press Start 2P',monospace; font-size:10px; color:var(--danger); margin-bottom:12px; text-shadow:0 0 8px rgba(255,92,122,.7); }
   .admin-list{ display:flex; flex-direction:column; gap:8px; }
   .admin-row{ background:var(--panel-2); border:2px solid var(--panel-border); padding:10px; font-size:12px;
@@ -385,6 +385,35 @@
     clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px); }
   .admin-row .btn-ban{ background:var(--danger); color:#fff; }
   .admin-row .btn-unban{ background:var(--emerald); color:#0A2415; }
+  .admin-row.clickable{ cursor:pointer; }
+  .admin-row.clickable:hover{ border-color:var(--sky); }
+  .admin-row .details{ display:none; margin-top:8px; font-size:12px; color:var(--text-light); line-height:1.6; }
+  .admin-row.open .details{ display:block; }
+  .admin-row .btn-warn{ background:var(--gold); color:#241703; }
+  .admin-row .btn-clear{ background:var(--sky); color:#031B1F; }
+  .admin-hint{ font-size:11px; color:var(--text-dim); margin:-6px 0 10px; }
+  /* online dot + admin buttons on the leaderboard */
+  .online-tag{ display:inline-flex; align-items:center; gap:5px; font-family:'Press Start 2P',monospace; font-size:7px; color:var(--emerald); white-space:nowrap; }
+  .online-slot{ display:inline-flex; width:62px; flex:none; }
+  .online-dot{ width:9px; height:9px; border-radius:50%; background:var(--emerald); box-shadow:0 0 8px rgba(62,228,134,.9); flex:none; }
+  .lb-admin{ display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+  .lb-admin button{ font-family:'Press Start 2P',monospace; font-size:7px; border:none; padding:6px 7px; cursor:pointer;
+    clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px); }
+  .lb-admin .b-warn{ background:var(--gold); color:#241703; }
+  .lb-admin .b-ban{ background:var(--danger); color:#fff; }
+  .lb-admin .b-unban{ background:var(--emerald); color:#0A2415; }
+  .lb-admin .b-clear{ background:var(--sky); color:#031B1F; }
+  .lb-admin button:disabled{ opacity:.4; cursor:default; }
+  .lb-status.warned{ background:rgba(255,215,94,.25); color:var(--gold); }
+  .lb-status.cleared{ background:rgba(94,200,255,.2); color:var(--sky); }
+  /* warning pop-up for a warned player */
+  #warn-modal{ position:fixed; inset:0; z-index:80; display:none; align-items:center; justify-content:center; background:rgba(5,3,12,.75); padding:16px; }
+  #warn-modal.show{ display:flex; }
+  #warn-modal .box{ background:var(--panel); border:2px solid var(--gold); padding:22px; max-width:380px; text-align:center;
+    clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px); }
+  #warn-modal h3{ font-family:'Press Start 2P',monospace; font-size:12px; color:var(--gold); margin-bottom:14px; }
+  #warn-modal p{ font-size:15px; line-height:1.5; margin-bottom:18px; }
+  #warn-modal button{ font-family:'Press Start 2P',monospace; font-size:9px; background:var(--gold); color:#241703; border:none; padding:10px 16px; cursor:pointer; }
   .admin-empty{ font-size:12px; color:var(--text-dim); text-align:center; padding:20px 0; }
 
   @media (max-width:640px){
@@ -392,6 +421,7 @@
     .task-add .btn-add{ grid-column:1 / -1; padding:12px; }
     #xp-bar .lv-badge{ font-size:9px; }
     #admin-panel{ max-width:90vw; }
+    .lb-row{ flex-wrap:wrap; gap:10px; }
   }
   @media (prefers-reduced-motion: reduce){ *{ animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; } }
 </style>
@@ -405,8 +435,16 @@
 <!-- ADMIN PANEL (only shows in-game for admin) -->
 <div id="admin-panel">
   <div class="admin-title">⚠️ FLAGGED PLAYERS</div>
+  <div class="admin-hint">Tap a player to view them.</div>
   <div class="admin-list" id="admin-list"></div>
 </div>
+
+<!-- WARNING POP-UP (shown to a player the admin warned) -->
+<div id="warn-modal"><div class="box">
+  <h3>⚠️ WARNING</h3>
+  <p id="warn-text"></p>
+  <button id="btn-warn-ok">I UNDERSTAND</button>
+</div></div>
 
 <!-- HOME / QUIT BUTTON -->
 <button id="btn-home" title="Quit to title">🏠 HOME</button>
@@ -677,6 +715,7 @@ function queueCloudSave(){
       if(error) throw error;
       if(data && data.user) currentUser=data.user;
       setCloudNote('☁ Hero saved to your account');
+      syncLeaderboard();
     }catch(err){ console.error(err); setCloudNote('☁ Could not save online. Your hero is still saved on this device.'); }
   },1500);
 }
@@ -773,10 +812,13 @@ function updateAuthUI(){
   const form=document.getElementById('login-form');
   const btnToggle=document.getElementById('btn-toggle-login');
   const btnLogout=document.getElementById('btn-logout');
+  document.body.classList.toggle('is-admin',isAdmin());
   if(currentUser){
+    startPresence(); checkMyWarning(); if(isAdmin()) refreshModerationViews(true);
     form.style.display='none'; btnToggle.style.display='none'; btnLogout.style.display='block';
     setCloudNote('☁ Signed in. Your heroes are saved to your account.');
   }else{
+    stopPresence();
     form.style.display=''; form.classList.remove('show'); resetLoginForm(); btnToggle.style.display='block'; btnLogout.style.display='none';
     setCloudNote('Not signed in. Your hero is saved on this device only.');
   }
@@ -981,31 +1023,128 @@ function toggleTask(id){
 function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
 // ========== LEADERBOARD ==========
-async function renderLeaderboard(){
+const ADMIN_EMAIL='punnavich.sr@gmail.com';
+const isAdmin=()=>!!(currentUser && currentUser.email===ADMIN_EMAIL);
+const WARN_TEXT='Your progress looks unusual. Please play fair, or your account may be banned.';
+// a player is "flagged" by XP unless the admin cleared or banned them
+function flagLevel(e){
+  if(e.banned||e.cleared) return '';
+  const xp=e.xp||0;
+  return xp>=15?'SUSPICIOUS':xp>=10?'FLAGGED':'';
+}
+function displayName(e){ const n=e.username||'Unknown'; return n.includes('@')?'Adventurer':n; }
+
+// Save your score to the leaderboard (one row per account)
+async function syncLeaderboard(){
+  if(!currentUser || !activeProfile) return;
+  try{
+    const {error}=await sb.from('leaderboard').upsert(
+      {user_id:currentUser.id, username:activeProfile, xp:hero.totalXP, level:hero.level},
+      {onConflict:'user_id'});
+    if(error) throw error;
+  }catch(err){ console.error('leaderboard save failed',err); }
+}
+
+// ---- who is online right now (Supabase Realtime presence) ----
+let onlineIds=new Set(), presenceChannel=null;
+function startPresence(){
+  if(!currentUser || presenceChannel) return;
+  presenceChannel=sb.channel('questcraft-online',{config:{presence:{key:currentUser.id}}});
+  presenceChannel
+    .on('presence',{event:'sync'},()=>{
+      onlineIds=new Set(Object.keys(presenceChannel.presenceState()));
+      refreshModerationViews();
+    })
+    .subscribe(status=>{ if(status==='SUBSCRIBED') presenceChannel.track({at:Date.now()}); });
+}
+function stopPresence(){
+  if(presenceChannel){ sb.removeChannel(presenceChannel); presenceChannel=null; }
+  onlineIds=new Set();
+}
+function onlineTag(e){ return '<span class="online-slot">'+((e.user_id && onlineIds.has(e.user_id))?'<span class="online-tag"><span class="online-dot"></span>ONLINE</span>':'')+'</span>'; }
+
+// ---- admin actions (the database also checks you are the admin) ----
+async function moderate(id,action){
+  const changes={
+    warn:{warned:true, warned_at:new Date().toISOString(), warn_message:WARN_TEXT},
+    ban:{banned:true},
+    unban:{banned:false},
+    clear:{cleared:true, warned:false}
+  }[action];
+  if(!changes || !isAdmin()) return;
+  try{
+    const {error}=await sb.from('leaderboard').update(changes).eq('id',id);
+    if(error) throw error;
+    showToast({warn:'⚠️ PLAYER WARNED',ban:'🚫 PLAYER BANNED',unban:'✅ PLAYER UNBANNED',clear:'✅ SUSPICION REMOVED'}[action],'');
+  }catch(err){ console.error(err); showToast('❌ ACTION FAILED',err.message||''); }
+  refreshModerationViews(true);
+}
+function adminButtons(e){
+  return `<div class="lb-admin">${onlineTag(e)}
+    <button class="b-warn" data-mod="warn" data-id="${e.id}" ${e.banned?'disabled':''}>⚠️ WARN</button>
+    ${e.banned?`<button class="b-unban" data-mod="unban" data-id="${e.id}">↩ UNBAN</button>`
+              :`<button class="b-ban" data-mod="ban" data-id="${e.id}">🚫 BAN</button>`}
+    <button class="b-clear" data-mod="clear" data-id="${e.id}" ${(e.cleared&&!e.warned)?'disabled':''}>✅ CLEAR</button>
+  </div>`;
+}
+function wireModButtons(root){
+  root.querySelectorAll('[data-mod]').forEach(b=>b.addEventListener('click',ev=>{
+    ev.stopPropagation(); b.disabled=true; moderate(Number(b.dataset.id),b.dataset.mod);
+  }));
+}
+
+let lbCache=null;
+async function fetchLeaderboard(){
+  const {data,error}=await sb.from('leaderboard').select('*').order('xp',{ascending:false}).limit(50);
+  if(error) throw error;
+  lbCache=data||[];
+  return lbCache;
+}
+async function renderLeaderboard(useCache){
   const list=document.getElementById('lb-list');
   try{
-    const {data,error}=await sb.from('leaderboard').select('*').order('xp',{ascending:false}).limit(50);
-    if(error) throw error;
-    const local={username:activeProfile||'Guest',xp:hero.totalXP,level:hero.level,banned:false,you:true};
-    let entries=(data||[]).map(e=>({...e,you:false}));
-    const hasUser=entries.find(e=>e.username===activeProfile);
-    if(!hasUser && activeProfile) entries.push(local);
-    entries.sort((a,b)=>b.xp-a.xp);
+    const data=(useCache&&lbCache)?lbCache:await fetchLeaderboard();
+    let entries=data.map(e=>({...e,you:!!(currentUser&&e.user_id===currentUser.id)}));
+    if(activeProfile && !entries.some(e=>e.you))
+      entries.push({username:activeProfile,xp:hero.totalXP,level:hero.level,banned:false,you:true,local:true,user_id:currentUser&&currentUser.id});
+    entries.sort((a,b)=>(b.xp||0)-(a.xp||0));
     list.innerHTML='';
     if(!entries.length){list.innerHTML='<div class="empty-note">No scores yet. Complete a quest to upload!</div>';return;}
+    const admin=isAdmin();
     entries.forEach((e,i)=>{
       const rank=i+1, medal=rank===1?'👑':rank===2?'🥈':rank===3?'🥉':'#'+rank;
+      const flag=flagLevel(e);
       const row=document.createElement('div');
-      row.className='lb-row'+(e.you?' you':'')+(rank<=3?` top${rank}`:'')+(e.banned?' banned':'');
-      const xpm=(e.xp||0);
+      row.className='lb-row'+(e.you?' you':'')+(rank<=3?` top${rank}`:'')+(e.banned?' banned':'')+(flag&&admin?' flagged':'');
       let status='';
       if(e.banned) status='<span class="lb-status banned">BANNED</span>';
-      else if(xpm>=15) status='<span class="lb-status flagged">⚠️ SUSPICIOUS</span>';
-      else if(xpm>=10) status='<span class="lb-status flagged">FLAGGED</span>';
-      row.innerHTML=`<div class="lb-rank">${medal}</div><div class="lb-av">🧙</div><div class="lb-name">${escapeHtml((e.username||'Unknown').includes('@')?'Adventurer':(e.username||'Unknown'))}<small>LV ${e.level||1}</small></div><div class="lb-xp">${xpm} XP</div>${status}`;
+      else if(flag==='SUSPICIOUS') status='<span class="lb-status flagged">⚠️ SUSPICIOUS</span>';
+      else if(flag==='FLAGGED') status='<span class="lb-status flagged">FLAGGED</span>';
+      if(admin && e.warned && !e.banned) status+='<span class="lb-status warned">WARNED</span>';
+      if(admin && e.cleared && !e.banned) status+='<span class="lb-status cleared">CLEARED</span>';
+      const front=(admin && !e.local && !e.you)?adminButtons(e):onlineTag(e);
+      row.innerHTML=`<div class="lb-rank">${medal}</div><div class="lb-av">🧙</div>${front}<div class="lb-name">${escapeHtml(displayName(e))}${e.you?'<span class="you-tag">YOU</span>':''}<small>LV ${e.level||1}</small></div><div class="lb-xp">${e.xp||0} XP</div>${status}`;
       list.appendChild(row);
     });
+    wireModButtons(list);
   }catch(err){console.error(err);list.innerHTML='<div class="empty-note">Error loading leaderboard</div>';}
+}
+
+// ---- a warned player sees the warning once ----
+async function checkMyWarning(){
+  if(!currentUser) return;
+  try{
+    const {data}=await sb.from('leaderboard').select('warned,warned_at,warn_message').eq('user_id',currentUser.id).maybeSingle();
+    if(!data || !data.warned || !data.warned_at) return;
+    let seen=''; try{ seen=localStorage.getItem('qc_warn_seen')||''; }catch(e){}
+    if(seen===data.warned_at) return;
+    document.getElementById('warn-text').textContent=data.warn_message||WARN_TEXT;
+    document.getElementById('warn-modal').classList.add('show');
+    document.getElementById('btn-warn-ok').onclick=()=>{
+      try{ localStorage.setItem('qc_warn_seen',data.warned_at); }catch(e){}
+      document.getElementById('warn-modal').classList.remove('show');
+    };
+  }catch(err){ console.error(err); }
 }
 
 // ========== QUESTS ==========
@@ -1060,7 +1199,7 @@ function completeChecklist(){
   showToast('✅ QUEST COMPLETE!',`+${xpGain} XP`);
   document.getElementById('quiz-overlay').classList.remove('active');
   renderQuestStatus();
-  if(currentUser){ try{sb.from('leaderboard').insert([{username:activeProfile||'Adventurer',xp:hero.totalXP,level:hero.level,banned:false}]);}catch(err){console.error(err);} }
+  syncLeaderboard();
   save();
 }
 
@@ -1089,32 +1228,46 @@ document.querySelectorAll('.hub-card').forEach(c=>{
 document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>showScreen('hub-screen')));
 
 // ========== ADMIN PANEL ==========
-async function renderAdminPanel(){
-  if(!currentUser || currentUser.email!=='punnavich.sr@gmail.com') return;
-  const panel=document.getElementById('admin-panel');
+let openFlagId=null;
+async function renderAdminPanel(useCache){
+  if(!isAdmin()) return;
+  const list=document.getElementById('admin-list');
   try{
-    const {data,error}=await sb.from('leaderboard').select('*').filter('banned','eq',false).order('xp',{ascending:false});
-    if(error) throw error;
-    const list=document.getElementById('admin-list');list.innerHTML='';
-    const flagged=(data||[]).filter(e=>{
-      const xpm=e.xp||0;
-      const timing=Math.random();return(xpm>=10 && xpm<15) || xpm>=15;
-    });
+    const data=(useCache&&lbCache)?lbCache:await fetchLeaderboard();
+    const flagged=data.filter(e=>flagLevel(e));
+    list.innerHTML='';
     if(!flagged.length){list.innerHTML='<div class="admin-empty">No flagged players</div>';return;}
     flagged.forEach(e=>{
-      const xpm=e.xp||0,status=(xpm>=15?'BAN':'REVIEW');
-      const row=document.createElement('div');row.className='admin-row';
-      row.innerHTML=`<div class="email">${escapeHtml(e.username||'')}</div><div style="color:var(--text-dim);font-size:11px;">XP: <span class="xpm">${xpm}</span> (${status})</div><div class="action-row"><button class="btn-ban" data-ban="${e.id}">🚫 BAN</button></div>`;
+      const row=document.createElement('div');
+      row.className='admin-row clickable'+(openFlagId===e.id?' open':'');
+      const online=e.user_id&&onlineIds.has(e.user_id);
+      row.innerHTML=`<div class="email">${online?'<span class="online-dot" style="display:inline-block;margin-right:6px"></span>':''}${escapeHtml(displayName(e))}</div>
+        <div style="color:var(--text-dim);font-size:11px;">XP: <span class="xpm">${e.xp||0}</span> (${flagLevel(e)})${e.warned?' · WARNED':''}</div>
+        <div class="details">
+          Level: <b>${e.level||1}</b><br>
+          Status: <b>${online?'🟢 Online now':'Offline'}</b><br>
+          Warned: <b>${e.warned?'Yes ('+new Date(e.warned_at).toLocaleString()+')':'No'}</b><br>
+          Joined: <b>${e.created_at?new Date(e.created_at).toLocaleDateString():'?'}</b><br>
+          Last update: <b>${e.updated_at?new Date(e.updated_at).toLocaleString():'?'}</b>
+          <div class="action-row">
+            <button class="btn-warn" data-mod="warn" data-id="${e.id}">⚠️ WARN</button>
+            <button class="btn-ban" data-mod="ban" data-id="${e.id}">🚫 BAN</button>
+            <button class="btn-clear" data-mod="clear" data-id="${e.id}">✅ CLEAR</button>
+          </div>
+        </div>`;
+      row.addEventListener('click',()=>{ openFlagId=(openFlagId===e.id?null:e.id); renderAdminPanel(true); });
       list.appendChild(row);
     });
-    list.querySelectorAll('[data-ban]').forEach(b=>b.addEventListener('click',async()=>{
-      const id=b.dataset.ban;
-      await sb.from('leaderboard').update({banned:true}).eq('id',id);
-      renderAdminPanel();
-    }));
+    wireModButtons(list);
   }catch(err){console.error(err);}
 }
-setInterval(renderAdminPanel,3000);
+// redraw whatever moderation views are on screen
+async function refreshModerationViews(refetch){
+  if(refetch){ try{ await fetchLeaderboard(); }catch(err){ console.error(err); } }
+  if(document.getElementById('leaderboard-screen').classList.contains('active')) renderLeaderboard(true);
+  renderAdminPanel(true);
+}
+setInterval(()=>{ if(isAdmin()) refreshModerationViews(true); },10000);
 
 // ========== INIT ==========
 // bring back the hero you last played on this device
