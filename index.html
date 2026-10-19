@@ -1023,8 +1023,8 @@ function toggleTask(id){
 function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
 // ========== LEADERBOARD ==========
-const ADMIN_EMAIL='punnavich.sr@gmail.com';
-const isAdmin=()=>!!(currentUser && currentUser.email===ADMIN_EMAIL);
+const ADMIN_EMAILS=['ss53753@samsenwit.ac.th','punnavich.sr@gmail.com'];
+const isAdmin=()=>!!(currentUser && ADMIN_EMAILS.includes((currentUser.email||'').toLowerCase()));
 const WARN_TEXT='Your progress looks unusual. Please play fair, or your account may be banned.';
 // a player is "flagged" by XP unless the admin cleared or banned them
 function flagLevel(e){

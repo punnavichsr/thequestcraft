@@ -20,7 +20,7 @@ create unique index if not exists leaderboard_user_id_key on public.leaderboard(
 -- 2) Who is the admin? (checked by the database, not the webpage)
 create or replace function public.is_questcraft_admin()
 returns boolean language sql stable as $$
-  select coalesce(auth.jwt() ->> 'email', '') = 'punnavich.sr@gmail.com'
+  select lower(coalesce(auth.jwt() ->> 'email', '')) in ('ss53753@samsenwit.ac.th', 'punnavich.sr@gmail.com')
 $$;
 
 -- 3) Players can never change their own warn/ban/clear status
