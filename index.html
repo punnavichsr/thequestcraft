@@ -187,6 +187,18 @@
   .lb-row.top1 .lb-rank{ color:var(--gold); text-shadow:0 0 8px rgba(255,215,94,.8); }
   .lb-row.top2 .lb-rank{ color:#CFE0FF; }
   .lb-row.top3 .lb-rank{ color:var(--torch); }
+  .ban-icon{ display:inline-block; width:26px; height:26px; border-radius:50%; border:4px solid var(--danger); position:relative; box-shadow:0 0 10px rgba(255,92,122,.6); }
+  .ban-icon::after{ content:''; position:absolute; left:50%; top:-2px; width:4px; height:calc(100% + 4px); background:var(--danger); transform:translateX(-50%) rotate(45deg); }
+  .lb-row.banned{ opacity:.85; border-color:var(--danger); background:#241018; }
+  .lb-row.banned .lb-name{ text-decoration:line-through; color:var(--text-dim); }
+  .btn-start.terminated{ background:#3a1520 !important; color:var(--danger) !important; cursor:not-allowed; }
+  #terminated-modal{ position:fixed; inset:0; z-index:81; display:none; align-items:center; justify-content:center; background:rgba(5,3,12,.85); padding:16px; }
+  #terminated-modal.show{ display:flex; }
+  #terminated-modal .box{ background:var(--panel); border:2px solid var(--danger); padding:24px; max-width:380px; text-align:center;
+    clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px); box-shadow:0 0 30px rgba(255,92,122,.4); }
+  #terminated-modal h3{ font-family:'Press Start 2P',monospace; font-size:13px; color:var(--danger); margin:14px 0; line-height:1.6; }
+  #terminated-modal p{ font-size:15px; line-height:1.5; margin-bottom:18px; }
+  #terminated-modal button{ font-family:'Press Start 2P',monospace; font-size:9px; background:var(--danger); color:#fff; border:none; padding:10px 16px; cursor:pointer; }
   .lb-av{ width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:19px;
     background:radial-gradient(circle at 32% 28%, #DFC9FF, #6B3FA0 78%); }
   .lb-name{ flex:1; font-size:16px; font-weight:700; }
@@ -391,6 +403,16 @@
   .admin-row.open .details{ display:block; }
   .admin-row .btn-warn{ background:var(--gold); color:#241703; }
   .admin-row .btn-clear{ background:var(--sky); color:#031B1F; }
+  .banned-toggle{ width:100%; margin-top:12px; font-family:'Press Start 2P',monospace; font-size:8px; background:transparent; color:var(--danger);
+    border:2px solid var(--danger); padding:9px; cursor:pointer; }
+  .banned-toggle:hover{ background:rgba(255,92,122,.12); }
+  .banned-list{ display:none; flex-direction:column; gap:6px; margin-top:8px; }
+  .banned-list.show{ display:flex; }
+  .banned-item{ display:flex; align-items:center; gap:8px; background:var(--panel-2); border:2px solid var(--panel-border); padding:8px; font-size:13px; }
+  .banned-item .ban-icon{ width:16px; height:16px; border-width:3px; flex:none; }
+  .banned-item .ban-icon::after{ width:3px; }
+  .banned-item span.n{ flex:1; }
+  .banned-item button{ font-family:'Press Start 2P',monospace; font-size:7px; background:var(--emerald); color:#0A2415; border:none; padding:5px 7px; cursor:pointer; }
   .admin-hint{ font-size:11px; color:var(--text-dim); margin:-6px 0 10px; }
   /* online dot + admin buttons on the leaderboard */
   .online-tag{ display:inline-flex; align-items:center; gap:5px; font-family:'Press Start 2P',monospace; font-size:7px; color:var(--emerald); white-space:nowrap; }
@@ -399,7 +421,8 @@
   .lb-admin{ display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
   .lb-admin button{ font-family:'Press Start 2P',monospace; font-size:7px; border:none; padding:6px 7px; cursor:pointer;
     clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px); }
-  .lb-admin .b-warn{ background:var(--gold); color:#241703; }
+  .lb-admin .b-warn{ background:var(--gold); color:#241703; min-width:112px; }
+  .lb-admin .b-ban,.lb-admin .b-unban{ min-width:70px; }
   .lb-admin .b-ban{ background:var(--danger); color:#fff; }
   .lb-admin .b-unban{ background:var(--emerald); color:#0A2415; }
   .lb-admin .b-clear{ background:var(--sky); color:#031B1F; }
@@ -411,6 +434,8 @@
   #warn-modal.show{ display:flex; }
   #warn-modal .box{ background:var(--panel); border:2px solid var(--gold); padding:22px; max-width:380px; text-align:center;
     clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px); }
+  #warn-modal.last .box{ border-color:var(--danger); }
+  #warn-modal.last h3{ color:var(--danger); }
   #warn-modal h3{ font-family:'Press Start 2P',monospace; font-size:12px; color:var(--gold); margin-bottom:14px; }
   #warn-modal p{ font-size:15px; line-height:1.5; margin-bottom:18px; }
   #warn-modal button{ font-family:'Press Start 2P',monospace; font-size:9px; background:var(--gold); color:#241703; border:none; padding:10px 16px; cursor:pointer; }
@@ -437,13 +462,23 @@
   <div class="admin-title">⚠️ FLAGGED PLAYERS</div>
   <div class="admin-hint">Tap a player to view them.</div>
   <div class="admin-list" id="admin-list"></div>
+  <button class="banned-toggle" id="banned-toggle">🚫 BANNED PLAYERS (0)</button>
+  <div class="banned-list" id="banned-list"></div>
 </div>
 
 <!-- WARNING POP-UP (shown to a player the admin warned) -->
 <div id="warn-modal"><div class="box">
-  <h3>⚠️ WARNING</h3>
+  <h3 id="warn-title">⚠️ WARNING</h3>
   <p id="warn-text"></p>
   <button id="btn-warn-ok">I UNDERSTAND</button>
+</div></div>
+
+<!-- BANNED PLAYER -->
+<div id="terminated-modal"><div class="box">
+  <span class="ban-icon" style="width:44px;height:44px;border-width:6px"></span>
+  <h3>ACCOUNT TERMINATED</h3>
+  <p>This account was banned for cheating and can no longer play TheQuestCraft.</p>
+  <button id="btn-terminated-ok">OK</button>
 </div></div>
 
 <!-- HOME / QUIT BUTTON -->
@@ -818,7 +853,7 @@ function updateAuthUI(){
     form.style.display='none'; btnToggle.style.display='none'; btnLogout.style.display='block';
     setCloudNote('☁ Signed in. Your heroes are saved to your account.');
   }else{
-    stopPresence();
+    stopPresence(); setBannedUI(false);
     form.style.display=''; form.classList.remove('show'); resetLoginForm(); btnToggle.style.display='block'; btnLogout.style.display='none';
     setCloudNote('Not signed in. Your hero is saved on this device only.');
   }
@@ -840,7 +875,11 @@ document.getElementById('btn-logout').addEventListener('click',signOut);
 // ========== SCREEN NAV ==========
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
+document.getElementById('btn-start').addEventListener('click',ev=>{
+  if(myBanned){ ev.stopImmediatePropagation(); showTerminated(); }
+},true);
 document.getElementById('btn-start').addEventListener('click',()=>{
+  if(myBanned) return;
   if(!activeProfile){alert('Create a hero first! Press CREATE / SWITCH HERO.'); return;}
   const flash=document.getElementById('flash');flash.style.transition='opacity .3s ease';flash.style.opacity='0.85';
   document.body.classList.add('in-game');
@@ -1026,12 +1065,16 @@ function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','
 const ADMIN_EMAILS=['ss53753@samsenwit.ac.th','punnavich.sr@gmail.com'];
 const isAdmin=()=>!!(currentUser && ADMIN_EMAILS.includes((currentUser.email||'').toLowerCase()));
 const WARN_TEXT='Your progress looks unusual. Please play fair, or your account may be banned.';
+const LAST_WARN_TEXT='LAST WARNING: your progress looks unusual again. If it happens one more time, your account will be terminated.';
+const REFLAG_XP=10;   // a cleared player is flagged again after gaining this much more XP
 // a player is "flagged" by XP unless the admin cleared or banned them
 function flagLevel(e){
-  if(e.banned||e.cleared) return '';
+  if(e.banned) return '';
   const xp=e.xp||0;
+  if(e.cleared) return (xp-(e.cleared_xp||0))>=REFLAG_XP?'SUSPICIOUS AGAIN':'';
   return xp>=15?'SUSPICIOUS':xp>=10?'FLAGGED':'';
 }
+const isLastWarning=e=>(e.warn_count||0)>=1;
 function displayName(e){ const n=e.username||'Unknown'; return n.includes('@')?'Adventurer':n; }
 
 // Save your score to the leaderboard (one row per account)
@@ -1065,23 +1108,25 @@ function onlineTag(e){ return '<span class="online-slot">'+((e.user_id && online
 
 // ---- admin actions (the database also checks you are the admin) ----
 async function moderate(id,action){
+  const e=(lbCache||[]).find(r=>r.id===id)||{};
+  const last=isLastWarning(e);
   const changes={
-    warn:{warned:true, warned_at:new Date().toISOString(), warn_message:WARN_TEXT},
+    warn:{warned:true, warned_at:new Date().toISOString(), warn_message:last?LAST_WARN_TEXT:WARN_TEXT, warn_count:(e.warn_count||0)+1},
     ban:{banned:true},
     unban:{banned:false},
-    clear:{cleared:true, warned:false}
+    clear:{cleared:true, cleared_xp:e.xp||0, warned:false}
   }[action];
   if(!changes || !isAdmin()) return;
   try{
     const {error}=await sb.from('leaderboard').update(changes).eq('id',id);
     if(error) throw error;
-    showToast({warn:'⚠️ PLAYER WARNED',ban:'🚫 PLAYER BANNED',unban:'✅ PLAYER UNBANNED',clear:'✅ SUSPICION REMOVED'}[action],'');
+    showToast({warn:last?'⚠️ LAST WARNING SENT':'⚠️ PLAYER WARNED',ban:'🚫 PLAYER BANNED',unban:'✅ PLAYER UNBANNED',clear:'✅ SUSPICION REMOVED'}[action],'');
   }catch(err){ console.error(err); showToast('❌ ACTION FAILED',err.message||''); }
   refreshModerationViews(true);
 }
 function adminButtons(e){
   return `<div class="lb-admin">${onlineTag(e)}
-    <button class="b-warn" data-mod="warn" data-id="${e.id}" ${e.banned?'disabled':''}>⚠️ WARN</button>
+    <button class="b-warn" data-mod="warn" data-id="${e.id}" ${e.banned?'disabled':''}>⚠️ ${isLastWarning(e)?'LAST WARNING':'WARN'}</button>
     ${e.banned?`<button class="b-unban" data-mod="unban" data-id="${e.id}">↩ UNBAN</button>`
               :`<button class="b-ban" data-mod="ban" data-id="${e.id}">🚫 BAN</button>`}
     <button class="b-clear" data-mod="clear" data-id="${e.id}">✅ CLEAR</button>
@@ -1107,19 +1152,23 @@ async function renderLeaderboard(useCache){
     let entries=data.map(e=>({...e,you:!!(currentUser&&e.user_id===currentUser.id)}));
     if(activeProfile && !entries.some(e=>e.you))
       entries.push({username:activeProfile,xp:hero.totalXP,level:hero.level,banned:false,you:true,local:true,user_id:currentUser&&currentUser.id});
-    entries.sort((a,b)=>(b.xp||0)-(a.xp||0));
+    // banned players go to the top (so everyone sees them); everyone else is ranked without them
+    entries.sort((a,b)=>(b.banned?1:0)-(a.banned?1:0) || (b.xp||0)-(a.xp||0));
     list.innerHTML='';
     if(!entries.length){list.innerHTML='<div class="empty-note">No scores yet. Complete a quest to upload!</div>';return;}
     const admin=isAdmin();
-    entries.forEach((e,i)=>{
-      const rank=i+1, medal=rank===1?'👑':rank===2?'🥈':rank===3?'🥉':'#'+rank;
+    let rank=0;
+    entries.forEach(e=>{
+      if(!e.banned) rank++;
+      const medal=e.banned?'<span class="ban-icon" title="Banned"></span>':rank===1?'👑':rank===2?'🥈':rank===3?'🥉':'#'+rank;
       const flag=flagLevel(e);
       const row=document.createElement('div');
-      row.className='lb-row'+(e.you?' you':'')+(rank<=3?` top${rank}`:'')+(e.banned?' banned':'')+(flag&&admin?' flagged':'');
+      row.className='lb-row'+(e.you?' you':'')+(!e.banned&&rank<=3?` top${rank}`:'')+(e.banned?' banned':'')+(flag&&admin?' flagged':'');
       let status='';
       if(e.banned) status='<span class="lb-status banned">BANNED</span>';
       else if(flag==='SUSPICIOUS') status='<span class="lb-status flagged">⚠️ SUSPICIOUS</span>';
       else if(flag==='FLAGGED') status='<span class="lb-status flagged">FLAGGED</span>';
+      else if(flag==='SUSPICIOUS AGAIN') status='<span class="lb-status flagged">⚠️ SUSPICIOUS AGAIN</span>';
       if(admin && e.warned && !e.banned) status+='<span class="lb-status warned">WARNED</span>';
       const front=(admin && !e.local)?adminButtons(e):onlineTag(e);
       row.innerHTML=`<div class="lb-rank">${medal}</div><div class="lb-av">🧙</div>${front}<div class="lb-name">${escapeHtml(displayName(e))}${e.you?'<span class="you-tag">YOU</span>':''}<small>LV ${e.level||1}</small></div><div class="lb-xp">${e.xp||0} XP</div>${status}`;
@@ -1129,12 +1178,33 @@ async function renderLeaderboard(useCache){
   }catch(err){console.error(err);list.innerHTML='<div class="empty-note">Error loading leaderboard</div>';}
 }
 
+// ---- banned players cannot play ----
+function setBannedUI(b){
+  myBanned=b;
+  const btn=document.getElementById('btn-start');
+  btn.classList.toggle('terminated',b);
+  btn.textContent=b?'⛔ ACCOUNT TERMINATED':'▶ START QUEST';
+  // banned while playing: send them back to the title screen
+  if(b && document.body.classList.contains('in-game')){
+    document.getElementById('quiz-overlay').classList.remove('active');
+    document.body.classList.remove('in-game'); showScreen('title-screen'); showTerminated();
+  }
+}
+function showTerminated(){ document.getElementById('terminated-modal').classList.add('show'); }
+document.getElementById('btn-terminated-ok').addEventListener('click',()=>document.getElementById('terminated-modal').classList.remove('show'));
+
 // ---- a warned player sees the warning once ----
+let myBanned=false;
 async function checkMyWarning(){
-  if(!currentUser) return;
+  if(!currentUser){ setBannedUI(false); return; }
   try{
-    const {data}=await sb.from('leaderboard').select('warned,warned_at,warn_message').eq('user_id',currentUser.id).maybeSingle();
+    const {data}=await sb.from('leaderboard').select('banned,warned,warned_at,warn_message,warn_count').eq('user_id',currentUser.id).maybeSingle();
+    setBannedUI(!!(data && data.banned));
+    if(myBanned) return;
     if(!data || !data.warned || !data.warned_at) return;
+    const last=(data.warn_count||0)>=2;
+    document.getElementById('warn-modal').classList.toggle('last',last);
+    document.getElementById('warn-title').textContent=last?'⛔ LAST WARNING':'⚠️ WARNING';
     let seen=''; try{ seen=localStorage.getItem('qc_warn_seen')||''; }catch(e){}
     if(seen===data.warned_at) return;
     document.getElementById('warn-text').textContent=data.warn_message||WARN_TEXT;
@@ -1233,6 +1303,7 @@ async function renderAdminPanel(useCache){
   const list=document.getElementById('admin-list');
   try{
     const data=(useCache&&lbCache)?lbCache:await fetchLeaderboard();
+    renderBannedList(data);
     const flagged=data.filter(e=>flagLevel(e));
     list.innerHTML='';
     if(!flagged.length){list.innerHTML='<div class="admin-empty">No flagged players</div>';return;}
@@ -1245,11 +1316,11 @@ async function renderAdminPanel(useCache){
         <div class="details">
           Level: <b>${e.level||1}</b><br>
           Status: <b>${online?'🟢 Online now':'Offline'}</b><br>
-          Warned: <b>${e.warned?'Yes ('+new Date(e.warned_at).toLocaleString()+')':'No'}</b><br>
+          Warnings given: <b>${e.warn_count||0}</b>${e.warned_at?' (last: '+new Date(e.warned_at).toLocaleString()+')':''}<br>
           Joined: <b>${e.created_at?new Date(e.created_at).toLocaleDateString():'?'}</b><br>
           Last update: <b>${e.updated_at?new Date(e.updated_at).toLocaleString():'?'}</b>
           <div class="action-row">
-            <button class="btn-warn" data-mod="warn" data-id="${e.id}">⚠️ WARN</button>
+            <button class="btn-warn" data-mod="warn" data-id="${e.id}">⚠️ ${isLastWarning(e)?'LAST WARNING':'WARN'}</button>
             <button class="btn-ban" data-mod="ban" data-id="${e.id}">🚫 BAN</button>
             <button class="btn-clear" data-mod="clear" data-id="${e.id}">✅ CLEAR</button>
           </div>
@@ -1260,6 +1331,24 @@ async function renderAdminPanel(useCache){
     wireModButtons(list);
   }catch(err){console.error(err);}
 }
+// banned players: a button first, the list opens when you click it
+function renderBannedList(data){
+  const banned=data.filter(e=>e.banned);
+  document.getElementById('banned-toggle').textContent=`🚫 BANNED PLAYERS (${banned.length}) ${document.getElementById('banned-list').classList.contains('show')?'▲':'▼'}`;
+  const box=document.getElementById('banned-list');
+  box.innerHTML=banned.length?'':'<div class="admin-empty">No banned players</div>';
+  banned.forEach(e=>{
+    const item=document.createElement('div'); item.className='banned-item';
+    item.innerHTML=`<span class="ban-icon"></span><span class="n">${escapeHtml(displayName(e))}</span><button data-mod="unban" data-id="${e.id}">↩ UNBAN</button>`;
+    box.appendChild(item);
+  });
+  wireModButtons(box);
+}
+document.getElementById('banned-toggle').addEventListener('click',()=>{
+  document.getElementById('banned-list').classList.toggle('show');
+  renderBannedList(lbCache||[]);
+});
+
 // redraw whatever moderation views are on screen
 async function refreshModerationViews(refetch){
   if(refetch){ try{ await fetchLeaderboard(); }catch(err){ console.error(err); } }
@@ -1267,6 +1356,7 @@ async function refreshModerationViews(refetch){
   renderAdminPanel(true);
 }
 setInterval(()=>{ if(isAdmin()) refreshModerationViews(true); },10000);
+setInterval(()=>{ if(currentUser) checkMyWarning(); },30000);
 
 // ========== INIT ==========
 // bring back the hero you last played on this device

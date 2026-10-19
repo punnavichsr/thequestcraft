@@ -9,7 +9,9 @@ alter table public.leaderboard
   add column if not exists warned_at timestamptz,
   add column if not exists warn_message text,
   add column if not exists cleared boolean not null default false,
-  add column if not exists updated_at timestamptz not null default now();
+  add column if not exists updated_at timestamptz not null default now(),
+  add column if not exists warn_count int not null default 0,
+  add column if not exists cleared_xp int;
 
 alter table public.leaderboard alter column banned set default false;
 update public.leaderboard set banned = false where banned is null;
@@ -35,6 +37,8 @@ begin
       new.warned_at    := old.warned_at;
       new.warn_message := old.warn_message;
       new.cleared      := old.cleared;
+      new.warn_count   := old.warn_count;
+      new.cleared_xp   := old.cleared_xp;
     else
       new.user_id      := auth.uid();
       new.banned       := false;
@@ -42,6 +46,8 @@ begin
       new.warned_at    := null;
       new.warn_message := null;
       new.cleared      := false;
+      new.warn_count   := 0;
+      new.cleared_xp   := null;
     end if;
   end if;
   new.updated_at := now();
