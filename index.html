@@ -1115,6 +1115,9 @@ async function syncLeaderboard(){
 let onlineIds=new Set(), presenceChannel=null;
 function startPresence(){
   if(!currentUser || presenceChannel) return;
+  try{ startPresenceInner(); }catch(err){ console.error('online status unavailable',err); presenceChannel=null; }
+}
+function startPresenceInner(){
   presenceChannel=sb.channel('questcraft-online',{config:{presence:{key:currentUser.id}}});
   presenceChannel
     .on('presence',{event:'sync'},()=>{
@@ -1124,7 +1127,7 @@ function startPresence(){
     .subscribe(status=>{ if(status==='SUBSCRIBED') presenceChannel.track({at:Date.now()}); });
 }
 function stopPresence(){
-  if(presenceChannel){ sb.removeChannel(presenceChannel); presenceChannel=null; }
+  if(presenceChannel){ try{ sb.removeChannel(presenceChannel); }catch(err){ console.error(err); } presenceChannel=null; }
   onlineIds=new Set();
 }
 function onlineTag(e){ return '<span class="online-slot">'+((e.user_id && onlineIds.has(e.user_id))?'<span class="online-tag"><span class="online-dot"></span>ONLINE</span>':'')+'</span>'; }
