@@ -483,8 +483,6 @@
   <div class="admin-sub admin-list" id="admin-list"></div>
   <button class="admin-toggle t-ban" data-open="banned-list" id="banned-toggle">🚫 BANNED PLAYERS (0) ▼</button>
   <div class="admin-sub banned-list" id="banned-list"></div>
-  <button class="admin-toggle t-appeal" data-open="appeals-list" id="appeals-toggle">📨 APPEALS (0) ▼</button>
-  <div class="admin-sub" id="appeals-list"></div>
 </div>
 
 <!-- WARNING POP-UP (shown to a player the admin warned) -->
@@ -1396,7 +1394,6 @@ async function renderAdminPanel(useCache){
   try{
     const data=(useCache&&lbCache)?lbCache:await fetchLeaderboard();
     renderBannedList(data);
-    renderAppeals();
     const flagged=data.filter(e=>flagLevel(e));
     setToggle('flag-toggle','⚠️ FLAGGED PLAYERS',flagged.length);
     list.innerHTML='';
@@ -1449,49 +1446,9 @@ function renderBannedList(data){
   wireModButtons(box);
 }
 
-// ---- appeals ----
-let appealsCache=[];
-async function fetchAppeals(){
-  const {data,error}=await sb.from('appeals').select('*').eq('status','pending').order('created_at',{ascending:true});
-  if(error) throw error;
-  const ids=[...new Set((data||[]).map(a=>a.leaderboard_id))];
-  let logs=[];
-  if(ids.length){
-    const r=await sb.from('warning_log').select('*').in('leaderboard_id',ids).order('created_at',{ascending:true});
-    if(r.error) throw r.error; logs=r.data||[];
-  }
-  appealsCache=(data||[]).map(a=>({...a,history:logs.filter(w=>w.leaderboard_id===a.leaderboard_id)}));
-  return appealsCache;
-}
-function renderAppeals(){
-  setToggle('appeals-toggle','📨 APPEALS',appealsCache.length);
-  const box=document.getElementById('appeals-list');
-  box.innerHTML=appealsCache.length?'':'<div class="admin-empty">No appeals waiting</div>';
-  appealsCache.forEach(a=>{
-    const e=(lbCache||[]).find(r=>r.id===a.leaderboard_id)||{};
-    const hist=a.history.length?a.history.map(w=>`<li><b>Warning #${w.warn_number}</b>: ${new Date(w.created_at).toLocaleString()} · by ${w.warned_by==='auto'?'🤖 Auto-Admin':'Admin'}<br><i>${escapeHtml(w.reason||'')}</i></li>`).join(''):'<li>No warnings on record</li>';
-    const item=document.createElement('div'); item.className='appeal-item';
-    item.innerHTML=`<div class="who">${escapeHtml(displayName(e))} · ${new Date(a.created_at).toLocaleString()}</div>
-      <blockquote>${escapeHtml(a.message)}</blockquote>
-      <b>Warning history</b><ol>${hist}</ol>
-      <div class="action-row"><button class="b-approve" data-appeal="${a.id}" data-ok="1">✅ APPROVE</button><button class="b-decline" data-appeal="${a.id}" data-ok="0">❌ DECLINE</button></div>`;
-    box.appendChild(item);
-  });
-  box.querySelectorAll('[data-appeal]').forEach(b=>b.addEventListener('click',async()=>{
-    const approve=b.dataset.ok==='1';
-    if(!approve && !confirm('Decline this appeal? The account will be terminated FOREVER and can never appeal again.')) return;
-    b.disabled=true;
-    const {error}=await sb.rpc('decide_appeal',{appeal_id:Number(b.dataset.appeal),approve});
-    if(error){ console.error(error); showToast('❌ ACTION FAILED',error.message||''); }
-    else showToast(approve?'✅ APPEAL APPROVED':'⛔ TERMINATED FOREVER',approve?'Account restored':'This account can never play again');
-    refreshModerationViews(true);
-  }));
-}
-
 // redraw whatever moderation views are on screen
 async function refreshModerationViews(refetch){
-  if(refetch){ try{ await fetchLeaderboard(); }catch(err){ console.error(err); }
-               if(isAdmin()){ try{ await fetchAppeals(); }catch(err){ console.error('appeals',err); } } }
+  if(refetch){ try{ await fetchLeaderboard(); }catch(err){ console.error(err); } }
   if(document.getElementById('leaderboard-screen').classList.contains('active')) renderLeaderboard(true);
   renderAdminPanel(true);
 }
