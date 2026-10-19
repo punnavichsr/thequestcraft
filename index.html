@@ -1084,7 +1084,7 @@ function adminButtons(e){
     <button class="b-warn" data-mod="warn" data-id="${e.id}" ${e.banned?'disabled':''}>⚠️ WARN</button>
     ${e.banned?`<button class="b-unban" data-mod="unban" data-id="${e.id}">↩ UNBAN</button>`
               :`<button class="b-ban" data-mod="ban" data-id="${e.id}">🚫 BAN</button>`}
-    <button class="b-clear" data-mod="clear" data-id="${e.id}" ${(e.cleared&&!e.warned)?'disabled':''}>✅ CLEAR</button>
+    <button class="b-clear" data-mod="clear" data-id="${e.id}">✅ CLEAR</button>
   </div>`;
 }
 function wireModButtons(root){
@@ -1121,8 +1121,7 @@ async function renderLeaderboard(useCache){
       else if(flag==='SUSPICIOUS') status='<span class="lb-status flagged">⚠️ SUSPICIOUS</span>';
       else if(flag==='FLAGGED') status='<span class="lb-status flagged">FLAGGED</span>';
       if(admin && e.warned && !e.banned) status+='<span class="lb-status warned">WARNED</span>';
-      if(admin && e.cleared && !e.banned) status+='<span class="lb-status cleared">CLEARED</span>';
-      const front=(admin && !e.local && !e.you)?adminButtons(e):onlineTag(e);
+      const front=(admin && !e.local)?adminButtons(e):onlineTag(e);
       row.innerHTML=`<div class="lb-rank">${medal}</div><div class="lb-av">🧙</div>${front}<div class="lb-name">${escapeHtml(displayName(e))}${e.you?'<span class="you-tag">YOU</span>':''}<small>LV ${e.level||1}</small></div><div class="lb-xp">${e.xp||0} XP</div>${status}`;
       list.appendChild(row);
     });
