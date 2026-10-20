@@ -200,6 +200,26 @@
   .lb-row.banned{ opacity:.85; border-color:var(--danger); background:#241018; }
   .lb-row.banned .lb-name{ text-decoration:line-through; color:var(--text-dim); }
   .btn-start.terminated{ background:#3a1520 !important; color:var(--danger) !important; cursor:not-allowed; }
+  .trial-chip{ margin-top:10px; font-family:'Press Start 2P',monospace; font-size:8px; color:var(--gold); text-align:center; line-height:1.6; }
+  .btn-start.locked{ background:#2a2440 !important; color:var(--text-dim) !important; }
+  .btn-start.expired{ background:#3a2c08 !important; color:var(--gold) !important; }
+  #access-modal{ position:fixed; inset:0; z-index:82; display:none; align-items:center; justify-content:center; background:rgba(5,3,12,.85); padding:16px; }
+  #access-modal.show{ display:flex; }
+  #access-modal .box{ background:var(--panel); border:2px solid var(--gold); padding:24px; width:100%; max-width:380px; text-align:center;
+    clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px); box-shadow:0 0 30px rgba(255,215,94,.3); }
+  #access-modal .lock-ico{ font-size:40px; }
+  #access-modal h3{ font-family:'Press Start 2P',monospace; font-size:12px; color:var(--gold); margin:12px 0; line-height:1.6; }
+  #access-modal p{ font-size:15px; line-height:1.5; margin-bottom:16px; }
+  #access-modal input{ width:100%; font-family:'Press Start 2P',monospace; font-size:16px; letter-spacing:6px; text-align:center; padding:12px;
+    background:var(--panel-2); color:var(--text-light); border:2px solid var(--panel-border); margin-bottom:10px; }
+  #access-modal button{ font-family:'Press Start 2P',monospace; font-size:9px; border:none; padding:11px 16px; cursor:pointer; width:100%; }
+  #btn-redeem{ background:var(--gold); color:#241703; }
+  #access-modal button.ghost{ background:transparent; color:var(--text-dim); border:2px solid var(--panel-border); margin-top:10px; }
+  #access-msg{ min-height:18px; font-size:13px; margin-top:8px; }
+  .admin-toggle.t-promo{ color:var(--emerald); }
+  .promo-item{ background:var(--panel-2); border:2px solid var(--panel-border); padding:10px; font-size:12px; line-height:1.6; }
+  .promo-item .pc{ font-family:'Press Start 2P',monospace; font-size:10px; color:var(--emerald); letter-spacing:3px; }
+  .promo-item button{ margin-top:6px; font-family:'Press Start 2P',monospace; font-size:7px; border:none; padding:7px 9px; cursor:pointer; background:var(--emerald); color:#0A2415; }
   #terminated-modal{ position:fixed; inset:0; z-index:81; display:none; align-items:center; justify-content:center; background:rgba(5,3,12,.85); padding:16px; }
   #terminated-modal.show{ display:flex; }
   #terminated-modal .box{ background:var(--panel); border:2px solid var(--danger); padding:24px; max-width:380px; text-align:center;
@@ -489,6 +509,8 @@
   <div class="admin-title">🛡️ ADMIN</div>
   <button class="admin-toggle t-flag" data-open="admin-list" id="flag-toggle">⚠️ FLAGGED PLAYERS (0) ▼</button>
   <div class="admin-sub admin-list" id="admin-list"></div>
+  <button class="admin-toggle t-promo" data-open="promo-list" id="promo-toggle">🎟️ PROMO CODES (0) ▼</button>
+  <div class="admin-sub" id="promo-list"></div>
   <button class="admin-toggle t-ban" data-open="banned-list" id="banned-toggle">🚫 BANNED PLAYERS (0) ▼</button>
   <div class="admin-sub banned-list" id="banned-list"></div>
 </div>
@@ -498,6 +520,19 @@
   <h3 id="warn-title">⚠️ WARNING</h3>
   <p id="warn-text"></p>
   <button id="btn-warn-ok">I UNDERSTAND</button>
+</div></div>
+
+<!-- EARLY ACCESS LOCK / PLAN EXPIRED / SUBSCRIPTION ENDED -->
+<div id="access-modal"><div class="box">
+  <div class="lock-ico" id="access-ico">🔒</div>
+  <h3 id="access-title">EARLY ACCESS</h3>
+  <p id="access-text"></p>
+  <div id="access-form" hidden>
+    <input type="text" id="access-code" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="Promo code">
+    <button id="btn-redeem">🔓 UNLOCK</button>
+  </div>
+  <div id="access-msg"></div>
+  <button id="btn-access-ok" class="ghost">CLOSE</button>
 </div></div>
 
 <!-- BANNED PLAYER -->
@@ -613,6 +648,7 @@
   </div>
   <div class="login-hint" id="cloud-note"></div>
   <button class="btn-start" id="btn-start">▶ START QUEST</button>
+  <div class="trial-chip" id="trial-chip" hidden></div>
   <div class="art-credit">Castle and knight art made with AI</div>
 </div>
 
@@ -884,11 +920,11 @@ function updateAuthUI(){
   const btnLogout=document.getElementById('btn-logout');
   document.body.classList.toggle('is-admin',isAdmin());
   if(currentUser){
-    startPresence(); checkMyWarning(); if(isAdmin()) refreshModerationViews(true);
+    startPresence(); checkMyWarning(); checkAccess(); if(isAdmin()) refreshModerationViews(true);
     form.style.display='none'; btnToggle.style.display='none'; btnLogout.style.display='block';
     setCloudNote('☁ Signed in. Your heroes are saved to your account.');
   }else{
-    stopPresence(); setBannedUI(false);
+    stopPresence(); myAccess={status:'none'}; setBannedUI(false);
     form.style.display=''; form.classList.remove('show'); resetLoginForm(); btnToggle.style.display='block'; btnLogout.style.display='none';
     setCloudNote('Not signed in. Your hero is saved on this device only.');
   }
@@ -911,10 +947,11 @@ document.getElementById('btn-logout').addEventListener('click',signOut);
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
 document.getElementById('btn-start').addEventListener('click',ev=>{
-  if(myBanned){ ev.stopImmediatePropagation(); showTerminated(); }
+  if(myBanned){ ev.stopImmediatePropagation(); showTerminated(); return; }
+  if(!canPlay()){ ev.stopImmediatePropagation(); showAccessModal(); }
 },true);
 document.getElementById('btn-start').addEventListener('click',()=>{
-  if(myBanned) return;
+  if(myBanned || !canPlay()) return;
   if(!activeProfile){alert('Create a hero first! Press CREATE / SWITCH HERO.'); return;}
   const flash=document.getElementById('flash');flash.style.transition='opacity .3s ease';flash.style.opacity='0.85';
   document.body.classList.add('in-game');
@@ -1242,15 +1279,83 @@ function applyXpReset(stamp){
 // ---- banned players cannot play ----
 function setBannedUI(b){
   myBanned=b;
-  const btn=document.getElementById('btn-start');
-  btn.classList.toggle('terminated',b);
-  btn.textContent=b?'⛔ ACCOUNT TERMINATED':'▶ START QUEST';
+  updateStartButton();
   // banned while playing: send them back to the title screen
-  if(b && document.body.classList.contains('in-game')){
-    document.getElementById('quiz-overlay').classList.remove('active');
-    document.body.classList.remove('in-game'); showScreen('title-screen'); showTerminated();
-  }
+  if(b && document.body.classList.contains('in-game')){ kickToTitle(); showTerminated(); }
 }
+function kickToTitle(){
+  document.getElementById('quiz-overlay').classList.remove('active');
+  document.body.classList.remove('in-game'); showScreen('title-screen');
+}
+
+// ---- early access: promo codes, VIP accounts, (future) paid plans ----
+let myAccess={status:'none'};
+const canPlay=()=>isAdmin() || myAccess.status==='ok';
+async function checkAccess(){
+  if(!currentUser){ myAccess={status:'none'}; updateStartButton(); return; }
+  try{
+    const {data,error}=await sb.rpc('my_access');
+    if(error) throw error;
+    myAccess=data||{status:'none'};
+  }catch(err){ console.error('access check failed',err); myAccess={status:'error'}; }
+  updateStartButton();
+  if(!myBanned && !canPlay() && document.body.classList.contains('in-game')){ kickToTitle(); showAccessModal(); }
+}
+function timeLeft(ends){
+  const ms=new Date(ends)-Date.now(); if(ms<=0) return 'ended';
+  const d=Math.floor(ms/864e5), h=Math.floor(ms%864e5/36e5), m=Math.floor(ms%36e5/6e4);
+  return d>0?`${d}d ${h}h left`:`${h}h ${m}m left`;
+}
+function updateStartButton(){
+  const btn=document.getElementById('btn-start'), chip=document.getElementById('trial-chip');
+  btn.classList.remove('terminated','locked','expired');
+  chip.hidden=true;
+  if(myBanned){ btn.classList.add('terminated'); btn.textContent='⛔ ACCOUNT TERMINATED'; return; }
+  if(canPlay()){
+    btn.textContent='▶ START QUEST';
+    if(myAccess.kind==='promo'){
+      chip.hidden=false;
+      chip.textContent=myAccess.ends_at?`🎟️ EARLY ACCESS · ${timeLeft(myAccess.ends_at)}`:'🎟️ EARLY ACCESS · countdown not started';
+    }
+    return;
+  }
+  if(myAccess.status==='plan_expired'){ btn.classList.add('expired'); btn.textContent='⏳ PLAN EXPIRED'; return; }
+  if(myAccess.status==='subscription_ended'){ btn.classList.add('expired'); btn.textContent='⏳ SUBSCRIPTION ENDED'; return; }
+  btn.classList.add('locked'); btn.textContent='🔒 START QUEST';
+}
+function showAccessModal(){
+  const st=currentUser?myAccess.status:'signed_out';
+  const set=(ico,title,text,form)=>{
+    document.getElementById('access-ico').textContent=ico;
+    document.getElementById('access-title').textContent=title;
+    document.getElementById('access-text').textContent=text;
+    document.getElementById('access-form').hidden=!form;
+  };
+  if(st==='signed_out') set('🔒','EARLY ACCESS','QuestCraft is in early access. Tap 🔐 SIGN IN TO CLOUD first, then enter your promo code.',false);
+  else if(st==='plan_expired') set('⏳','PLAN EXPIRED','Your early-access plan has ended. Thanks for testing QuestCraft! Have a new code? Enter it below.',true);
+  else if(st==='subscription_ended') set('⏳','SUBSCRIPTION ENDED','Your QuestCraft subscription has ended. Renew it to keep playing, or enter a code below.',true);
+  else if(st==='error') set('⚠️','CAN\'T CHECK ACCESS','We couldn\'t reach the server. Check your internet and try again.',false);
+  else set('🔒','EARLY ACCESS','QuestCraft is in early access. Enter your promo code to play.',true);
+  document.getElementById('access-msg').textContent='';
+  document.getElementById('access-code').value='';
+  document.getElementById('access-modal').classList.add('show');
+}
+document.getElementById('btn-access-ok').addEventListener('click',()=>document.getElementById('access-modal').classList.remove('show'));
+async function redeem(){
+  const code=document.getElementById('access-code').value.trim(), msg=document.getElementById('access-msg');
+  if(!code){ msg.style.color='var(--danger)'; msg.textContent='Type your code first.'; return; }
+  const btn=document.getElementById('btn-redeem'); btn.disabled=true; msg.style.color='var(--text-dim)'; msg.textContent='Checking…';
+  const {data,error}=await sb.rpc('redeem_code',{p_code:code});
+  btn.disabled=false;
+  if(error){ msg.style.color='var(--danger)'; msg.textContent='❌ '+(error.message||'That code did not work.'); return; }
+  myAccess=data||{status:'none'}; updateStartButton();
+  if(canPlay()){
+    document.getElementById('access-modal').classList.remove('show');
+    showToast('🔓 UNLOCKED!','Welcome to QuestCraft early access');
+  }else{ msg.style.color='var(--danger)'; msg.textContent='That code has expired.'; }
+}
+document.getElementById('btn-redeem').addEventListener('click',redeem);
+document.getElementById('access-code').addEventListener('keydown',e=>{ if(e.key==='Enter') redeem(); });
 function showTerminated(){ document.getElementById('terminated-modal').classList.add('show'); renderAppealArea(); }
 async function renderAppealArea(){
   const area=document.getElementById('appeal-area'), text=document.getElementById('terminated-text');
@@ -1399,6 +1504,7 @@ async function renderAdminPanel(useCache){
   try{
     const data=(useCache&&lbCache)?lbCache:await fetchLeaderboard();
     renderBannedList(data);
+    renderPromos();
     const flagged=data.filter(e=>flagLevel(e));
     setToggle('flag-toggle','⚠️ FLAGGED PLAYERS',flagged.length);
     list.innerHTML='';
@@ -1451,14 +1557,43 @@ function renderBannedList(data){
   wireModButtons(box);
 }
 
+// ---- promo codes (admin) ----
+let promoCache=[];
+async function fetchPromos(){
+  const {data,error}=await sb.rpc('admin_promo_codes');
+  if(error) throw error;
+  promoCache=data||[];
+}
+function renderPromos(){
+  setToggle('promo-toggle','🎟️ PROMO CODES',promoCache.length);
+  const box=document.getElementById('promo-list');
+  box.innerHTML=promoCache.length?'':'<div class="admin-empty">No promo codes</div>';
+  promoCache.forEach(c=>{
+    const item=document.createElement('div'); item.className='promo-item';
+    const status=!c.active?'Turned off':!c.ends_at?'⏸ Countdown not started':new Date(c.ends_at)<=new Date()?'⏳ Ended '+new Date(c.ends_at).toLocaleDateString():'⏱ '+timeLeft(c.ends_at)+' (ends '+new Date(c.ends_at).toLocaleString()+')';
+    item.innerHTML=`<div class="pc">${escapeHtml(c.code)}</div>Players: <b>${c.players}</b> · Length: ${escapeHtml(c.duration)}<br>${status}`+
+      (c.ends_at?'':`<br><button data-start="${escapeHtml(c.code)}">▶ START COUNTDOWN</button>`);
+    box.appendChild(item);
+  });
+  box.querySelectorAll('[data-start]').forEach(b=>b.addEventListener('click',async()=>{
+    if(!confirm(`Start the countdown for code ${b.dataset.start} now? It can't be paused.`)) return;
+    b.disabled=true;
+    const {data,error}=await sb.rpc('admin_start_promo',{p_code:b.dataset.start});
+    if(error){ showToast('❌ ACTION FAILED',error.message||''); b.disabled=false; return; }
+    promoCache=data||[]; renderPromos(); showToast('⏱ COUNTDOWN STARTED',`Code ${b.dataset.start}`);
+  }));
+}
+
 // redraw whatever moderation views are on screen
 async function refreshModerationViews(refetch){
-  if(refetch){ try{ await fetchLeaderboard(); }catch(err){ console.error(err); } }
+  if(refetch){ try{ await fetchLeaderboard(); }catch(err){ console.error(err); }
+               if(isAdmin()){ try{ await fetchPromos(); }catch(err){ console.error('promos',err); } } }
   if(document.getElementById('leaderboard-screen').classList.contains('active')) renderLeaderboard(true);
   renderAdminPanel(true);
 }
 setInterval(()=>{ if(isAdmin()) refreshModerationViews(true); },10000);
 setInterval(()=>{ if(currentUser) checkMyWarning(); },30000);
+setInterval(()=>{ if(currentUser) checkAccess(); else updateStartButton(); },60000);
 
 // ========== INIT ==========
 // bring back the hero you last played on this device
