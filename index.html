@@ -161,15 +161,22 @@
   .task-check.dq-task{ width:100%; height:auto; padding:14px; text-align:left; border:2px solid var(--panel-border); background:var(--panel-2);
     display:flex; align-items:center; gap:12px; cursor:pointer; color:var(--text-light); border-radius:0; transition:all .12s ease;
     clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px); }
-  .task-check.dq-task span{ flex:1; font-size:16px; font-weight:700; }
+  .task-check.dq-task .tname{ flex:1; font-size:16px; font-weight:700; transition:color .15s ease; }
+  .task-check.dq-task .txp{ font-family:'Press Start 2P',monospace; font-size:8px; color:var(--emerald); white-space:nowrap; }
+  .task-check.dq-task.on .tname{ text-decoration:line-through; text-decoration-color:#8B87A6; text-decoration-thickness:2px; color:var(--text-dim) !important; text-shadow:none !important; }
+  .task-check.dq-task.on .txp{ opacity:.55; }
+  .task-check.dq-task.busy{ opacity:.6; pointer-events:none; }
+  .dq-earned{ text-align:center; margin-top:14px; font-size:15px; color:var(--text-dim); }
+  .dq-earned b{ color:var(--emerald); }
   .task-check.dq-task .check-box{ width:26px; height:26px; flex-shrink:0; border:2px solid var(--panel-border); background:var(--panel-2); display:flex;
     align-items:center; justify-content:center; color:var(--emerald); font-weight:900; font-size:16px; border-radius:6px; }
-  .task-check.dq-task.on .check-box{ border-color:var(--emerald); background:rgba(62,228,134,.15); }
+  .task-check.dq-task .check-box{ color:#fff; }
+  .task-check.dq-task.on .check-box{ border-color:var(--emerald) !important; background:var(--emerald) !important; color:#fff; }
   .dq-clock{ text-align:center; font-family:'Press Start 2P',monospace; font-size:9px; color:var(--gold); margin:-2px 0 12px; line-height:1.6; }
   .task-check.task-special{ border-color:var(--gold) !important; position:relative; overflow:hidden;
     background:linear-gradient(135deg,#3a2c08,#5a4310 45%,#3a2c08) !important; box-shadow:0 0 16px rgba(255,215,94,.45), inset 0 0 12px rgba(255,215,94,.18); }
   .task-check.task-special span{ color:var(--gold); text-shadow:0 0 8px rgba(255,215,94,.7); }
-  .task-check.task-special .check-box{ border-color:var(--gold) !important; }
+  .task-check.task-special:not(.on) .check-box{ border-color:var(--gold) !important; }
   .task-check.task-special::after{ content:''; position:absolute; top:0; left:-60%; width:40%; height:100%; pointer-events:none;
     background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent); animation:goldShine 2.4s ease-in-out infinite; }
   @keyframes goldShine{ 0%{ left:-60%; } 55%,100%{ left:130%; } }
@@ -1486,8 +1493,7 @@ async function openQuiz(key){
     const {data,error}=await sb.rpc('start_daily_quest');
     if(error) throw error;
     dq=data; clockSkew=new Date(dq.server_now)-Date.now();
-    let done=[]; try{ done=JSON.parse(localStorage.getItem(dqDoneKey())||'[]'); }catch(e){}
-    run.checklistTasks=dq.tasks.map((name,i)=>({name,done:done.includes(i)}));
+    run.checklistTasks=dq.tasks.map((name,i)=>({name,done:(dq.done||[]).includes(i)}));
     renderChecklist();
     clearInterval(dqTimer); dqTimer=setInterval(updateDqClock,1000);
   }catch(err){
@@ -1500,52 +1506,55 @@ function updateDqClock(){
   if(!dq || !el || !document.getElementById('quiz-overlay').classList.contains('active')){ clearInterval(dqTimer); return; }
   const left=new Date(dq.ends_at)-serverNow();
   if(left<=0){ el.textContent=dq.completed?'✨ A new Daily Quest is ready! Close and open QUEST again.':'⌛ Time is up! Close and open QUEST for a new one.'; return; }
-  el.textContent=dq.completed?`✅ Done for today · next Daily Quest in ${countdown(left)}`:`⏳ Time left: ${countdown(left)}`;
+  el.textContent=dq.completed?`✅ All done! Next Daily Quest in ${countdown(left)}`:`⏳ Time left: ${countdown(left)}`;
 }
 function renderChecklist(){
-  const tasks=run.checklistTasks;
-  const completed=tasks.filter(t=>t.done).length;
-  const finished=dq&&dq.completed;
-  document.getElementById('quiz-qcount').textContent=`${finished?tasks.length:completed} / ${tasks.length}`;
-  document.getElementById('quiz-progress').style.width=`${((finished?tasks.length:completed)/tasks.length)*100}%`;
-  const ready=!finished && completed===tasks.length;
+  const tasks=run.checklistTasks, per=(dq&&dq.xp_per_task)||XP_PER_TASK;
+  const doneCount=tasks.filter(t=>t.done).length;
+  document.getElementById('quiz-qcount').textContent=`${doneCount} / ${tasks.length}`;
+  document.getElementById('quiz-progress').style.width=`${(doneCount/tasks.length)*100}%`;
   document.getElementById('quiz-body').innerHTML=`<div class="qtext">${QUESTS.daily.name} CHECKLIST</div>
     <div class="dq-clock" id="dq-clock"></div>
-    <div class="login-hint" style="text-align:center;margin:-4px 0 10px">${finished?'Come back when the timer ends for a new quest.':'⏱️ Do your tasks <b>after</b> starting the quest. Finishing too fast gets an automatic warning.'}</div>
+    <div class="login-hint" style="text-align:center;margin:-4px 0 10px">Tick a task when you finish it to earn its XP. Your ticks are saved, so you can leave and come back.</div>
     <div class="options" id="quiz-options" style="flex-direction:column; gap:12px;"></div>
-    <div class="modal-actions" style="justify-content:center;"><button class="btn-start" id="checklist-done" style="opacity:${ready?1:0.5}; pointer-events:${ready?'auto':'none'}" ${ready?'':'disabled'}>${finished?'✅ COMPLETED TODAY':'COMPLETE QUEST ▶'}</button></div>`;
+    <div class="dq-earned">⭐ Earned today: <b>${doneCount*per}</b> / ${tasks.length*per} XP</div>`;
   const wrap=document.getElementById('quiz-options');
   tasks.forEach((t,i)=>{
-    const on=t.done||finished, special=isSpecialTask(t.name);
+    const special=isSpecialTask(t.name);
     const b=document.createElement('button');
-    b.className='task-check dq-task'+(on?' on':'')+(special?' task-special':'');
-    b.innerHTML=`<div class="check-box${on?' on':''}">${on?'✓':''}</div><span>${special?'✨ ':''}${escapeHtml(t.name)}</span>`;
-    if(!finished) b.addEventListener('click',()=>{
-      t.done=!t.done;
-      try{ localStorage.setItem(dqDoneKey(),JSON.stringify(tasks.map((x,j)=>x.done?j:-1).filter(j=>j>=0))); }catch(e){}
-      renderChecklist();
-    });
+    b.className='task-check dq-task'+(t.done?' on':'')+(special?' task-special':'');
+    b.innerHTML=`<div class="check-box">${t.done?'✓':''}</div><span class="tname">${special?'✨ ':''}${escapeHtml(t.name)}</span><span class="txp">+${per} XP</span>`;
+    b.addEventListener('click',()=>toggleTask(i,b));
     wrap.appendChild(b);
   });
-  if(ready) document.getElementById('checklist-done').addEventListener('click',completeChecklist);
   updateDqClock();
 }
-async function completeChecklist(){
-  const btn=document.getElementById('checklist-done'); if(btn){ btn.disabled=true; btn.textContent='CHECKING…'; }
+let taskBusy=false;
+async function toggleTask(i,btn){
+  if(taskBusy) return;
+  const t=run.checklistTasks[i], want=!t.done;
+  taskBusy=true; btn.classList.add('busy');
   try{
-    await syncLeaderboard();
-    const {data,error}=await sb.rpc('complete_daily_quest');
+    const {data,error}=await sb.rpc('set_quest_task',{p_index:i,p_done:want});
     if(error) throw error;
-    dq=data; questsDone.daily=true;
-    addXP(data.xp);
-    showToast('✅ QUEST COMPLETE!',`+${data.xp} XP`);
+    dq=data;
+    run.checklistTasks=dq.tasks.map((name,j)=>({name,done:(dq.done||[]).includes(j)}));
+    if(data.xp_delta>0){ addXP(data.xp_delta); showToast('✅ TASK DONE!',`+${data.xp_delta} XP`); }
+    if(data.xp_delta<0){ removeXP(-data.xp_delta); showToast('↩ TASK UNTICKED',`${data.xp_delta} XP`); }
+    if(data.completed && data.xp_delta>0){ questsDone.daily=true; showToast('🏆 DAILY QUEST COMPLETE!',`+${data.xp_delta} XP · all tasks done`); }
     syncLeaderboard(); save();
     if(data.too_fast) checkMyWarning();
-    renderChecklist();
-  }catch(err){
-    console.error(err); showToast('❌ COULDN\'T FINISH',err.message||'Try again');
-    if(btn){ btn.disabled=false; btn.textContent='COMPLETE QUEST ▶'; }
-  }
+  }catch(err){ console.error(err); showToast('❌ COULDN\'T SAVE',err.message||'Try again'); }
+  taskBusy=false;
+  renderChecklist();
+}
+// take XP back (when a task is unticked); can go down a level
+function removeXP(xp){
+  if(!xp) return;
+  hero.totalXP=Math.max(0,hero.totalXP-xp); hero.xpIntoLevel-=xp;
+  while(hero.xpIntoLevel<0 && hero.level>1){ hero.level--; hero.skillPoints=Math.max(0,hero.skillPoints-SP_PER_LEVEL); hero.xpIntoLevel+=xpNeeded(); }
+  if(hero.xpIntoLevel<0) hero.xpIntoLevel=0;
+  renderAll(); save();
 }
 
 
