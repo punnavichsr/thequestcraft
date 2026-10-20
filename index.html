@@ -208,6 +208,10 @@
   .lb-row.banned{ opacity:.85; border-color:var(--danger); background:#241018; }
   .lb-row.banned .lb-name{ text-decoration:line-through; color:var(--text-dim); }
   .btn-start.terminated{ background:#3a1520 !important; color:var(--danger) !important; cursor:not-allowed; }
+  .btn-promo{ display:block; margin:12px auto 0; font-family:'Press Start 2P',monospace; font-size:9px; color:var(--gold); background:transparent;
+    border:2px solid rgba(255,215,94,.55); padding:10px 16px; cursor:pointer; clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); }
+  .btn-promo:hover{ border-color:var(--gold); box-shadow:0 0 16px rgba(255,215,94,.35); }
+  body.in-game .btn-promo{ display:none; }
   .trial-chip{ margin-top:10px; font-family:'Press Start 2P',monospace; font-size:8px; color:var(--gold); text-align:center; line-height:1.6; }
   .btn-start.locked{ background:#2a2440 !important; color:var(--text-dim) !important; }
   .btn-start.expired{ background:#3a2c08 !important; color:var(--gold) !important; }
@@ -657,6 +661,7 @@
   <div class="login-hint" id="cloud-note"></div>
   <button class="btn-start" id="btn-start">▶ START QUEST</button>
   <div class="trial-chip" id="trial-chip" hidden></div>
+  <button class="btn-promo" id="btn-promo">🎟️ ENTER PROMO CODE</button>
   <div class="art-credit">Castle and knight art made with AI</div>
 </div>
 
@@ -1358,6 +1363,26 @@ function showAccessModal(){
   document.getElementById('access-code').value='';
   document.getElementById('access-modal').classList.add('show');
 }
+// Home page button: a screen just for typing a promo code
+function showPromoScreen(){
+  showAccessModal();
+  document.getElementById('access-ico').textContent='🎟️';
+  document.getElementById('access-title').textContent='PROMO CODE';
+  if(!currentUser){
+    document.getElementById('access-text').textContent='Sign in first (tap 🔐 SIGN IN TO CLOUD), then come back here to type your promo code.';
+    document.getElementById('access-form').hidden=true;
+    return;
+  }
+  const kind=myAccess.kind, ok=canPlay();
+  document.getElementById('access-text').textContent=
+    myAccess.status==='temp_banned'?'You are temporarily banned right now. You can still enter a code, and it will work when the ban ends.':
+    ok&&(kind==='admin'||kind==='vip')?'You already have full access. You can still type a code here to test it.':
+    ok&&kind==='promo'?'You already have early access. Got a new code? Type it below.':
+    'Type your promo code to unlock QuestCraft.';
+  document.getElementById('access-form').hidden=false;
+  setTimeout(()=>document.getElementById('access-code').focus(),50);
+}
+document.getElementById('btn-promo').addEventListener('click',showPromoScreen);
 document.getElementById('btn-access-ok').addEventListener('click',()=>document.getElementById('access-modal').classList.remove('show'));
 async function redeem(){
   const code=document.getElementById('access-code').value.trim(), msg=document.getElementById('access-msg');
