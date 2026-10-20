@@ -24,6 +24,12 @@
     --panel-border:#3A2E63;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
+  /* Computers: same shape as an iPad (4:3), centered. Phones and iPads use their own screen. */
+  @media (hover:hover) and (pointer:fine) and (min-aspect-ratio:4/3) and (min-width:900px){
+    html{ background:#05030C; height:100%; overflow:hidden; }   /* so the frame below clips anything outside it */
+    body{ width:calc(100vh * 4 / 3); max-width:100vw; height:100vh; min-height:0 !important; margin:0 auto; overflow-y:auto; overflow-x:hidden;
+          transform:translateZ(0); box-shadow:0 0 0 1px rgba(155,107,255,.25), 0 0 80px rgba(155,107,255,.18); }
+  }
   body{
     font-family:'Rajdhani', sans-serif;
     background:radial-gradient(ellipse at 50% -10%, #2B1E4E 0%, transparent 55%), linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-deep) 70%);
@@ -806,6 +812,7 @@ const SP_PER_LEVEL=2, STAT_MAX=8;
 let hero={level:1,xpIntoLevel:0,totalXP:0,skillPoints:0,stats:{power:0,shield:0,wisdom:0}};
 let tasks=[], questsDone={math:false,sci:false,eng:false,soc:false};
 let activeProfile='', currentUser=null;
+const agentName=n=>'Agent '+n;   // how every player's name is shown
 let run={current:null,qIndex:0,flags:[],streak:0,shieldCharges:0,hintCharges:0,doubleXP:false};
 
 const xpNeeded=()=>hero.level*5;
@@ -984,9 +991,9 @@ document.getElementById('btn-home').addEventListener('click',()=>{
 // ========== HERO / PROFILE ==========
 function updateHeroSlot(){
   if(activeProfile){
-    document.getElementById('slot-name').textContent=activeProfile.toUpperCase();
+    document.getElementById('slot-name').textContent=agentName(activeProfile).toUpperCase();
     document.getElementById('slot-sub').textContent=`Level ${hero.level} · ${hero.totalXP} XP`;
-    document.getElementById('hero-name-display').textContent=activeProfile;
+    document.getElementById('hero-name-display').textContent=agentName(activeProfile);
   }else{
     document.getElementById('slot-name').textContent='NEW HERO';
     document.getElementById('slot-sub').textContent='Create a hero to begin';
@@ -1013,7 +1020,7 @@ function renderHeroList(){
   names.forEach(n=>{
     const h=heroInfo(n), b=document.createElement('button');
     b.className='hp-hero'+(n===hpSelected?' sel':'');
-    const nm=document.createElement('span'); nm.textContent=n+(n===activeProfile?' ★':'');
+    const nm=document.createElement('span'); nm.textContent=agentName(n)+(n===activeProfile?' ★':'');
     const lv=document.createElement('small'); lv.textContent='LV '+(h.level||1);
     const del=document.createElement('span'); del.className='hp-del'; del.textContent='✕'; del.title='Delete this hero';
     b.appendChild(nm); b.appendChild(lv); b.appendChild(del);
@@ -1167,7 +1174,7 @@ function flagLevel(e){
 }
 const warnedBy=e=>e.warned_by==='auto'?'🤖 Auto-Admin':'Admin';
 const isLastWarning=e=>(e.warn_count||0)>=1;
-function displayName(e){ const n=e.username||'Unknown'; return n.includes('@')?'Adventurer':n; }
+function displayName(e){ const n=e.username||'Unknown'; return agentName(n.includes('@')?'Adventurer':n); }
 
 const readSeen=k=>{ try{ return localStorage.getItem(k)||null; }catch(e){ return null; } };
 // Auto-Admin: a quest finished faster than its tasks could take

@@ -55,7 +55,7 @@ async function load(){
   const decided = data.status !== 'pending';
   app.innerHTML = `
     <h1>📨 APPEAL REVIEW</h1>
-    <div class="player">${esc(data.player)}</div>
+    <div class="player">Agent ${esc(data.player)}</div>
     <div class="meta">Level ${data.level} · ${data.xp} XP · sent ${when(data.sent_at)}</div>
     <h2>THEIR MESSAGE</h2>
     <blockquote>${esc(data.message)}</blockquote>
