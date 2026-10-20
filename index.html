@@ -1266,6 +1266,7 @@ async function renderLeaderboard(useCache){
       row.className='lb-row'+(e.you?' you':'')+(!e.banned&&rank<=3?` top${rank}`:'')+(e.banned?' banned':'')+(flag&&admin?' flagged':'');
       let status='';
       if(e.banned) status='<span class="lb-status banned">BANNED</span>';
+      else if(admin && e.banned_until && new Date(e.banned_until)>new Date()) status='<span class="lb-status banned">⏳ 30-MIN BAN</span>';
       else if(flag==='SUSPICIOUS') status='<span class="lb-status flagged">⚠️ SUSPICIOUS</span>';
       else if(flag==='SUSPICIOUS AGAIN') status='<span class="lb-status flagged">⚠️ SUSPICIOUS AGAIN</span>';
       const front=(admin && !e.local)?adminButtons(e):onlineTag(e);
@@ -1305,6 +1306,7 @@ async function checkAccess(){
     const {data,error}=await sb.rpc('my_access');
     if(error) throw error;
     myAccess=data||{status:'none'};
+    if(myAccess.server_now) myAccess.skew=new Date(myAccess.server_now)-Date.now();
   }catch(err){ console.error('access check failed',err); myAccess={status:'error'}; }
   updateStartButton();
   if(!myBanned && !canPlay() && document.body.classList.contains('in-game')){ kickToTitle(); showAccessModal(); }
@@ -1314,6 +1316,7 @@ function timeLeft(ends){
   const d=Math.floor(ms/864e5), h=Math.floor(ms%864e5/36e5), m=Math.floor(ms%36e5/6e4);
   return d>0?`${d}d ${h}h left`:`${h}h ${m}m left`;
 }
+const countdownShort=ms=>{ if(ms<=0) return '0m'; const m=Math.floor(ms/6e4), sec=Math.floor(ms%6e4/1e3); return m>0?`${m}m ${String(sec).padStart(2,'0')}s`:`${sec}s`; };
 function updateStartButton(){
   const btn=document.getElementById('btn-start'), chip=document.getElementById('trial-chip');
   btn.classList.remove('terminated','locked','expired');
@@ -1325,6 +1328,12 @@ function updateStartButton(){
       chip.hidden=false;
       chip.textContent=myAccess.ends_at?`🎟️ EARLY ACCESS · ${timeLeft(myAccess.ends_at)}`:'🎟️ EARLY ACCESS · countdown not started';
     }
+    return;
+  }
+  if(myAccess.status==='temp_banned'){
+    const left=new Date(myAccess.until)-(Date.now()+(myAccess.skew||0));
+    btn.classList.add('terminated'); btn.textContent='⛔ BANNED · '+countdownShort(left);
+    chip.hidden=false; chip.textContent='⏳ 3 warnings: auto-ban ends in '+countdownShort(left);
     return;
   }
   if(myAccess.status==='plan_expired'){ btn.classList.add('expired'); btn.textContent='⏳ PLAN EXPIRED'; return; }
@@ -1340,6 +1349,7 @@ function showAccessModal(){
     document.getElementById('access-form').hidden=!form;
   };
   if(st==='signed_out') set('🔒','EARLY ACCESS','QuestCraft is in early access. Tap 🔐 SIGN IN TO CLOUD first, then enter your promo code.',false);
+  else if(st==='temp_banned') set('⛔','TEMPORARY BAN',`You got 3 warnings, so the Auto-Admin banned you for 30 minutes. Time left: ${countdownShort(new Date(myAccess.until)-(Date.now()+(myAccess.skew||0)))}. Please play fair when you come back!`,false);
   else if(st==='plan_expired') set('⏳','PLAN EXPIRED','Your early-access plan has ended. Thanks for testing QuestCraft! Have a new code? Enter it below.',true);
   else if(st==='subscription_ended') set('⏳','SUBSCRIPTION ENDED','Your QuestCraft subscription has ended. Renew it to keep playing, or enter a code below.',true);
   else if(st==='error') set('⚠️','CAN\'T CHECK ACCESS','We couldn\'t reach the server. Check your internet and try again.',false);
@@ -1413,6 +1423,7 @@ async function checkMyWarning(){
     if(seen===data.warned_at) return;
     document.getElementById('warn-text').textContent=data.warn_message||WARN_TEXT;
     document.getElementById('warn-modal').classList.add('show');
+    checkAccess();
     document.getElementById('btn-warn-ok').onclick=()=>{
       try{ localStorage.setItem('qc_warn_seen',data.warned_at); }catch(e){}
       document.getElementById('warn-modal').classList.remove('show');
@@ -1634,6 +1645,10 @@ async function refreshModerationViews(refetch){
 setInterval(()=>{ if(isAdmin()) refreshModerationViews(true); },10000);
 setInterval(()=>{ if(currentUser) checkMyWarning(); },30000);
 setInterval(()=>{ if(currentUser) checkAccess(); else updateStartButton(); },60000);
+setInterval(()=>{
+  if(myAccess.status!=='temp_banned') return;
+  if(new Date(myAccess.until)<=Date.now()+(myAccess.skew||0)) checkAccess(); else updateStartButton();
+},5000);
 
 // ========== INIT ==========
 // bring back the hero you last played on this device
