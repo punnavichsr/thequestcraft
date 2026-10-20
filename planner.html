@@ -286,6 +286,8 @@
     <button class="btn primary" id="setSave">Save</button>
     <div class="msg" id="setMsg" style="margin:0"></div>
     <p class="side-hint">Get a free key at console.groq.com → API Keys. It's saved only in this browser. Never share it with anyone.</p>
+    <p class="side-hint" id="memInfo">When you're signed in to QuestCraft, your AI remembers your chats and notes.</p>
+    <button class="btn" id="memClear" type="button">🧹 Clear AI memory</button>
   </div>
 
   <div class="chat" id="chat"></div>
@@ -800,9 +802,7 @@
         nm.onchange = () => { s.name = nm.value.trim() || "My stat"; renderStats(); syncStatActivity(s); };
         row.querySelector(".nm").appendChild(nm);
         row.querySelector(".del").onclick = () => {
-          // the stat's own points come back, and its +500 bonus leaves with it
-          points = Math.max(0, points + s.value - BONUS_PER_STAT); stats.splice(i, 1); renderStats();
-          if (s.activity && MODES[s.activity]) deleteActivity(s.activity);   // gone from Stopwatch, Timetable and Planner too
+          deleteStat(s);
           flash("statMsg", `Stat deleted (−${BONUS_PER_STAT} bonus points).`);
         };
       } else {
@@ -820,6 +820,16 @@
       };
       list.appendChild(row);
     });
+  }
+
+  // Delete one of your own stats (the built-in ones can't be deleted)
+  function deleteStat(s) {
+    const i = stats.indexOf(s);
+    if (i < 0 || !s.custom) return false;
+    // the stat's own points come back, and its +500 bonus leaves with it
+    points = Math.max(0, points + s.value - BONUS_PER_STAT); stats.splice(i, 1); renderStats();
+    if (s.activity && MODES[s.activity]) deleteActivity(s.activity);   // gone from Stopwatch, Timetable and Planner too
+    return true;
   }
 
   // Add your own stat: each new one gives +500 points
@@ -895,7 +905,10 @@
   document.getElementById("aiBtn").onclick = () => {
     aiPanel.classList.toggle("open");
     if (!aiReady()) { openAiSettings(); document.getElementById("setName").focus(); return; }
-    if (!chat.children.length) bubble(`Hi! I'm ${ai.name} 👋 I can plan your day, add timetable blocks, and add or adjust your stats and activities. Just ask.`, "ai");
+    if (!chat.children.length) {
+      bubble(`Hi! I'm ${ai.name} 👋 I can plan your day, add, move or delete timetable blocks, change your stats and activities, and tell you about the leaderboard.${isAdminUser() ? " 🛡️ Admin: ask me \"what's going on?\" or to warn / ban / clear / reset a player." : ""} Just ask.`, "ai");
+      loadMemory();
+    }
     document.getElementById("aiMsg").focus();
   };
   document.getElementById("aiClose").onclick = () => aiPanel.classList.remove("open");
@@ -915,8 +928,51 @@
     document.getElementById("aiMsg").focus();
   };
 
+  // ---- link to the QuestCraft game (only when this page runs inside the game) ----
+  const game = (() => { try { return window.parent !== window ? window.parent.questcraftBridge || null : null; } catch (e) { return null; } })();
+  const signedIn = () => Boolean(game && game.user());
+  const isAdminUser = () => Boolean(game && game.isAdmin());
+
+  // ---- memory (saved in the database for signed-in players) ----
+  let memory = { notes: [], loaded: false };
+  async function loadMemory() {
+    if (!signedIn() || memory.loaded) return;
+    try {
+      const { data, error } = await game.sb.from("ai_memory").select("notes,history").maybeSingle();
+      if (error) throw error;
+      if (data) { memory.notes = data.notes || []; history = Array.isArray(data.history) ? data.history.slice(-20) : []; }
+      memory.loaded = true;
+      if (history.length) bubble(`(${ai.name} remembers your last chat and ${memory.notes.length} note${memory.notes.length === 1 ? "" : "s"}.)`, "note");
+    } catch (e) { console.error("memory load failed", e); }
+  }
+  async function saveMemory() {
+    if (!signedIn()) return;
+    try {
+      const { error } = await game.sb.from("ai_memory").upsert({
+        user_id: game.user().id, notes: memory.notes.slice(-40).map(n => String(n).slice(0, 200)),
+        history: history.slice(-20).map(m => ({ role: m.role, content: String(m.content).slice(0, 4000) })), updated_at: new Date().toISOString()
+      }, { onConflict: "user_id" });
+      if (error) throw error;
+    } catch (e) { console.error("memory save failed", e); }
+  }
+  document.getElementById("memClear").onclick = async () => {
+    if (!confirm("Clear everything your AI remembers?")) return;
+    memory.notes = []; history = []; chat.innerHTML = "";
+    if (signedIn()) { try { await game.sb.from("ai_memory").delete().eq("user_id", game.user().id); } catch (e) {} }
+    flash("setMsg", "AI memory cleared.");
+  };
+
+  // ---- extra things the AI can see ----
+  async function gameContext() {
+    const ctx = {};
+    if (!game) return ctx;
+    try { ctx.leaderboard = (await game.leaderboard()).slice(0, 15); } catch (e) {}
+    if (isAdminUser()) { try { ctx.admin = await game.adminReport(); } catch (e) {} }
+    return ctx;
+  }
+
   // What the AI knows about you (sent with every message)
-  function systemPrompt() {
+  function systemPrompt(ctx = {}) {
     const today = new Date(), tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
     const day = d => JSON.stringify((save.events[dateKey(d)] || []).map(e => ({ title: e.title, start: e.start, end: e.end, category: e.type })));
     const cats = Object.keys(MODES).map(k => `${k} (${MODES[k].name})`).join(", ");
@@ -929,23 +985,92 @@ Today's timetable: ${day(today)}
 Tomorrow's timetable: ${day(tmr)}
 Stats (each max ${MAX}): ${stats.map(s => s.name + " " + s.value).join(", ")}. Unspent points: ${points}. Creating a new stat gives +${BONUS_PER_STAT} points.
 Activity categories (key (name)): ${cats}.
+Your own stats you can rename/delete: ${stats.filter(s => s.custom).map(s => s.name).join(", ") || "none yet"} (IQ, Gaming, Strength and Sleep are built in and can't be deleted).
+Planner activities you can delete: ${save.activities.filter(a => !a.fromStat).map(a => a.name).join(", ") || "none"} (activities made from a stat are deleted by deleting the stat).
+${ctx.leaderboard ? `QuestCraft leaderboard right now (rank, name, level, XP, online): ${JSON.stringify(ctx.leaderboard)}` : ""}
+${memory.notes.length ? `Things you remember about this user: ${JSON.stringify(memory.notes)}` : ""}
+${signedIn() ? `The user is signed in, so you have memory. When they tell you something worth remembering (a habit, a goal, a preference, a regular class), save it with a "remember" action. Never save passwords, addresses or other private details.` : ""}
 
 You can change the app. When you want to, add this at the very END of your reply (a JSON array, any mix of these):
 \`\`\`actions
 [{"action":"add_event","date":"YYYY-MM-DD","title":"Short title","start":"HH:MM","end":"HH:MM","category":"iq"},
+ {"action":"edit_event","date":"YYYY-MM-DD","title":"part of the current title","new_title":"optional","start":"optional HH:MM","end":"optional HH:MM","category":"optional","new_date":"optional YYYY-MM-DD"},
  {"action":"delete_event","date":"YYYY-MM-DD","title":"exact title"},
  {"action":"add_stat","name":"Working","icon":"💼"},
  {"action":"set_stat","name":"IQ","value":120},
- {"action":"add_activity","name":"Piano","icon":"🎹"}]
-\`\`\`
+ {"action":"rename_stat","name":"Working","new_name":"Job","icon":"optional emoji"},
+ {"action":"delete_stat","name":"Job"},
+ {"action":"add_activity","name":"Piano","icon":"🎹"},
+ {"action":"delete_activity","name":"Piano"},
+ {"action":"remember","note":"Has football practice every Tuesday at 17:00"},
+ {"action":"forget","note":"part of a note to remove"}]
+\`\`\`${ctx.admin ? `
+
+ADMIN MODE: this user is a QuestCraft admin. Live game report: ${JSON.stringify(ctx.admin)}
+When they ask "what's going on", summarise it simply: who is online, flagged players and their warnings, bans, temporary bans, promo countdowns.
+Admin actions (only when they clearly ask, using the player's name as shown):
+ {"action":"warn","player":"Agent Tor"}, {"action":"ban","player":"Agent Tor"}, {"action":"unban","player":"Agent Tor"}, {"action":"clear","player":"Agent Tor"}, {"action":"reset_xp","player":"Agent Tor"}
+Ban and reset_xp always ask the admin to confirm in a pop-up.` : ""}
 Use 24-hour times and category keys. Raising a stat spends unspent points, so never set stats higher than the points allow.
 You cannot make or upload pictures: tell the user to press "Upload picture" in the Planner tab.
 Only include actions the user asked for or agreed to. Never show this format otherwise.`;
   }
 
   // Apply the AI's changes
-  function runActions(list) {
-    list.forEach(a => {
+  async function runActions(list) {
+    for (const a of list) {
+      if (a.action === "edit_event" && a.date) {
+        const arr = save.events[a.date] || [];
+        const i = arr.findIndex(e => e.title.toLowerCase().includes(String(a.title || "").toLowerCase()));
+        if (i < 0) { bubble(`I couldn't find "${a.title}" on ${a.date}.`, "err"); continue; }
+        const ev = arr[i];
+        if (a.category && MODES[a.category]) ev.type = a.category;
+        if (a.new_title) ev.title = `${MODES[ev.type].icon} ${a.new_title}`.trim();
+        if (a.start) ev.start = a.start;
+        if (a.end) ev.end = a.end;
+        if (a.new_date && a.new_date !== a.date) { arr.splice(i, 1); addEvent(a.new_date, ev); }
+        else { arr.sort((x, y) => toMin(x.start) - toMin(y.start)); store(); }
+        bubble(`✏️ Updated "${ev.title}" (${a.new_date || a.date}, ${ev.start}–${ev.end})`, "note");
+      }
+      if (a.action === "rename_stat") {
+        const st = stats.find(x => x.name.toLowerCase() === String(a.name).toLowerCase());
+        if (!st || !st.custom) { bubble(`I can only rename stats you made yourself.`, "err"); continue; }
+        if (a.new_name) st.name = String(a.new_name).trim().slice(0, 20);
+        if (a.icon) st.icon = String(a.icon).trim().slice(0, 4);
+        renderStats(); syncStatActivity(st);
+        bubble(`✏️ Stat is now "${st.icon} ${st.name}"`, "note");
+      }
+      if (a.action === "delete_stat") {
+        const st = stats.find(x => x.name.toLowerCase() === String(a.name).toLowerCase());
+        if (st && deleteStat(st)) bubble(`🗑 Deleted the stat "${st.name}" (−${BONUS_PER_STAT} bonus points)`, "note");
+        else bubble(`I can only delete stats you made yourself.`, "err");
+      }
+      if (a.action === "delete_activity") {
+        const act = save.activities.find(x => x.name.toLowerCase() === String(a.name).toLowerCase());
+        if (!act) bubble(`I couldn't find an activity called "${a.name}".`, "err");
+        else if (act.fromStat) bubble(`"${act.name}" comes from a stat. Delete the stat instead.`, "err");
+        else { deleteActivity(act.key); bubble(`🗑 Deleted the activity "${act.name}"`, "note"); }
+      }
+      if (a.action === "remember" && a.note && signedIn()) {
+        memory.notes.push(String(a.note).slice(0, 200)); memory.notes = memory.notes.slice(-40);
+        bubble(`🧠 I'll remember: ${a.note}`, "note");
+      }
+      if (a.action === "forget" && a.note) {
+        const before = memory.notes.length;
+        memory.notes = memory.notes.filter(n => !n.toLowerCase().includes(String(a.note).toLowerCase()));
+        bubble(before !== memory.notes.length ? `🧹 Forgotten.` : `I didn't have a note like that.`, "note");
+      }
+      if (["warn", "ban", "unban", "clear", "reset_xp"].includes(a.action)) {
+        if (!isAdminUser()) { bubble("Only admins can do that.", "err"); continue; }
+        const r = await game.moderateByName(a.action === "reset_xp" ? "reset" : a.action, a.player);
+        bubble((r.ok ? "🛡️ " : "⚠️ ") + r.msg, r.ok ? "note" : "err");
+      }
+      runOne(a);
+    }
+    renderDay(); renderSidebar(); renderPlanner();
+  }
+  function runOne(a) {
+    {
       const type = MODES[a.category] ? a.category : "other";
       if (a.action === "add_event" && a.date && a.start && a.end) {
         addEvent(a.date, { title: `${MODES[type].icon} ${a.title}`.trim(), start: a.start, end: a.end, type });
@@ -969,22 +1094,23 @@ Only include actions the user asked for or agreed to. Never show this format oth
         const act = addActivity(a.name, a.icon);
         if (act) bubble(`✔ New activity "${act.name}". Add its picture in the Planner tab.`, "note");
       }
-    });
-    renderDay(); renderSidebar(); renderPlanner();
+    }
   }
 
   async function askAI(text) {
     if (!aiReady()) { openAiSettings(); return; }
+    await loadMemory();
     bubble(text, "me");
     history.push({ role: "user", content: text });
     history = history.slice(-20);
     const thinking = bubble("…thinking", "ai");
     try {
+      const ctx = await gameContext();
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + ai.key },
         body: JSON.stringify({ model: ai.model, temperature: 0.6,
-          messages: [{ role: "system", content: systemPrompt() }, ...history] }),
+          messages: [{ role: "system", content: systemPrompt(ctx) }, ...history] }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || res.status);
@@ -994,7 +1120,8 @@ Only include actions the user asked for or agreed to. Never show this format oth
       const m = reply.match(/```actions\s*([\s\S]*?)```/);
       reply = reply.replace(/```actions[\s\S]*?```/, "").trim();
       thinking.textContent = reply || "Done! ✅";
-      if (m) { try { runActions(JSON.parse(m[1])); } catch (e) { bubble("I tried to change your timetable but got confused 😅 Try again?", "err"); } }
+      if (m) { try { await runActions(JSON.parse(m[1])); } catch (e) { console.error(e); bubble("I tried to change your timetable but got confused 😅 Try again?", "err"); } }
+      saveMemory();
     } catch (err) {
       thinking.remove();
       bubble("Error: " + err.message + " (check your key / model in ⚙️)", "err");

@@ -1745,6 +1745,55 @@ setInterval(()=>{
   if(new Date(myAccess.until)<=Date.now()+(myAccess.skew||0)) checkAccess(); else updateStartButton();
 },5000);
 
+// ========== BRIDGE for the planner's AI (planner.html runs inside the game) ==========
+// Everyone: who's signed in + the leaderboard. Admins only: the live report + the 4 buttons.
+window.questcraftBridge={
+  sb, agentName,
+  user:()=>currentUser,
+  isAdmin:()=>isAdmin(),
+  async leaderboard(){
+    const data=await fetchLeaderboard();
+    let rank=0;
+    return data.slice().sort((a,b)=>(a.banned?1:0)-(b.banned?1:0)||(b.xp||0)-(a.xp||0)).map(e=>{
+      if(!e.banned) rank++;
+      return { rank:e.banned?null:rank, name:displayName(e), level:e.level||1, xp:e.xp||0,
+               online:!!(e.user_id&&onlineIds.has(e.user_id)), banned:!!e.banned, you:!!(currentUser&&e.user_id===currentUser.id) };
+    });
+  },
+  async adminReport(){
+    if(!isAdmin()) return null;
+    const data=await fetchLeaderboard();
+    try{ await fetchPromos(); }catch(e){}
+    const now=new Date();
+    return {
+      players_total:data.length,
+      online_now:data.filter(e=>e.user_id&&onlineIds.has(e.user_id)).map(displayName),
+      flagged:data.filter(e=>flagLevel(e)).map(e=>({name:displayName(e),status:flagLevel(e),warnings:e.warn_count||0,last_warned_by:e.warned_by||null,last_warned_at:e.warned_at||null})),
+      banned:data.filter(e=>e.banned).map(e=>({name:displayName(e),forever:!!e.perma_banned})),
+      temp_banned:data.filter(e=>e.banned_until&&new Date(e.banned_until)>now).map(e=>({name:displayName(e),until:e.banned_until})),
+      promo_codes:promoCache.map(c=>({code:c.code,players:c.players,countdown_started:!!c.ends_at,ends_at:c.ends_at}))
+    };
+  },
+  // action: warn | ban | unban | clear | reset ; player: a name like "Agent Tor" or "Tor"
+  async moderateByName(action,player){
+    if(!isAdmin()) return {ok:false,msg:'Only admins can do that.'};
+    const data=await fetchLeaderboard();
+    const want=String(player||'').toLowerCase().replace(/^agent\s+/,'').trim();
+    const hits=data.filter(e=>String(e.username||'').toLowerCase()===want);
+    if(hits.length!==1) return {ok:false,msg:hits.length?`More than one player is called "${player}".`:`I couldn't find a player called "${player}".`};
+    const e=hits[0];
+    if(action==='clear' && !e.warned) return {ok:false,msg:`${displayName(e)} has no active warning to clear.`};
+    if((action==='ban'||action==='reset') && !confirm(`${action==='ban'?'BAN':'RESET XP of'} ${displayName(e)}? (asked by your AI)`)) return {ok:false,msg:'Cancelled.'};
+    if(action==='reset'){   // moderate() asks again for reset; skip that second question
+      const {error}=await sb.from('leaderboard').update({xp:0,level:1,xp_reset_at:new Date().toISOString()}).eq('id',e.id);
+      if(error) return {ok:false,msg:error.message};
+      refreshModerationViews(true); return {ok:true,msg:`${displayName(e)}'s XP was reset to 0.`};
+    }
+    await moderate(e.id,action);
+    return {ok:true,msg:{warn:`Warned ${displayName(e)}.`,ban:`Banned ${displayName(e)}.`,unban:`Unbanned ${displayName(e)}.`,clear:`Cleared ${displayName(e)}'s warning.`}[action]||'Done.'};
+  }
+};
+
 // ========== INIT ==========
 // bring back the hero you last played on this device
 try{ activeProfile=localStorage.getItem('questology_active')||''; }catch(e){}
