@@ -158,6 +158,14 @@
   .task-row.done .task-name{ text-decoration:line-through; }
   .task-check{ width:26px; height:26px; flex-shrink:0; border:2px solid var(--panel-border); background:var(--panel-2); cursor:pointer;
     display:flex; align-items:center; justify-content:center; color:var(--emerald); font-weight:900; font-size:16px; border-radius:6px; }
+  .task-check.task-special{ border-color:var(--gold) !important; position:relative; overflow:hidden;
+    background:linear-gradient(135deg,#3a2c08,#5a4310 45%,#3a2c08) !important; box-shadow:0 0 16px rgba(255,215,94,.45), inset 0 0 12px rgba(255,215,94,.18); }
+  .task-check.task-special span{ color:var(--gold); text-shadow:0 0 8px rgba(255,215,94,.7); }
+  .task-check.task-special .check-box{ border-color:var(--gold) !important; }
+  .task-check.task-special::after{ content:''; position:absolute; top:0; left:-60%; width:40%; height:100%; pointer-events:none;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent); animation:goldShine 2.4s ease-in-out infinite; }
+  @keyframes goldShine{ 0%{ left:-60%; } 55%,100%{ left:130%; } }
+  @media (prefers-reduced-motion:reduce){ .task-check.task-special::after{ animation:none; display:none; } }
   .task-check.on{ background:rgba(62,228,134,.2); border-color:var(--emerald); }
   .task-main{ flex:1; min-width:0; }
   .task-name{ font-size:16px; font-weight:700; }
@@ -683,10 +691,6 @@
       <span class="area-title">⚔️ QUESTS</span>
     </div>
     <div class="quest-grid">
-      <button class="quest-card q-math" data-planet="math"><div class="q-num">QUEST I</div><div class="orb">➗</div><h3>NUMERIA</h3><div class="desc">Math · Integers &amp; ratios</div><div class="status" data-status>ENTER</div></button>
-      <button class="quest-card q-sci" data-planet="sci"><div class="q-num">QUEST II</div><div class="orb">🧪</div><h3>BIOSPHERE</h3><div class="desc">Science · Cells &amp; forces</div><div class="status" data-status>ENTER</div></button>
-      <button class="quest-card q-eng" data-planet="eng"><div class="q-num">QUEST III</div><div class="orb">🔤</div><h3>LEXICON</h3><div class="desc">English · Grammar</div><div class="status" data-status>ENTER</div></button>
-      <button class="quest-card q-his" data-planet="soc"><div class="q-num">QUEST IV</div><div class="orb">🏛️</div><h3>CHRONOS</h3><div class="desc">History · Eras &amp; evidence</div><div class="status" data-status>ENTER</div></button>
     </div>
   </div>
 </div>
@@ -721,18 +725,19 @@ for(let i=0;i<36;i++){const f=document.createElement('div');f.className='fly';co
   f.style.animationDelay=(Math.random()*4)+'s';f.style.animationDuration=(3+Math.random()*4)+'s';flies.appendChild(f);}
 
 // ========== DATA ==========
-const CHECKLIST_TASKS=['Complete all your homework','Study for your Exams or Quizzes','Do your favorite hobby or exercise','Preread (Random Chance)','Read 1 book and Summarize'];
+const CHECKLIST_TASKS=['Do all your homework','Study for your Exams or Quizzes','Do your favorite hobby or exercise','Preread (Random Chance)','Read 1 book and Summarize'];
 const QUESTS={
   math:{name:'NUMERIA',icon:'➗',color:'q-math',desc:'Math Tasks'},
   sci:{name:'BIOSPHERE',icon:'🧪',color:'q-sci',desc:'Science Tasks'},
   eng:{name:'LEXICON',icon:'🔤',color:'q-eng',desc:'English Tasks'},
-  soc:{name:'CHRONOS',icon:'🏛️',color:'q-his',desc:'History Tasks'}
+  soc:{name:'CHRONOS',icon:'🏛️',color:'q-his',desc:'History Tasks'},
+  daily:{name:'DAILY QUEST',icon:'⚔️',color:'q-math',desc:'Your tasks for today'}
 };
 const XP_PER_TASK=5;
 // Auto-Admin: the fastest an honest player could really finish each task (in seconds).
 // Finishing a quest faster than its tasks add up to = automatic warning.
 const TASK_MIN_SECONDS={
-  'Complete all your homework':30,
+  'Do all your homework':30,
   'Study for your Exams or Quizzes':60,
   'Do your favorite hobby or exercise':60,
   'Preread (Random Chance)':60,
@@ -1341,7 +1346,7 @@ function renderChecklist(){
   document.getElementById('quiz-body').innerHTML=`<div class="qtext">${QUESTS[key].name} CHECKLIST</div><div class="login-hint" style="text-align:center;margin:-4px 0 10px">⏱️ Do your tasks <b>after</b> starting the quest. Finishing too fast gets an automatic warning.</div><div class="options" id="quiz-options" style="flex-direction:column; gap:12px;"></div><div class="modal-actions" style="justify-content:center;"><button class="btn-start" id="checklist-done" style="opacity:${completed===tasks.length?1:0.5}; pointer-events:${completed===tasks.length?'auto':'none'}" ${completed!==tasks.length?'disabled':''}>COMPLETE QUEST ▶</button></div>`;
   const wrap=document.getElementById('quiz-options');
   tasks.forEach((t,i)=>{
-    const b=document.createElement('button');b.className='task-check'+(t.done?' on':'');b.style.width='100%';b.style.padding='14px';b.style.textAlign='left';b.style.border='2px solid var(--panel-border)';b.style.background='var(--panel-2)';b.style.clip='polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)';b.style.display='flex';b.style.alignItems='center';b.style.gap='12px';b.style.cursor='pointer';b.style.transition='all .12s ease';b.style.color='var(--text-light)';b.innerHTML=`<div style="width:26px; height:26px; flex-shrink:0; border:2px solid var(--panel-border); background:var(--panel-2); display:flex; align-items:center; justify-content:center; color:var(--emerald); font-weight:900; font-size:16px; border-radius:6px;" class="check-box${t.done?' on':''}">✓</div><span style="flex:1; font-size:16px; font-weight:700;">${t.name}</span>`;
+    const b=document.createElement('button');b.className='task-check'+(t.done?' on':'')+(/hobby/i.test(t.name)?' task-special':'');b.style.width='100%';b.style.padding='14px';b.style.textAlign='left';b.style.border='2px solid var(--panel-border)';b.style.background='var(--panel-2)';b.style.clip='polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)';b.style.display='flex';b.style.alignItems='center';b.style.gap='12px';b.style.cursor='pointer';b.style.transition='all .12s ease';b.style.color='var(--text-light)';b.innerHTML=`<div style="width:26px; height:26px; flex-shrink:0; border:2px solid var(--panel-border); background:var(--panel-2); display:flex; align-items:center; justify-content:center; color:var(--emerald); font-weight:900; font-size:16px; border-radius:6px;" class="check-box${t.done?' on':''}">✓</div><span style="flex:1; font-size:16px; font-weight:700;">${/hobby/i.test(t.name)?'✨ ':''}${t.name}</span>`;
     b.addEventListener('click',()=>{t.done=!t.done;renderChecklist();});wrap.appendChild(b);
   });
   document.getElementById('checklist-done').addEventListener('click',completeChecklist);
@@ -1378,7 +1383,7 @@ document.querySelectorAll('.hub-card').forEach(c=>{
     const area=c.dataset.area;
     if(area==='schedule'){ openPlanner('timetable','📋 SCHEDULE'); return; }
     if(area==='leaderboard') renderLeaderboard();
-    if(area==='quests') renderQuestStatus();
+    if(area==='quests'){ openQuiz('daily'); return; }   // one quest: the checklist opens right away
     if(area==='planner'){ openPlanner('planner','🧍 PLANNER'); return; }
     if(area==='timer'){ openPlanner('stopwatch','⏱️ TIMER'); return; }
     showScreen(area+'-screen');
