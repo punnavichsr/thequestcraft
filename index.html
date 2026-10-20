@@ -158,6 +158,14 @@
   .task-row.done .task-name{ text-decoration:line-through; }
   .task-check{ width:26px; height:26px; flex-shrink:0; border:2px solid var(--panel-border); background:var(--panel-2); cursor:pointer;
     display:flex; align-items:center; justify-content:center; color:var(--emerald); font-weight:900; font-size:16px; border-radius:6px; }
+  .task-check.dq-task{ width:100%; height:auto; padding:14px; text-align:left; border:2px solid var(--panel-border); background:var(--panel-2);
+    display:flex; align-items:center; gap:12px; cursor:pointer; color:var(--text-light); border-radius:0; transition:all .12s ease;
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px); }
+  .task-check.dq-task span{ flex:1; font-size:16px; font-weight:700; }
+  .task-check.dq-task .check-box{ width:26px; height:26px; flex-shrink:0; border:2px solid var(--panel-border); background:var(--panel-2); display:flex;
+    align-items:center; justify-content:center; color:var(--emerald); font-weight:900; font-size:16px; border-radius:6px; }
+  .task-check.dq-task.on .check-box{ border-color:var(--emerald); background:rgba(62,228,134,.15); }
+  .dq-clock{ text-align:center; font-family:'Press Start 2P',monospace; font-size:9px; color:var(--gold); margin:-2px 0 12px; line-height:1.6; }
   .task-check.task-special{ border-color:var(--gold) !important; position:relative; overflow:hidden;
     background:linear-gradient(135deg,#3a2c08,#5a4310 45%,#3a2c08) !important; box-shadow:0 0 16px rgba(255,215,94,.45), inset 0 0 12px rgba(255,215,94,.18); }
   .task-check.task-special span{ color:var(--gold); text-shadow:0 0 8px rgba(255,215,94,.7); }
@@ -1423,53 +1431,85 @@ function renderQuestStatus(){
 document.querySelectorAll('.quest-card').forEach(btn=>btn.addEventListener('click',()=>openQuiz(btn.dataset.planet)));
 document.getElementById('quiz-close').addEventListener('click',()=>document.getElementById('quiz-overlay').classList.remove('active'));
 
-function openQuiz(key){
-  run.current=key;run.qIndex=0;run.flags=[];run.streak=0;
-  run.shieldCharges=hero.stats.shield;
-  run.hintCharges=hero.stats.wisdom;
-  run.doubleXP=false;
-  run.checklistTasks=generateChecklist();
-  run.startedAt=Date.now();
-  save();
-  document.getElementById('quiz-planet-tag').textContent=QUESTS[key].name;
-  document.getElementById('quiz-overlay').classList.add('active');
-  renderChecklist();
+// ========== DAILY QUEST (the database keeps the 24-hour clock and picks the tasks) ==========
+const isSpecialTask=name=>/hobby|preread/i.test(name);
+let dq=null, dqTimer=null, clockSkew=0;   // clockSkew: server time minus this device's time
+const serverNow=()=>Date.now()+clockSkew;
+const dqDoneKey=()=>'qc_daily_done_'+(dq?dq.started_at:'');
+function countdown(ms){
+  if(ms<=0) return '0m';
+  const h=Math.floor(ms/36e5), m=Math.floor(ms%36e5/6e4), sec=Math.floor(ms%6e4/1e3);
+  return h>0?`${h}h ${String(m).padStart(2,'0')}m`:`${m}m ${String(sec).padStart(2,'0')}s`;
 }
-function generateChecklist(){
-  const count=Math.floor(Math.random()*3)+3;
-  const tasks=[];
-  const shuffled=[...CHECKLIST_TASKS].sort(()=>Math.random()-.5);
-  for(let i=0;i<count;i++){tasks.push({name:shuffled[i],done:false});}
-  return tasks;
+async function openQuiz(key){
+  run.current='daily';
+  document.getElementById('quiz-planet-tag').textContent=QUESTS.daily.name;
+  document.getElementById('quiz-body').innerHTML='<div class="qtext">Loading your Daily Quest…</div>';
+  document.getElementById('quiz-overlay').classList.add('active');
+  try{
+    const {data,error}=await sb.rpc('start_daily_quest');
+    if(error) throw error;
+    dq=data; clockSkew=new Date(dq.server_now)-Date.now();
+    let done=[]; try{ done=JSON.parse(localStorage.getItem(dqDoneKey())||'[]'); }catch(e){}
+    run.checklistTasks=dq.tasks.map((name,i)=>({name,done:done.includes(i)}));
+    renderChecklist();
+    clearInterval(dqTimer); dqTimer=setInterval(updateDqClock,1000);
+  }catch(err){
+    console.error(err);
+    document.getElementById('quiz-body').innerHTML=`<div class="qtext">Couldn't open the Daily Quest</div><div class="login-hint" style="text-align:center">${escapeHtml(err.message||'Check your internet and try again.')}</div>`;
+  }
+}
+function updateDqClock(){
+  const el=document.getElementById('dq-clock');
+  if(!dq || !el || !document.getElementById('quiz-overlay').classList.contains('active')){ clearInterval(dqTimer); return; }
+  const left=new Date(dq.ends_at)-serverNow();
+  if(left<=0){ el.textContent=dq.completed?'✨ A new Daily Quest is ready! Close and open QUEST again.':'⌛ Time is up! Close and open QUEST for a new one.'; return; }
+  el.textContent=dq.completed?`✅ Done for today · next Daily Quest in ${countdown(left)}`:`⏳ Time left: ${countdown(left)}`;
 }
 function renderChecklist(){
   const tasks=run.checklistTasks;
-  const key=run.current;
   const completed=tasks.filter(t=>t.done).length;
-  document.getElementById('quiz-qcount').textContent=`${completed} / ${tasks.length}`;
-  document.getElementById('quiz-progress').style.width=`${(completed/tasks.length)*100}%`;
-  document.getElementById('quiz-body').innerHTML=`<div class="qtext">${QUESTS[key].name} CHECKLIST</div><div class="login-hint" style="text-align:center;margin:-4px 0 10px">⏱️ Do your tasks <b>after</b> starting the quest. Finishing too fast gets an automatic warning.</div><div class="options" id="quiz-options" style="flex-direction:column; gap:12px;"></div><div class="modal-actions" style="justify-content:center;"><button class="btn-start" id="checklist-done" style="opacity:${completed===tasks.length?1:0.5}; pointer-events:${completed===tasks.length?'auto':'none'}" ${completed!==tasks.length?'disabled':''}>COMPLETE QUEST ▶</button></div>`;
+  const finished=dq&&dq.completed;
+  document.getElementById('quiz-qcount').textContent=`${finished?tasks.length:completed} / ${tasks.length}`;
+  document.getElementById('quiz-progress').style.width=`${((finished?tasks.length:completed)/tasks.length)*100}%`;
+  const ready=!finished && completed===tasks.length;
+  document.getElementById('quiz-body').innerHTML=`<div class="qtext">${QUESTS.daily.name} CHECKLIST</div>
+    <div class="dq-clock" id="dq-clock"></div>
+    <div class="login-hint" style="text-align:center;margin:-4px 0 10px">${finished?'Come back when the timer ends for a new quest.':'⏱️ Do your tasks <b>after</b> starting the quest. Finishing too fast gets an automatic warning.'}</div>
+    <div class="options" id="quiz-options" style="flex-direction:column; gap:12px;"></div>
+    <div class="modal-actions" style="justify-content:center;"><button class="btn-start" id="checklist-done" style="opacity:${ready?1:0.5}; pointer-events:${ready?'auto':'none'}" ${ready?'':'disabled'}>${finished?'✅ COMPLETED TODAY':'COMPLETE QUEST ▶'}</button></div>`;
   const wrap=document.getElementById('quiz-options');
   tasks.forEach((t,i)=>{
-    const b=document.createElement('button');b.className='task-check'+(t.done?' on':'')+(/hobby/i.test(t.name)?' task-special':'');b.style.width='100%';b.style.padding='14px';b.style.textAlign='left';b.style.border='2px solid var(--panel-border)';b.style.background='var(--panel-2)';b.style.clip='polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)';b.style.display='flex';b.style.alignItems='center';b.style.gap='12px';b.style.cursor='pointer';b.style.transition='all .12s ease';b.style.color='var(--text-light)';b.innerHTML=`<div style="width:26px; height:26px; flex-shrink:0; border:2px solid var(--panel-border); background:var(--panel-2); display:flex; align-items:center; justify-content:center; color:var(--emerald); font-weight:900; font-size:16px; border-radius:6px;" class="check-box${t.done?' on':''}">✓</div><span style="flex:1; font-size:16px; font-weight:700;">${/hobby/i.test(t.name)?'✨ ':''}${t.name}</span>`;
-    b.addEventListener('click',()=>{t.done=!t.done;renderChecklist();});wrap.appendChild(b);
+    const on=t.done||finished, special=isSpecialTask(t.name);
+    const b=document.createElement('button');
+    b.className='task-check dq-task'+(on?' on':'')+(special?' task-special':'');
+    b.innerHTML=`<div class="check-box${on?' on':''}">${on?'✓':''}</div><span>${special?'✨ ':''}${escapeHtml(t.name)}</span>`;
+    if(!finished) b.addEventListener('click',()=>{
+      t.done=!t.done;
+      try{ localStorage.setItem(dqDoneKey(),JSON.stringify(tasks.map((x,j)=>x.done?j:-1).filter(j=>j>=0))); }catch(e){}
+      renderChecklist();
+    });
+    wrap.appendChild(b);
   });
-  document.getElementById('checklist-done').addEventListener('click',completeChecklist);
+  if(ready) document.getElementById('checklist-done').addEventListener('click',completeChecklist);
+  updateDqClock();
 }
-function completeChecklist(){
-  const key=run.current;
-  const tasks=run.checklistTasks;
-  const xpGain=tasks.length*XP_PER_TASK;
-  const seconds=Math.round((Date.now()-(run.startedAt||Date.now()))/1000);
-  const needed=minSecondsFor(tasks);
-  questsDone[key]=true;
-  addXP(xpGain);
-  if(seconds<needed) autoWarnTooFast(seconds,needed);
-  showToast('✅ QUEST COMPLETE!',`+${xpGain} XP`);
-  document.getElementById('quiz-overlay').classList.remove('active');
-  renderQuestStatus();
-  syncLeaderboard();
-  save();
+async function completeChecklist(){
+  const btn=document.getElementById('checklist-done'); if(btn){ btn.disabled=true; btn.textContent='CHECKING…'; }
+  try{
+    await syncLeaderboard();
+    const {data,error}=await sb.rpc('complete_daily_quest');
+    if(error) throw error;
+    dq=data; questsDone.daily=true;
+    addXP(data.xp);
+    showToast('✅ QUEST COMPLETE!',`+${data.xp} XP`);
+    syncLeaderboard(); save();
+    if(data.too_fast) checkMyWarning();
+    renderChecklist();
+  }catch(err){
+    console.error(err); showToast('❌ COULDN\'T FINISH',err.message||'Try again');
+    if(btn){ btn.disabled=false; btn.textContent='COMPLETE QUEST ▶'; }
+  }
 }
 
 
