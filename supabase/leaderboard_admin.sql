@@ -1,6 +1,8 @@
 -- QuestCraft: make the leaderboard work + admin tools (warn / ban / clear)
 -- Run once in Supabase: SQL Editor -> New query -> paste -> Run.
--- Safe to run again.
+-- Safe to run again, BUT if you re-run this file, also re-run these after it, in order:
+--   warn_email.sql, auto_admin.sql, appeals.sql, appeals_email.sql
+-- (they replace some functions here with stronger versions).
 
 -- 1) New columns
 alter table public.leaderboard

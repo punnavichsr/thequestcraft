@@ -467,6 +467,27 @@
     if (mode === key) setWatchMode("iq");
     store(); refreshTypeSelects(); renderSidebar(); renderPlanner(); renderDay();
   }
+  // ---- Stats <-> activities: every custom stat has its own activity ----
+  // (so a new stat shows up in the Stopwatch, Timetable and Planner right away)
+  function linkStatQuiet(st) {
+    if (st.activity && MODES[st.activity]) return st.activity;
+    let a = save.activities.find(x => x.name.toLowerCase() === String(st.name).toLowerCase());
+    if (!a) {
+      a = { key: "c" + Date.now() + Math.floor(Math.random() * 1000), name: st.name, icon: st.icon || "", color: st.color || ACT_COLORS[save.activities.length % ACT_COLORS.length] };
+      save.activities.push(a);
+      MODES[a.key] = { name: a.name, icon: a.icon, color: a.color, custom: true };
+    }
+    a.fromStat = true; MODES[a.key].fromStat = true;
+    st.activity = a.key;
+    return a.key;
+  }
+  function syncStatActivity(st) {
+    const key = linkStatQuiet(st);
+    const a = save.activities.find(x => x.key === key);
+    if (a) { a.name = st.name; a.icon = st.icon; MODES[key].name = st.name; MODES[key].icon = st.icon; }
+    store(); refreshTypeSelects(); renderSidebar();
+    if (planActivity === key) renderPlanner();
+  }
   const sidebar = document.getElementById("sidebar");
 
   function minutesToday(type) {
@@ -538,9 +559,10 @@
       b.style.setProperty("--c", MODES[m].color);
       const mins = minutesToday(m);
       b.innerHTML = `<span class="ico">${esc(MODES[m].icon || "?")}</span><span style="flex:1">${esc(MODES[m].name)}<small>Today: ${Math.floor(mins / 60)}h ${mins % 60}m</small></span>`
-        + (MODES[m].custom ? `<span class="side-del" title="Delete this activity">✕</span>` : "");
+        + (MODES[m].custom && !MODES[m].fromStat ? `<span class="side-del" title="Delete this activity">✕</span>` : "")
+        + (MODES[m].fromStat ? `<span class="side-del" style="opacity:.35;cursor:help" title="This comes from a stat: delete it in STATS">📊</span>` : "");
       b.onclick = e => {
-        if (e.target.classList.contains("side-del")) { deleteActivity(m); return; }
+        if (e.target.classList.contains("side-del")) { if (!MODES[m].fromStat) deleteActivity(m); return; }
         setActivity(m); sidebar.classList.remove("open");
       };
       list.appendChild(b);
@@ -771,15 +793,16 @@
         // Custom stats: you type the icon and the name yourself
         const ic = document.createElement("input");
         ic.className = "icon-in"; ic.value = s.icon; ic.placeholder = "?"; ic.maxLength = 4; ic.title = "Type your own icon (emoji)";
-        ic.onchange = () => { s.icon = ic.value.trim(); renderStats(); };
+        ic.onchange = () => { s.icon = ic.value.trim(); renderStats(); syncStatActivity(s); };
         row.querySelector(".icon").appendChild(ic);
         const nm = document.createElement("input");
         nm.className = "name-in"; nm.value = s.name; nm.maxLength = 20;
-        nm.onchange = () => { s.name = nm.value.trim() || "My stat"; renderStats(); };
+        nm.onchange = () => { s.name = nm.value.trim() || "My stat"; renderStats(); syncStatActivity(s); };
         row.querySelector(".nm").appendChild(nm);
         row.querySelector(".del").onclick = () => {
           // the stat's own points come back, and its +500 bonus leaves with it
           points = Math.max(0, points + s.value - BONUS_PER_STAT); stats.splice(i, 1); renderStats();
+          if (s.activity && MODES[s.activity]) deleteActivity(s.activity);   // gone from Stopwatch, Timetable and Planner too
           flash("statMsg", `Stat deleted (−${BONUS_PER_STAT} bonus points).`);
         };
       } else {
@@ -808,6 +831,7 @@
     stats.push(st);
     points += BONUS_PER_STAT;
     renderStats();
+    syncStatActivity(st);   // now it's in the Stopwatch, Timetable and Planner too
     return st;
   }
   // Move a stat to a target number (never past MAX or past the points you have)
@@ -822,7 +846,7 @@
     const st = addStat(document.getElementById("newStatName").value, document.getElementById("newStatIcon").value);
     if (!st) { document.getElementById("newStatName").focus(); return; }
     document.getElementById("newStatName").value = ""; document.getElementById("newStatIcon").value = "";
-    flash("statMsg", `"${st.name}" added: +${BONUS_PER_STAT} points!`);
+    flash("statMsg", `"${st.name}" added: +${BONUS_PER_STAT} points! It's in your Stopwatch, Timetable and Planner now.`);
   };
 
   document.getElementById("openBtn").onclick  = () => document.getElementById("overlay").classList.add("show");
@@ -998,6 +1022,9 @@ Only include actions the user asked for or agreed to. Never show this format oth
 
   // ================= START =================
   showAiName();
+  stats.filter(s => s.custom).forEach(linkStatQuiet);   // connect stats made before this update
+  save.activities.forEach(a => { if (a.fromStat && MODES[a.key]) MODES[a.key].fromStat = true; });
+  store();
   refreshTypeSelects();
   setWatchMode("iq");
   renderSidebar();
