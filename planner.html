@@ -1003,7 +1003,10 @@ You can change the app. When you want to, add this at the very END of your reply
  {"action":"add_activity","name":"Piano","icon":"🎹"},
  {"action":"delete_activity","name":"Piano"},
  {"action":"remember","note":"Has football practice every Tuesday at 17:00"},
- {"action":"forget","note":"part of a note to remove"}]
+  {"action":"forget","note":"part of a note to remove"},
+ {"action":"start_timer"},
+ {"action":"stop_timer"},
+ {"action":"reset_timer"}]
 \`\`\`${ctx.admin ? `
 
 ADMIN MODE: this user is a QuestCraft admin. Live game report: ${JSON.stringify(ctx.admin)}
@@ -1070,6 +1073,23 @@ Only include actions the user asked for or agreed to. Never show this format oth
     renderDay(); renderSidebar(); renderPlanner();
   }
   function runOne(a) {
+    if (a.action === "start_timer") {
+  if (!running) {
+    document.getElementById("startBtn").click();
+    bubble("⏱️ Timer Started!", "note");
+  } else {
+    bubble("⏱️ Timer is already running!", "note");
+  }
+}
+    if (a.action === "stop_timer") {
+  document.getElementById("logBtn").click();
+  bubble("⏱️ Timer Logged!", "note");
+}
+    if (a.action === "reset_timer") {
+  document.getElementById("resetWatch").click();
+  bubble("⏱️ Timer Reseted!", "note");
+}
+}
     {
       const type = MODES[a.category] ? a.category : "other";
       if (a.action === "add_event" && a.date && a.start && a.end) {
