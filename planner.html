@@ -381,6 +381,7 @@
       <h2>CHARACTER STATS</h2>
       <button class="close" id="closeBtn" aria-label="Close">✕</button>
     </div>
+    <div class="points" id="classLine" style="display:none">Class: <span id="heroCls"></span></div>
     <div class="points">Points left: <span id="pts"></span></div>
     <label class="amount">Amount per click: <input type="number" id="amount" value="1" min="1"></label>
     <div id="list"></div>
@@ -771,7 +772,19 @@
     return n > 0 ? n : 1;
   }
 
+  // Class: shown when the planner runs inside the game
+  function showHeroClass() {
+    let name = "";
+    try { name = game && game.heroClass ? game.heroClass() : ""; } catch (e) {}
+    const line = document.getElementById("classLine");
+    if (!line) return;
+    line.style.display = name ? "" : "none";
+    document.getElementById("heroCls").textContent = name ? name.charAt(0) + name.slice(1).toLowerCase() : "";
+  }
+  window.showHeroClass = showHeroClass;
+
   function renderStats() {
+    showHeroClass();
     save.stats = stats; save.points = points; store();
     document.getElementById("pts").textContent = points;
     const list = document.getElementById("list");
@@ -1159,7 +1172,7 @@ reply = reply.replace(/```(?:actions|json)[\s\S]*?```/, "").trim();
   // The QuestCraft game calls this to jump straight to a tab: "timetable", "stopwatch", "planner" or "stats"
   function openTab(name) {
     const overlay = document.getElementById("overlay");
-    if (name === "stats") { overlay.classList.add("show"); return; }   // open the STATS popup
+    if (name === "stats") { showHeroClass(); overlay.classList.add("show"); return; }   // open the STATS popup
     overlay.classList.remove("show");
     const id = { timetable: "tableView", stopwatch: "watchView", planner: "plannerView" }[name];
     const btn = id && document.querySelector(`.mode[data-view="${id}"]`);

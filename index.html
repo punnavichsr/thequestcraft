@@ -96,6 +96,12 @@
     border:2px solid #4c3970; border-radius:6px; cursor:pointer; font-weight:700; font-size:13px; text-align:left; }
   .hp-hero small{ color:var(--text-dim); font-weight:600; white-space:nowrap; }
   .hp-hero small{ margin-left:auto; }
+  .hp-hero{ align-items:center; }
+  .hp-cls-img{ width:34px; height:30px; object-fit:cover; image-rendering:pixelated; border:1px solid #4c3970; border-radius:4px; flex:none; background:#0b0716; }
+  .hp-mid{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .hp-cls{ font-family:'Press Start 2P',monospace; font-size:7px; color:var(--gold); cursor:pointer; padding:3px 0; }
+  .hp-cls:hover{ color:#fff3c4; text-decoration:underline; }
+
   .hp-del{ color:var(--text-dim); padding:0 4px; border-radius:4px; }
   .hp-del:hover{ color:var(--danger); background:#0006; }
   .hp-hero.sel{ border-color:var(--gold); box-shadow:0 0 10px rgba(255,215,94,.4); }
@@ -266,6 +272,7 @@
   #terminated-modal h3{ font-family:'Press Start 2P',monospace; font-size:13px; color:var(--danger); margin:14px 0; line-height:1.6; }
   #terminated-modal p{ font-size:15px; line-height:1.5; margin-bottom:18px; }
   #terminated-modal button{ font-family:'Press Start 2P',monospace; font-size:9px; background:var(--danger); color:#fff; border:none; padding:10px 16px; cursor:pointer; }
+  .lb-av img{ width:100%; height:100%; object-fit:cover; image-rendering:pixelated; border-radius:inherit; }
   .lb-av{ width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:19px;
     background:radial-gradient(circle at 32% 28%, #DFC9FF, #6B3FA0 78%); }
   .lb-name{ flex:1; font-size:16px; font-weight:700; }
@@ -1033,6 +1040,7 @@ const CLASSES={
 };
 function unlockedClasses(){ if(!Array.isArray(hero.unlocked)) hero.unlocked=['warrior']; return hero.unlocked; }
 function hasClass(key){ return CLASSES[key] && (CLASSES[key].cost===0 || unlockedClasses().includes(key)); }
+function classOf(h){ const k=(h&&h.cls)==='knight'?'warrior':(h&&h.cls); return (CLASSES[k] && (CLASSES[k].cost===0 || (Array.isArray(h.unlocked)&&h.unlocked.includes(k))))?k:'warrior'; }
 function heroClass(){ const k=hero.cls==='knight'?'warrior':hero.cls; return hasClass(k)?k:'warrior'; }   // old Knights become Warriors
 function classImgSrc(key){ return CLASSES[key].img || document.getElementById('class-img').dataset.knight; }
 function renderClassUI(){
@@ -1044,6 +1052,9 @@ function pickClass(key){
   hero.cls=key; save(); renderClassUI();
   document.getElementById('class-modal').classList.remove('show');
   showToast('⚔ CLASS CHOSEN',CLASSES[key].name);
+  if(heroPanel.classList.contains('open')) renderHeroList();
+  syncLeaderboard();
+  try{ document.getElementById('planner-frame').contentWindow.showHeroClass(); }catch(e){}
 }
 function buyClass(key){
   const c=CLASSES[key];
@@ -1107,12 +1118,21 @@ function renderHeroList(){
   names.forEach(n=>{
     const h=heroInfo(n), b=document.createElement('button');
     b.className='hp-hero'+(n===hpSelected?' sel':'');
+    const ck=classOf(h);
+    const pic=document.createElement('img'); pic.className='hp-cls-img'; pic.src=classImgSrc(ck); pic.alt='';
+    const mid=document.createElement('span'); mid.className='hp-mid';
     const nm=document.createElement('span'); nm.textContent=agentName(n)+(n===activeProfile?' ★':'');
+    const cls=document.createElement('span'); cls.className='hp-cls'; cls.textContent='⚔ '+CLASSES[ck].name+' ▸'; cls.title='Choose a class for this hero';
+    mid.appendChild(nm); mid.appendChild(cls);
     const lv=document.createElement('small'); lv.textContent='LV '+(h.level||1);
     const del=document.createElement('span'); del.className='hp-del'; del.textContent='✕'; del.title='Delete this hero';
-    b.appendChild(nm); b.appendChild(lv); b.appendChild(del);
+    b.appendChild(pic); b.appendChild(mid); b.appendChild(lv); b.appendChild(del);
     b.addEventListener('click',e=>{
       if(e.target===del){ if(confirm('Delete hero "'+n+'"? This cannot be undone.')) deleteHero(n); return; }
+      if(e.target===cls){   // choose this hero's class (switches to this hero first, panel stays open)
+        if(n!==activeProfile){ save(); activeProfile=n; load(); save(); updateHeroSlot(); renderAll(); }
+        hpSelected=n; renderHeroList(); openClassPicker(); return;
+      }
       hpSelected=n; renderHeroList();
     });
     list.appendChild(b);
@@ -1279,9 +1299,11 @@ async function autoWarnTooFast(seconds,needed){
 async function syncLeaderboard(){
   if(!currentUser || !activeProfile) return;
   try{
-    const {error}=await sb.from('leaderboard').upsert(
-      {user_id:currentUser.id, username:activeProfile, xp:hero.totalXP, level:hero.level, xp_reset_ack:readSeen('qc_reset_seen')},
-      {onConflict:'user_id'});
+    const row={user_id:currentUser.id, username:activeProfile, xp:hero.totalXP, level:hero.level, xp_reset_ack:readSeen('qc_reset_seen'), hero_class:heroClass()};
+    let {error}=await sb.from('leaderboard').upsert(row,{onConflict:'user_id'});
+    if(error && /hero_class/.test(error.message||'')){   // class column not added in Supabase yet: save without it
+      delete row.hero_class; ({error}=await sb.from('leaderboard').upsert(row,{onConflict:'user_id'}));
+    }
     if(error) throw error;
   }catch(err){ console.error('leaderboard save failed',err); }
 }
@@ -1345,6 +1367,10 @@ function wireModButtons(root){
 }
 
 let lbCache=null;
+// class shown on the leaderboard (your own row uses your current class right away)
+function lbClassKey(e){ const k=e.you?heroClass():(e.hero_class==='knight'?'warrior':e.hero_class); return CLASSES[k]?k:null; }
+function lbClassPic(e){ const k=lbClassKey(e); return k?`<img src="${classImgSrc(k)}" alt="">`:'🧙'; }
+function lbClassName(e){ const k=lbClassKey(e); return k?` · ${CLASSES[k].name}`:''; }
 async function fetchLeaderboard(){
   const {data,error}=await sb.from('leaderboard').select('*').order('xp',{ascending:false}).limit(50);
   if(error) throw error;
@@ -1376,7 +1402,7 @@ async function renderLeaderboard(useCache){
       else if(flag==='SUSPICIOUS') status='<span class="lb-status flagged">⚠️ SUSPICIOUS</span>';
       else if(flag==='SUSPICIOUS AGAIN') status='<span class="lb-status flagged">⚠️ SUSPICIOUS AGAIN</span>';
       const front=(admin && !e.local)?adminButtons(e):onlineTag(e);
-      row.innerHTML=`<div class="lb-rank">${medal}</div><div class="lb-av">🧙</div>${front}<div class="lb-name">${escapeHtml(displayName(e))}${e.title?`<span class="title-tag">🏅 ${escapeHtml(e.title).toUpperCase()}</span>`:''}${e.you?'<span class="you-tag">YOU</span>':''}<small>LV ${e.level||1}</small></div><div class="lb-xp">${e.xp||0} XP</div>${status}`;
+      row.innerHTML=`<div class="lb-rank">${medal}</div><div class="lb-av">${lbClassPic(e)}</div>${front}<div class="lb-name">${escapeHtml(displayName(e))}${e.title?`<span class="title-tag">🏅 ${escapeHtml(e.title).toUpperCase()}</span>`:''}${e.you?'<span class="you-tag">YOU</span>':''}<small>LV ${e.level||1}${lbClassName(e)}</small></div><div class="lb-xp">${e.xp||0} XP</div>${status}`;
       list.appendChild(row);
     });
     wireModButtons(list);
@@ -1788,6 +1814,7 @@ setInterval(()=>{
 // Everyone: who's signed in + the leaderboard. Admins only: the live report + the 4 buttons.
 window.questcraftBridge={
   sb, agentName,
+  heroClass:()=>CLASSES[heroClass()].name,
   user:()=>currentUser,
   isAdmin:()=>isAdmin(),
   async leaderboard(){
