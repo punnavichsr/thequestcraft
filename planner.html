@@ -1138,8 +1138,8 @@ Only include actions the user asked for or agreed to. Never show this format oth
       let reply = data.choices[0].message.content;
       history.push({ role: "assistant", content: reply });
 
-      const m = reply.match(/```actions\s*([\s\S]*?)```/);
-      reply = reply.replace(/```actions[\s\S]*?```/, "").trim();
+    const m = reply.match(/```(?:actions|json)\s*([\s\S]*?)```/);
+reply = reply.replace(/```(?:actions|json)[\s\S]*?```/, "").trim();
       thinking.textContent = reply || "Done! ✅";
       if (m) { try { await runActions(JSON.parse(m[1])); } catch (e) { console.error(e); bubble("I tried to change your timetable but got confused 😅 Try again?", "err"); } }
       saveMemory();
