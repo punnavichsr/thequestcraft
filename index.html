@@ -1861,6 +1861,22 @@ window.questcraftBridge={
     }
     await moderate(e.id,action);
     return {ok:true,msg:{warn:`Warned ${displayName(e)}.`,ban:`Banned ${displayName(e)}.`,unban:`Unbanned ${displayName(e)}.`,clear:`Cleared ${displayName(e)}'s warning.`}[action]||'Done.'};
+  },
+  // admins: give or take away the Ace title (asked by Jarvis)
+  async setAceByName(player,give){
+    if(!isAdmin()) return {ok:false,msg:'Only admins can do that.'};
+    const data=await fetchLeaderboard();
+    const want=String(player||'').toLowerCase().replace(/^agent\s+/,'').trim();
+    const hits=data.filter(e=>String(e.username||'').toLowerCase()===want);
+    if(hits.length!==1) return {ok:false,msg:hits.length?`More than one player is called "${player}".`:`I couldn't find a player called "${player}".`};
+    const e=hits[0];
+    if(!give && e.title!=='Ace') return {ok:false,msg:`${displayName(e)} doesn't have the Ace title.`};
+    if(give && e.title==='Ace') return {ok:false,msg:`${displayName(e)} already has the Ace title.`};
+    if(!give && !confirm(`Take the ACE title away from ${displayName(e)}? (asked by your AI)`)) return {ok:false,msg:'Cancelled.'};
+    const {error}=await sb.rpc('admin_set_ace',{p_user:e.user_id,p_give:!!give});
+    if(error) return {ok:false,msg:error.message};
+    refreshModerationViews(true);
+    return {ok:true,msg:give?`🏅 ${displayName(e)} now has the Ace title.`:`Took the Ace title away from ${displayName(e)}.`};
   }
 };
 

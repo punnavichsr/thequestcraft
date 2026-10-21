@@ -1025,7 +1025,8 @@ You can change the app. When you want to, add this at the very END of your reply
 ADMIN MODE: this user is a QuestCraft admin. Live game report: ${JSON.stringify(ctx.admin)}
 When they ask "what's going on", summarise it simply: who is online, flagged players and their warnings, bans, temporary bans, promo countdowns.
 Admin actions (only when they clearly ask, using the player's name as shown):
- {"action":"warn","player":"Agent Tor"}, {"action":"ban","player":"Agent Tor"}, {"action":"unban","player":"Agent Tor"}, {"action":"clear","player":"Agent Tor"}, {"action":"reset_xp","player":"Agent Tor"}
+ {"action":"warn","player":"Agent Tor"}, {"action":"ban","player":"Agent Tor"}, {"action":"unban","player":"Agent Tor"}, {"action":"clear","player":"Agent Tor"}, {"action":"reset_xp","player":"Agent Tor"}, {"action":"give_ace","player":"Agent Tor"}, {"action":"remove_ace","player":"Agent Tor"}
+give_ace gives a player the Ace title (normally earned by 5 honest Daily Quests in a row); remove_ace takes it away. "Me" means the admin's own player (the leaderboard entry with "you": true).
 Ban and reset_xp always ask the admin to confirm in a pop-up.` : ""}
 Use 24-hour times and category keys. Raising a stat spends unspent points, so never set stats higher than the points allow.
 The Stopwatch counts UP, so never ask how long. start_timer = press Start on the Stopwatch and it starts counting up. stop_timer = press Stop & Log, and the time gets saved to today's schedule. reset_timer = press Reset, and the timer goes back to 0.When the user asks to start, stop or reset the timer, do it right away with the action and don't ask any questions.Use add_event to plan things on the schedule. For the live stopwatch ALWAYS use start_timer, stop_timer or reset_timer (never add_event), and don't ask any questions.
@@ -1076,6 +1077,11 @@ Only include actions the user asked for or agreed to. Never show this format oth
         const before = memory.notes.length;
         memory.notes = memory.notes.filter(n => !n.toLowerCase().includes(String(a.note).toLowerCase()));
         bubble(before !== memory.notes.length ? `🧹 Forgotten.` : `I didn't have a note like that.`, "note");
+      }
+      if (a.action === "give_ace" || a.action === "remove_ace") {
+        if (!isAdminUser()) { bubble("Only admins can do that.", "err"); continue; }
+        const r = await game.setAceByName(a.player, a.action === "give_ace");
+        bubble((r.ok ? "🏅 " : "⚠️ ") + r.msg, r.ok ? "note" : "err");
       }
       if (["warn", "ban", "unban", "clear", "reset_xp"].includes(a.action)) {
         if (!isAdminUser()) { bubble("Only admins can do that.", "err"); continue; }
