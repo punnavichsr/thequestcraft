@@ -1867,7 +1867,8 @@ window.questcraftBridge={
     if(!isAdmin()) return {ok:false,msg:'Only admins can do that.'};
     const data=await fetchLeaderboard();
     const want=String(player||'').toLowerCase().replace(/^agent\s+/,'').trim();
-    const hits=data.filter(e=>String(e.username||'').toLowerCase()===want);
+    const isMe=['me','myself','i','admin'].includes(want);   // "give me Ace"
+    const hits=data.filter(e=>isMe ? (currentUser && e.user_id===currentUser.id) : String(e.username||'').toLowerCase()===want);
     if(hits.length!==1) return {ok:false,msg:hits.length?`More than one player is called "${player}".`:`I couldn't find a player called "${player}".`};
     const e=hits[0];
     if(!give && e.title!=='Ace') return {ok:false,msg:`${displayName(e)} doesn't have the Ace title.`};
