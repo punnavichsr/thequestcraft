@@ -1176,11 +1176,19 @@ document.getElementById('slot-switch').addEventListener('click',()=>{
 });
 document.getElementById('hp-close').addEventListener('click',()=>heroPanel.classList.remove('open'));
 heroPanel.addEventListener('click',e=>{ if(e.target===heroPanel) heroPanel.classList.remove('open'); });
-function createHero(){
+async function createHero(){
   const name=document.getElementById('hp-name').value.trim();
   const msg=document.getElementById('hp-msg');
   if(!name){ msg.textContent='Type a name for your hero first.'; return; }
   if(knownHeroes().some(n=>n.toLowerCase()===name.toLowerCase())){ msg.textContent='That hero already exists. Pick it under SWITCH.'; return; }
+  // no two players with the same name (the server checks this too)
+  if(currentUser){
+    try{
+      const safe=name.replace(/[\\%_]/g,m=>'\\'+m);
+      const {data}=await sb.from('leaderboard').select('user_id').ilike('username',safe).limit(5);
+      if((data||[]).some(r=>r.user_id!==currentUser.id)){ msg.textContent='Another player already has that name. Try a different one!'; return; }
+    }catch(e){}
+  }
   useHero(name);
 }
 document.getElementById('hp-create').addEventListener('click',createHero);
