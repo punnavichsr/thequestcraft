@@ -1368,7 +1368,7 @@ function wireModButtons(root){
 
 let lbCache=null;
 // class shown on the leaderboard (your own row uses your current class right away)
-function lbClassKey(e){ const k=e.you?heroClass():(e.hero_class==='knight'?'warrior':e.hero_class); return CLASSES[k]?k:null; }
+function lbClassKey(e){ const k=e.you?heroClass():(e.hero_class==='knight'?'warrior':e.hero_class); return CLASSES[k]?k:'warrior'; }   // no class saved yet = Warrior (everyone starts as one)
 function lbClassPic(e){ const k=lbClassKey(e); return k?`<img src="${classImgSrc(k)}" alt="">`:'🧙'; }
 function lbClassName(e){ const k=lbClassKey(e); return k?` · ${CLASSES[k].name}`:''; }
 async function fetchLeaderboard(){
