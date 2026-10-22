@@ -726,7 +726,7 @@
 <!-- HUB -->
 <div class="screen" id="hub-screen">
   <div class="hub-title">◆ ADVENTURER'S HUB ◆</div>
-  <div class="hub-grid">
+  <div class="hub-grid">st
     <button class="hub-card c-sched" data-area="schedule">
       <div class="hub-icon">📋</div><h3>SCHEDULE</h3>
       <div class="desc">Plan your day on the timetable, hour by hour.</div>
@@ -743,9 +743,13 @@
       <div class="hub-icon">🧍</div><h3>PLANNER</h3>
       <div class="desc">Pick an activity and see your scene and today's plan.</div>
     </button>
-    <button class="hub-card c-timer" data-area="timer">
+       <button class="hub-card c-timer" data-area="timer">
       <div class="hub-icon">⏱️</div><h3>TIMER</h3>
       <div class="desc">Time your study, exercise or play, and log it.</div>
+    </button>
+    <button class="hub-card c-sched" data-area="office">
+      <div class="hub-icon">🏢</div><h3>OFFICE</h3>
+      <div class="desc">Manage your agents at HQ.</div>
     </button>
   </div>
 </div>
@@ -1706,8 +1710,9 @@ document.querySelectorAll('.hub-card').forEach(c=>{
     if(area==='schedule'){ openPlanner('timetable','📋 SCHEDULE'); return; }
     if(area==='leaderboard') renderLeaderboard();
     if(area==='quests'){ openQuiz('daily'); return; }   // one quest: the checklist opens right away
-    if(area==='planner'){ openPlanner('planner','🧍 PLANNER'); return; }
+       if(area==='planner'){ openPlanner('planner','🧍 PLANNER'); return; }
     if(area==='timer'){ openPlanner('stopwatch','⏱️ TIMER'); return; }
+    if(area==='office'){ location.href='office.html'; return; }
     showScreen(area+'-screen');
   });
 });
