@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>THE QUESTCRAFT</title>
+<meta name="description" content="TheQuestCraft: a pixel RPG where you earn XP for real homework, study, reading and hobbies. Learn. Quest. Ascend.">
+<meta property="og:title" content="THE QUESTCRAFT">
+<meta property="og:description" content="Earn XP for real homework, study, reading and hobbies. Learn. Quest. Ascend.">
+<meta property="og:url" content="https://www.thequestcraft.com/">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@500;600;700&display=swap');
@@ -737,7 +743,7 @@
     </button>
     <button class="hub-card c-quest" data-area="quests">
       <div class="hub-icon">⚔️</div><h3>QUESTS</h3>
-      <div class="desc">Battle knowledge challenges and collect XP.</div>
+      <div class="desc">Finish today's real-life tasks and collect XP.</div>
     </button>
     <button class="hub-card c-plan" data-area="planner">
       <div class="hub-icon">🧍</div><h3>PLANNER</h3>
@@ -810,7 +816,7 @@
 <div class="overlay" id="quiz-overlay">
   <div class="modal" id="quiz-modal">
     <button class="btn-close" id="quiz-close">✕</button>
-    <div class="modal-top"><span class="planet-tag" id="quiz-planet-tag">NUMERIA</span><span class="qcount" id="quiz-qcount">1 / 5</span></div>
+    <div class="modal-top"><span class="planet-tag" id="quiz-planet-tag">NUMERIA</span><span class="qcount" id="quiz-qcount"></span></div>
     <div class="progress-bar"><div class="progress-fill" id="quiz-progress" style="width:0%;"></div></div>
     <div id="quiz-body"></div>
   </div>
@@ -1188,9 +1194,16 @@ async function createHero(){
   // no two players with the same name (the server checks this too)
   if(currentUser){
     try{
-      const safe=name.replace(/[\\%_]/g,m=>'\\'+m);
-      const {data}=await sb.from('leaderboard').select('user_id').ilike('username',safe).limit(5);
-      if((data||[]).some(r=>r.user_id!==currentUser.id)){ msg.textContent='Another player already has that name. Try a different one!'; return; }
+      // name_taken (xp_cap_and_lookalike_names.sql) also catches lookalikes: ItzPxnnz = ItsPxnnz
+      let taken=null;
+      const r=await sb.rpc('name_taken',{p_name:name});
+      if(!r.error) taken=!!r.data;
+      else{   // SQL not run yet: old exact-name check
+        const safe=name.replace(/[\\%_]/g,m=>'\\'+m);
+        const {data}=await sb.from('leaderboard').select('user_id').ilike('username',safe).limit(5);
+        taken=(data||[]).some(x=>x.user_id!==currentUser.id);
+      }
+      if(taken){ msg.textContent='That name is taken (or looks too much like another player\'s). Try a different one!'; return; }
     }catch(e){}
   }
   useHero(name);
@@ -1272,13 +1285,15 @@ function renderTasks(){
     row.innerHTML=`<div class="task-check${t.done?' on':''}" data-check="${t.id}">${t.done?'✓':''}</div><div class="task-main"><div class="task-name">${escapeHtml(t.name)}</div><div class="task-due${overdue?' overdue':''}">${dueTxt}</div></div><span class="prio-pill prio-${t.prio}">${t.prio.toUpperCase()}</span><button class="task-del" data-del="${t.id}" title="Delete">🗑</button>`;
     list.appendChild(row);
   });
-  list.querySelectorAll('[data-check]').forEach(c=>c.addEventListener('click',()=>toggleTask(c.dataset.check)));
+  list.querySelectorAll('[data-check]').forEach(c=>c.addEventListener('click',()=>toggleScheduleTask(c.dataset.check)));
   list.querySelectorAll('[data-del]').forEach(d=>d.addEventListener('click',()=>{tasks=tasks.filter(x=>x.id!==d.dataset.del);renderTasks();save();}));
 }
-function toggleTask(id){
+// (was also called toggleTask, which clashed with the Daily Quest's toggleTask below)
+function toggleScheduleTask(id){
   const t=tasks.find(x=>x.id===id);if(!t) return;
   const wasDone=t.done;t.done=!t.done;
-  if(!wasDone && t.done){addXP(3);showToast('✅ TASK DONE!','+3 XP');}
+  // XP only the first time a task is ticked, so tick/untick can't farm XP
+  if(!wasDone && t.done && !t.xpGiven){t.xpGiven=true;addXP(3);showToast('✅ TASK DONE!','+3 XP');}
   renderTasks();save();
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -1357,7 +1372,8 @@ async function moderate(id,action){
     clear:{cleared:true, cleared_xp:e.xp||0, warned:false}
   }[action];
   if(!changes || !isAdmin()) return;
-  if(action==='reset' && !confirm(`Reset ${displayName(e)} to Level 1 and 0 XP?`)) return;
+  if(action==='reset' && !confirm(`Reset ${displayName(e)} to Level 1 and 0 XP?`)){ refreshModerationViews(); return; }
+  if(action==='ban' && !confirm(`BAN ${displayName(e)}?`)){ refreshModerationViews(); return; }
   if(action==='clear' && !e.warned){ showToast('✅ NOTHING TO CLEAR',`${displayName(e)} has no active warning`); refreshModerationViews(); return; }
   try{
     const {error}=await sb.from('leaderboard').update(changes).eq('id',id);
@@ -1417,7 +1433,7 @@ async function renderLeaderboard(useCache){
       else if(admin && e.banned_until && new Date(e.banned_until)>new Date()) status='<span class="lb-status banned">⏳ 30-MIN BAN</span>';
       else if(flag==='SUSPICIOUS') status='<span class="lb-status flagged">⚠️ SUSPICIOUS</span>';
       else if(flag==='SUSPICIOUS AGAIN') status='<span class="lb-status flagged">⚠️ SUSPICIOUS AGAIN</span>';
-      const front=(admin && !e.local)?adminButtons(e):onlineTag(e);
+      const front=(admin && !e.local && !e.you)?adminButtons(e):onlineTag(e);   // no ban/reset buttons on your own row
       row.innerHTML=`<div class="lb-rank">${medal}</div><div class="lb-av">${lbClassPic(e)}</div>${front}<div class="lb-name">${escapeHtml(displayName(e))}${e.title?`<span class="title-tag">🏅 ${escapeHtml(e.title).toUpperCase()}</span>`:''}${e.you?'<span class="you-tag">YOU</span>':''}<small>LV ${e.level||1}${lbClassName(e)}</small></div><div class="lb-xp">${e.xp||0} XP</div>${status}`;
       list.appendChild(row);
     });
@@ -1623,6 +1639,8 @@ function countdown(ms){
 async function openQuiz(key){
   run.current='daily';
   document.getElementById('quiz-planet-tag').textContent=QUESTS.daily.name;
+  document.getElementById('quiz-qcount').textContent='';
+  document.getElementById('quiz-progress').style.width='0%';
   document.getElementById('quiz-body').innerHTML='<div class="qtext">Loading your Daily Quest…</div>';
   document.getElementById('quiz-overlay').classList.add('active');
   try{
