@@ -232,7 +232,8 @@ function esc(t){return String(t).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;',
 // turns ```code blocks``` and `small code` into nicely shown code (after making the text safe)
 function fmt(t){
   return esc(t).replace(/\n?```[a-zA-Z]*\n?([\s\S]*?)```\n?/g,(m,code)=>`<pre><code>${code.replace(/\n$/,'')}</code></pre>`)
-               .replace(/`([^`\n]+)`/g,'<code>$1</code>');
+               .replace(/`([^`\n]+)`/g,'<code>$1</code>')
+               .replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');
 }
 function addMsg(from,text,mine=false){
   const d=document.createElement('div'); d.className='msg'+(mine?' me':'');
@@ -475,15 +476,38 @@ function detectActions(t){
 }
 // Jarvis answers in the Team chat. It's your REAL Planner Jarvis (same memory, timetable powers and settings),
 // so whatever you say here also shows in his orange panel.
+// Jarvis passes a message to a teammate (they answer in the Team chat, like when you message them)
+let jvBusy=false; const relayQueue=[];
+async function relay(to,text){
+  if(!text) return;
+  const list=to==='everyone'?people.filter(p=>!p.manager&&p.scene==='office'):[to];
+  addMsg(jarvis,(to==='everyone'?'@everyone ':'@'+to.name+' ')+text);
+  log(`🟠 ${jarvis.name} → ${to==='everyone'?'everyone':to.name}: "${esc(text)}"`);
+  if(!list.length){ addMsg(vector,'Nobody is in the office right now 🙂'); return; }
+  const msg=`[Message from ${jarvis.name}, the CEO's personal AI, passing on the CEO's request] ${text}`;
+  let pressed=false;
+  for(const p of list){
+    if(p!==vector && p.scene!=='office'){ addMsg(p,`(Auto-reply) I'm ${p.status} right now, I'll answer later 🙏`); continue; }
+    const fb=()=>{ const acts=detectActions(text);
+      return acts.length?{reply:'On it! 👍',task:null,actions:acts}
+        :isChatty(text)?{reply:replyTo(p,text),task:null}:{reply:'On it!',task:p===vector?null:extractTask(text,p.name)}; };
+    const out=aiOn()?await aiChat(p,msg,fb):(()=>{ const o=fb(); addMsg(p,o.reply); return o; })();
+    if(out.actions&&out.actions.length&&!pressed){ runActions(out.actions,p); pressed=true; continue; }
+    if(out.task&&p!==vector) giveTask2(p,out.task,true);
+  }
+}
 async function jarvisHandle(text){
   syncJarvis();
   typingEl.textContent=`${jarvis.name} is typing…`;
   let out;
+  jvBusy=true;
   try{ out=await JarvisAnywhere.ask(text); }catch(e){ out={error:e.message}; }
+  jvBusy=false;
   typingEl.textContent='';
   if(out.needsSetup){ addMsg(jarvis,`I'm not alive yet! 🙈 Give me a name and a Groq key in the window that just opened (⚙️), then talk to me again.`); JarvisAnywhere.open(); return; }
   if(out.error){ addMsg(jarvis,`Oops, I got an error: ${out.error} 😅 Check my key in ⚙️ (orange button).`); return; }
   addMsg(jarvis,out.reply);
+  while(relayQueue.length){ const [to,t]=relayQueue.shift(); await relay(to,t); }   // now pass on his messages
 }
 // the Guard answers (he's always at the door)
 async function guardHandle(text){
@@ -943,9 +967,19 @@ Team: ${people.filter(p=>!p.manager).map(p=>`${p.name} (${p.job}, ${p.status}, $
 - {"action":"vacation","who":"Dev"}: send someone on vacation, or bring them back
 - {"action":"wander","who":"Dev"}: someone walks around freely, or goes back to their desk
 "who" is one of: ${people.filter(p=>!p.manager).map(p=>p.name).join(', ')}.
-For coding, tutoring, ideas or emails, tell him to ask that team member in the Team chat (Dev, Personal Assistant, Ideamaker, Email).`,
-  names:['clock_in','clock_out','lunch','raise','vacation','wander'],
-  run(a){ runActions([a],jarvis); }
+- {"action":"message","who":"Email","text":"please check the inbox"}: YOU send a message to a teammate in the Team chat for him, and they answer there.
+  "who" is a teammate's name, "Guard", or "everyone". Write "text" as if you are talking to them. Use this whenever he asks you to tell, ask or message someone. Don't tell him to do it himself.
+For big coding, tutoring, ideas or email jobs, you can pass the job to the right teammate with "message" (Dev, Personal Assistant, Ideamaker, Email).`,
+  names:['clock_in','clock_out','lunch','raise','vacation','wander','message'],
+  run(a){
+    if(a.action!=='message'){ runActions([a],jarvis); return; }
+    const w=String(a.who||'').toLowerCase().trim();
+    const to=/^(everyone|all|team|the team)$/.test(w)?'everyone'
+            :(w==='guard'||vector.aliases.includes(w))?vector:findAgent(a.who);
+    if(!to) return `I couldn't find "${a.who||'?'}" on the team.`;
+    if(jvBusy) relayQueue.push([to,String(a.text||'')]); else relay(to,String(a.text||''));   // wait until Jarvis's own reply is shown
+    return `✔ Sent to ${to==='everyone'?'the whole team':to.name} in the Team chat`;
+  }
 };
 </script>
 <script src="jarvis.js"></script>
