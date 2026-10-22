@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TheQuestCraft HQ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
 <style>
   :root{
     --bg:#1b1b1b; --panel:#262626; --line:#3a3a3a; --text:#eee; --muted:#9a9a9a;
@@ -37,8 +38,12 @@
   .msg .bubble{background:#2c2c2c;border:1px solid var(--line);border-radius:4px 12px 12px 12px;padding:7px 11px;font-size:14px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
   .msg .bubble pre{white-space:pre;overflow-x:auto;background:#151515;border:1px solid #444;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:12.5px;line-height:1.45}
   .msg .bubble code{font-family:Consolas,"Courier New",monospace;color:#a5f3a5}
-  .back{font-size:14px;color:var(--accent);text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--panel)}
-  .back:hover{border-color:var(--accent)}
+  /* same back button + title as the other game screens (copied from index.html) */
+  .btn-back{font-family:'Press Start 2P',monospace;font-size:9px;color:#F2EEDF;background:#1C1533;border:2px solid #3A2E63;padding:11px 14px;cursor:pointer;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+  .btn-back:hover{border-color:#FFD75E;background:#1C1533}
+  .area-head{display:flex;align-items:center;gap:14px}
+  .area-title{font-family:'Press Start 2P',monospace;font-size:14px;color:#FFD75E;text-shadow:2px 2px 0 #6B3FA0;letter-spacing:.06em}
   .msg .who{font-size:12px;color:var(--muted);margin-bottom:2px}
   .msg.me{align-self:flex-end;flex-direction:row-reverse}
   .msg.me .bubble{background:#1d4ed8;border-color:#1d4ed8;border-radius:12px 4px 12px 12px}
@@ -49,7 +54,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1><span><a class="back" href="index.html">◀ Game</a> 🏢 TheQuestCraft HQ</span>
+  <h1><span class="area-head"><button class="btn-back" id="backHub">◀ HUB</button><span class="area-title">🏢 OFFICE</span></span>
     <span class="stats">
       <span class="stat" id="timeStat">08:00</span>
       <span class="stat" id="cashStat">Cash $500</span>
@@ -118,6 +123,11 @@
 
 <script>
 // ---------- Setup ----------
+// ◀ HUB: go back to the game and tell it to open the hub (not the title screen)
+document.getElementById('backHub').onclick=()=>{
+  try{ sessionStorage.setItem('qc-back-to-hub','1'); }catch(e){}
+  location.href='index.html';
+};
 const sc = document.getElementById('street').getContext('2d');
 const oc = document.getElementById('office').getContext('2d');
 const CORR_Y = 225;           // corridor walking line
@@ -189,20 +199,13 @@ const vector = {name:'Guard', guard:true, job:'Building guard', wage:3, scene:'o
   color:'#1e3a8a', hair:'boy', hairColor:'#4a3020', x:90, y:85, status:'guarding the door', step:0, speech:'', speechT:0};
 
 // ---------- Jarvis: your own AI from the Planner, now a member of the Team chat ----------
-const jarvis={name:'Jarvis', isJarvis:true, job:'Your personal AI (from the Planner)', wage:0, scene:'office', status:'online',
-  color:'#f97316', history:[], maxTokens:1500, aliases:['jarvis','ai']};
+// (his brain is the REAL Planner Jarvis: see jarvisHandle below)
+const jarvis={name:'Jarvis', isJarvis:true, job:'Your personal AI (from the Planner)', color:'#f97316', aliases:['jarvis','ai']};
 function syncJarvis(){            // use the name you gave your AI in the Planner
   let n='Jarvis'; try{ const a=JSON.parse(localStorage.getItem('punn-levelup-ai')||'null'); if(a&&a.name) n=a.name; }catch(e){}
   jarvis.name=n;
   const o=document.querySelector('#chatTo option[value="jarvis"]'); if(o) o.textContent='To: 🟠 '+n;
 }
-jarvis.persona=()=>`You are ${jarvis.name}, the CEO's own personal AI. You normally live in his Level-Up Planner, and now you are also in the office Team chat.
-You are NOT an employee: you are his right hand. Friendly, upbeat, smart, a bit witty, and you call him "boss" or "CEO".
-You can help with anything, and you can run the office for him by pressing its buttons (see the list below).
-You know the team well: Email (inbox, writing emails), Personal Assistant (tutoring, school subjects), Ideamaker (brainstorming), Dev (coding help), and the Guard at the door.
-For a big coding question, a lesson or a brainstorm you can help, but also suggest the teammate who is best at it.
-For schoolwork: help him understand and plan, but don't just do his homework. Ask him to try first.`;
-
 function P(name){return people.find(p=>p.name.toLowerCase()===name.toLowerCase());}
 const showName=p=>p.tag||p.name;   // the name shown on screen (the CEO's is longer)
 function deskSpot(p){
@@ -280,14 +283,8 @@ function brain(){
 const aiOn=()=>!!brain().key;
 function systemFor(p){
   const team=people.filter(q=>!q.manager&&q!==p).map(q=>`${q.name} (${q.status})`).join(', ');
-  if(p.isJarvis) return `${p.persona()}
-Right now: game time ${timeStr(minutes)}${lunchActive?' (lunch time)':''}. Cash $${cash}, payroll $${payroll}.
-Team right now: ${people.filter(q=>!q.manager).map(q=>`${q.name} (${q.job}, ${q.status}, $${q.wage}/hr${q.vacation?', on vacation':''})`).join('; ')}.
-Rules: keep everything kid-friendly. Short replies for small talk; full, useful answers when he asks for help. Use new lines and \`\`\` code blocks when they help.
-"task" is always null for you.
-${BUTTON_HELP()}`;
   return `You are "${p.name}" (your job: ${p.job}), an employee at TheQuestCraft HQ, the office of the company that makes TheQuestCraft (thequestcraft.com).
-${p.persona?p.persona():(PERSONA[p.name]||'Friendly office worker.')}
+${PERSONA[p.name]||'Friendly office worker.'}
 Your boss is Punn, the CEO of TheQuestCraft. He is a student who built the game himself. Call him "boss" or "CEO". You talk to him in the team chat.
 Right now: game time ${timeStr(minutes)}, you are "${p.status}", wage $${p.wage}/hr${p.vacation?', on vacation':''}.
 Coworkers: ${team}. At the front door: the Guard.
@@ -476,12 +473,17 @@ function detectActions(t){
   if(/lunch/i.test(t)) a.push({action:'lunch'});
   return a;
 }
-// Jarvis answers in the Team chat (he's always online, even when the office is empty)
+// Jarvis answers in the Team chat. It's your REAL Planner Jarvis (same memory, timetable powers and settings),
+// so whatever you say here also shows in his orange panel.
 async function jarvisHandle(text){
   syncJarvis();
-  if(!aiOn()){ addMsg(jarvis,`I'm not alive yet! 🙈 Create me first: open the game → PLANNER → press the orange button → ⚙️, give me a name and a Groq key. Then come back and talk to me here.`); return; }
-  const out=await aiChat(jarvis,text,()=>({reply:`Hmm, I couldn't think just now 😅 Check the AI key, then try again.`,task:null,actions:[]}));
-  runActions(out.actions,jarvis);
+  typingEl.textContent=`${jarvis.name} is typing…`;
+  let out;
+  try{ out=await JarvisAnywhere.ask(text); }catch(e){ out={error:e.message}; }
+  typingEl.textContent='';
+  if(out.needsSetup){ addMsg(jarvis,`I'm not alive yet! 🙈 Give me a name and a Groq key in the window that just opened (⚙️), then talk to me again.`); JarvisAnywhere.open(); return; }
+  if(out.error){ addMsg(jarvis,`Oops, I got an error: ${out.error} 😅 Check my key in ⚙️ (orange button).`); return; }
+  addMsg(jarvis,out.reply);
 }
 // the Guard answers (he's always at the door)
 async function guardHandle(text){
@@ -905,6 +907,27 @@ log('Welcome to TheQuestCraft HQ, CEO! Press <b>Clock in</b> to start the day.')
 addMsg(vector,'Welcome to TheQuestCraft HQ, CEO! 🫡 Your team: Email (inbox), Personal Assistant (tutoring), Ideamaker (brainstorming) and Dev (coding). Your own AI from the Planner is here too: pick "To: 🟠 '+jarvis.name+'" or start your message with his name 👇');
 requestAnimationFrame(loop);
 </script>
+<!-- ===== Bridge: gives Jarvis your sign-in (memory) and the leaderboard here too, like in the game ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(()=>{
+  if(!window.supabase) return;                       // no internet to Supabase: Jarvis still works, just without memory
+  const sb=window.supabase.createClient('https://gndzjvgpydjchpqqhrns.supabase.co','sb_publishable_rCcAuXMJ92-IZU7Hs53QOQ_o53sslUa');
+  let user=null;
+  sb.auth.getSession().then(({data})=>{ user=data&&data.session?data.session.user:null; }).catch(()=>{});   // same sign-in as the game
+  window.questcraftBridge={
+    sb,
+    user:()=>user,
+    isAdmin:()=>false,                                 // warn / ban / Ace: ask Jarvis inside the game
+    async leaderboard(){
+      const {data,error}=await sb.from('leaderboard').select('*').order('xp',{ascending:false}).limit(50);
+      if(error) throw error;
+      let rank=0;
+      return (data||[]).filter(e=>!e.banned).map(e=>({rank:++rank,name:'Agent '+(e.username||'?'),level:e.level||1,xp:e.xp||0,you:!!(user&&e.user_id===user.id)}));
+    }
+  };
+})();
+</script>
 <!-- ===== JARVIS ANYWHERE: what Jarvis can see and press in the office ===== -->
 <script>
 window.JarvisPage={
@@ -921,7 +944,8 @@ Team: ${people.filter(p=>!p.manager).map(p=>`${p.name} (${p.job}, ${p.status}, $
 - {"action":"wander","who":"Dev"}: someone walks around freely, or goes back to their desk
 "who" is one of: ${people.filter(p=>!p.manager).map(p=>p.name).join(', ')}.
 For coding, tutoring, ideas or emails, tell him to ask that team member in the Team chat (Dev, Personal Assistant, Ideamaker, Email).`,
-  run(a,by){ runActions([a],by); }
+  names:['clock_in','clock_out','lunch','raise','vacation','wander'],
+  run(a){ runActions([a],jarvis); }
 };
 </script>
 <script src="jarvis.js"></script>

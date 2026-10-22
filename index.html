@@ -1940,6 +1940,20 @@ function showAcePop(title){
   pop.classList.add('show');
 }
 </script>
+<!-- ===== Coming back from the Office with ◀ HUB: open the hub again, like pressing START QUEST ===== -->
+<script>
+(()=>{
+  let flag=null; try{ flag=sessionStorage.getItem('qc-back-to-hub'); sessionStorage.removeItem('qc-back-to-hub'); }catch(e){}
+  if(!flag) return;
+  let tries=0;
+  const t=setInterval(()=>{                 // wait until sign-in, access and your hero are loaded (max 10s)
+    tries++;
+    let ready=false; try{ ready=!myBanned && canPlay() && !!activeProfile; }catch(e){}
+    if(ready){ clearInterval(t); document.getElementById('btn-start').click(); }
+    else if(tries>50) clearInterval(t);     // not ready: just stay on the title screen
+  },200);
+})();
+</script>
 <!-- ===== JARVIS ANYWHERE: what Jarvis can see and press on the game page ===== -->
 <script>
 window.JarvisPage={
@@ -1951,33 +1965,17 @@ window.JarvisPage={
     return `He is looking at ${where}. ${inGame?'He is playing (in game).':'He has NOT pressed START QUEST yet, so opening game screens will not work until he does.'}
 ${activeProfile?`His hero: ${agentName(activeProfile)}, level ${hero.level}, ${hero.totalXP} XP, class ${CLASSES[heroClass()].name}.`:'No hero picked yet.'}`;
   },
-  actions:`- {"action":"open","screen":"hub"}: open a screen. screen is one of: hub, schedule, leaderboard, quests (the Daily Quest), planner, timer, stats, office
-- {"action":"planner","request":"Add 1h football at 17:00 tomorrow"}: for anything about his timetable, schedule, stats, activities or the stopwatch. This opens the Planner and hands the request to your full Planner self, who can change those things. Write the request clearly in his words.`,
+  names:['open'],
+  actions:`- {"action":"open","screen":"hub"}: open a game screen. screen is one of: hub, schedule, leaderboard, quests (the Daily Quest), planner, timer, stats, office`,
   async run(a){
-    const inGame=document.body.classList.contains('in-game');
-    if(!inGame) return 'Press ▶ START QUEST first, then I can open things for you 🙂';
-    if(a.action==='open'){
-      const s=String(a.screen||'').toLowerCase();
-      if(s==='hub'){ document.getElementById('quiz-overlay').classList.remove('active'); showScreen('hub-screen'); return '✔ Opened the hub'; }
-      if(s==='stats'){ document.getElementById('btn-stats').click(); return '✔ Opened your stats'; }
-      const card=document.querySelector(`.hub-card[data-area="${s}"]`);
-      if(!card) return `I don't know a screen called "${a.screen}".`;
-      card.click(); return `✔ Opened ${s}`;
-    }
-    if(a.action==='planner'){
-      document.querySelector('.hub-card[data-area="planner"]').click();
-      const f=document.getElementById('planner-frame');
-      for(let i=0;i<50;i++){                        // wait (max 5s) until the Planner is loaded
-        try{ if(f.contentWindow&&typeof f.contentWindow.askAI==='function'&&f.contentDocument.readyState==='complete') break; }catch(e){}
-        await new Promise(r=>setTimeout(r,100));
-      }
-      try{
-        f.contentDocument.getElementById('aiPanel').classList.add('open');
-        f.contentWindow.askAI(String(a.request||''));
-        document.getElementById('jvPanel').classList.remove('open');   // the Planner's Jarvis takes over from here
-        return '✔ Opened the Planner and passed it on';
-      }catch(e){ return 'I opened the Planner. Ask me again there with the orange button 🙂'; }
-    }
+    if(!document.body.classList.contains('in-game')) return 'Press ▶ START QUEST first, then I can open things for you 🙂';
+    const s=String(a.screen||'').toLowerCase();
+    if(s==='hub'){ document.getElementById('quiz-overlay').classList.remove('active'); showScreen('hub-screen'); return '✔ Opened the hub'; }
+    if(s==='stats'){ document.getElementById('btn-stats').click(); return '✔ Opened your stats'; }
+    const card=document.querySelector(`.hub-card[data-area="${s}"]`);
+    if(!card) return `I don't know a screen called "${a.screen}".`;
+    if(s!=='office') window.JarvisAnywhere&&JarvisAnywhere.close();   // get out of the way so you can see it
+    card.click(); return `✔ Opened ${s}`;
   }
 };
 </script>
