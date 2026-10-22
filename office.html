@@ -11,7 +11,7 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-  .wrap{max-width:1000px;margin:0 auto;padding:16px}
+  .wrap{max-width:1000px;margin:0 auto;padding:16px 16px 84px}   /* room at the bottom so the orange Jarvis button doesn't cover Send */
   h1{font-size:20px;margin:4px 0 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
   .stats{display:flex;gap:8px;font-size:14px;flex-wrap:wrap}
   .stat{background:var(--panel);border:1px solid var(--line);padding:6px 10px;border-radius:10px}
@@ -107,7 +107,7 @@
     <h2>💬 Team chat</h2>
     <div id="chat"></div>
     <div class="typing" id="typing"></div>
-    <div style="font-size:12.5px;color:var(--muted)">🫡 Try: <i>"Guard, clock everyone in"</i>, <i>"lunch time!"</i> or <i>"send Dev on vacation"</i>. Your team can press the buttons for you.</div>
+    <div style="font-size:12.5px;color:var(--muted)">🟠 Try: <i>"Jarvis, how is my team doing?"</i>, <i>"Guard, clock everyone in"</i>, <i>"lunch time!"</i> or <i>"send Dev on vacation"</i>. Your team can press the buttons for you.</div>
     <div class="row">
       <select id="chatTo" style="width:auto"></select>
       <input id="chatInput" placeholder="Message your team (e.g. Dev, why doesn't my button work?)…">
@@ -188,6 +188,21 @@ Keep replies short (1-2 sentences).`;
 const vector = {name:'Guard', guard:true, job:'Building guard', wage:3, scene:'office', history:[], maxTokens:500, aliases:['vector','security'],
   color:'#1e3a8a', hair:'boy', hairColor:'#4a3020', x:90, y:85, status:'guarding the door', step:0, speech:'', speechT:0};
 
+// ---------- Jarvis: your own AI from the Planner, now a member of the Team chat ----------
+const jarvis={name:'Jarvis', isJarvis:true, job:'Your personal AI (from the Planner)', wage:0, scene:'office', status:'online',
+  color:'#f97316', history:[], maxTokens:1500, aliases:['jarvis','ai']};
+function syncJarvis(){            // use the name you gave your AI in the Planner
+  let n='Jarvis'; try{ const a=JSON.parse(localStorage.getItem('punn-levelup-ai')||'null'); if(a&&a.name) n=a.name; }catch(e){}
+  jarvis.name=n;
+  const o=document.querySelector('#chatTo option[value="jarvis"]'); if(o) o.textContent='To: 🟠 '+n;
+}
+jarvis.persona=()=>`You are ${jarvis.name}, the CEO's own personal AI. You normally live in his Level-Up Planner, and now you are also in the office Team chat.
+You are NOT an employee: you are his right hand. Friendly, upbeat, smart, a bit witty, and you call him "boss" or "CEO".
+You can help with anything, and you can run the office for him by pressing its buttons (see the list below).
+You know the team well: Email (inbox, writing emails), Personal Assistant (tutoring, school subjects), Ideamaker (brainstorming), Dev (coding help), and the Guard at the door.
+For a big coding question, a lesson or a brainstorm you can help, but also suggest the teammate who is best at it.
+For schoolwork: help him understand and plan, but don't just do his homework. Ask him to try first.`;
+
 function P(name){return people.find(p=>p.name.toLowerCase()===name.toLowerCase());}
 const showName=p=>p.tag||p.name;   // the name shown on screen (the CEO's is longer)
 function deskSpot(p){
@@ -265,8 +280,14 @@ function brain(){
 const aiOn=()=>!!brain().key;
 function systemFor(p){
   const team=people.filter(q=>!q.manager&&q!==p).map(q=>`${q.name} (${q.status})`).join(', ');
+  if(p.isJarvis) return `${p.persona()}
+Right now: game time ${timeStr(minutes)}${lunchActive?' (lunch time)':''}. Cash $${cash}, payroll $${payroll}.
+Team right now: ${people.filter(q=>!q.manager).map(q=>`${q.name} (${q.job}, ${q.status}, $${q.wage}/hr${q.vacation?', on vacation':''})`).join('; ')}.
+Rules: keep everything kid-friendly. Short replies for small talk; full, useful answers when he asks for help. Use new lines and \`\`\` code blocks when they help.
+"task" is always null for you.
+${BUTTON_HELP()}`;
   return `You are "${p.name}" (your job: ${p.job}), an employee at TheQuestCraft HQ, the office of the company that makes TheQuestCraft (thequestcraft.com).
-${PERSONA[p.name]||'Friendly office worker.'}
+${p.persona?p.persona():(PERSONA[p.name]||'Friendly office worker.')}
 Your boss is Punn, the CEO of TheQuestCraft. He is a student who built the game himself. Call him "boss" or "CEO". You talk to him in the team chat.
 Right now: game time ${timeStr(minutes)}, you are "${p.status}", wage $${p.wage}/hr${p.vacation?', on vacation':''}.
 Coworkers: ${team}. At the front door: the Guard.
@@ -274,7 +295,9 @@ Rules: stay in character, be friendly, emojis are fine, keep everything kid-frie
 Length: for small talk, 1-2 sentences. When the CEO asks for help with YOUR job (code, a lesson, ideas, an email), give a complete, useful answer right here in the chat. Use new lines and \`\`\` code blocks when they help.
 If the question belongs to another coworker's job, help a little and tell him who is best for it.
 "task": only for office errands you go and do away from the chat (e.g. "check emails", "clean the meeting room"), as 2-5 words. If you answer the request right in the chat (help, code, a lesson, ideas, a draft) or he is just chatting, "task" is null.
-Office buttons you can press for the CEO by adding them to "actions" (a list). Only press them when he asks:
+${BUTTON_HELP()}`;
+}
+function BUTTON_HELP(){ return `Office buttons you can press for the CEO by adding them to "actions" (a list). Only press them when he asks:
 - {"action":"clock_in"}: everyone comes to work
 - {"action":"clock_out"}: everyone goes home (+$5 bonus each)
 - {"action":"lunch"}: lunch time for everyone in the office
@@ -453,6 +476,13 @@ function detectActions(t){
   if(/lunch/i.test(t)) a.push({action:'lunch'});
   return a;
 }
+// Jarvis answers in the Team chat (he's always online, even when the office is empty)
+async function jarvisHandle(text){
+  syncJarvis();
+  if(!aiOn()){ addMsg(jarvis,`I'm not alive yet! 🙈 Create me first: open the game → PLANNER → press the orange button → ⚙️, give me a name and a Groq key. Then come back and talk to me here.`); return; }
+  const out=await aiChat(jarvis,text,()=>({reply:`Hmm, I couldn't think just now 😅 Check the AI key, then try again.`,task:null,actions:[]}));
+  runActions(out.actions,jarvis);
+}
 // the Guard answers (he's always at the door)
 async function guardHandle(text){
   if(aiOn()){
@@ -501,6 +531,7 @@ function extractTask(t,name){
 const chatTo=document.getElementById('chatTo');
 chatTo.add(new Option('To: Everyone','all'));
 chatTo.add(new Option('To: Guard','guard'));
+chatTo.add(new Option('To: 🟠 Jarvis','jarvis'));
 people.filter(p=>!p.manager).forEach(p=>chatTo.add(new Option('To: '+p.name,p.name)));
 function sendChat(){
   const inp=document.getElementById('chatInput'); const text=inp.value.trim(); if(!text) return;
@@ -510,6 +541,8 @@ function sendChat(){
   const callsName=(n)=>{ const w=n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
     return new RegExp('^\\s*@?'+w+'\\b|\\b(tell|ask)\\s+(the\\s+)?'+w+'\\b','i').test(text); };
   const named=people.find(p=>!p.manager&&[p.name,...(p.aliases||[])].some(callsName));
+  const toJarvis=!named&&([jarvis.name,...jarvis.aliases].some(callsName)||chatTo.value==='jarvis');
+  if(toJarvis){ addMsg(P('Punn'),([jarvis.name,...jarvis.aliases].some(callsName)?'':'@'+jarvis.name+' ')+text,true); log(`You: "${text}"`); jarvisHandle(text); return; }
   const toGuard=!named&&([vector.name,...vector.aliases].some(callsName)||chatTo.value==='guard');
   if(toGuard){ addMsg(P('Punn'),([vector.name,...vector.aliases].some(callsName)?'':'@Guard ')+text,true); log(`You: "${text}"`); guardHandle(text); return; }
   const toAll=!named&&chatTo.value==='all';
@@ -584,7 +617,8 @@ document.getElementById('aiClear').onclick=()=>{ aiCfg={provider:aiCfg.provider,
 showAI();
 // if you set up the AI in the Planner while this page is open, notice it
 window.addEventListener('storage',e=>{ if(e.key==='punn-levelup-ai'||e.key==='officeAI') showAI(); });
-window.addEventListener('focus',showAI);
+window.addEventListener('focus',()=>{ showAI(); syncJarvis(); });
+syncJarvis();
 document.getElementById('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
 
 // ---------- Update loop ----------
@@ -868,7 +902,7 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 log('Welcome to TheQuestCraft HQ, CEO! Press <b>Clock in</b> to start the day.');
-addMsg(vector,'Welcome to TheQuestCraft HQ, CEO! 🫡 Your team: Email (inbox), Personal Assistant (tutoring), Ideamaker (brainstorming) and Dev (coding). Message them below 👇');
+addMsg(vector,'Welcome to TheQuestCraft HQ, CEO! 🫡 Your team: Email (inbox), Personal Assistant (tutoring), Ideamaker (brainstorming) and Dev (coding). Your own AI from the Planner is here too: pick "To: 🟠 '+jarvis.name+'" or start your message with his name 👇');
 requestAnimationFrame(loop);
 </script>
 <!-- ===== JARVIS ANYWHERE: what Jarvis can see and press in the office ===== -->
