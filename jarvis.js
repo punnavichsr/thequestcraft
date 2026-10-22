@@ -21,6 +21,8 @@
   #jvDot:hover{box-shadow:0 0 24px #f97316aa}
   body.in-game #jvDot{bottom:72px}                                   /* above the game's XP bar */
   body:has(#planner-screen.active) #jvDot{display:none}               /* the Planner has its own Jarvis */
+  body:has(#title-screen.active) #jvDot,
+  body:has(#title-screen.active) #jvPanel{display:none}               /* not on the start screen: only once you're playing */
   .jv-dot{width:10px;height:10px;border-radius:50%;background:#f97316;box-shadow:0 0 10px #f97316;animation:jvPulse 1.6s ease-in-out infinite}
   @keyframes jvPulse{50%{transform:scale(1.4);opacity:.7}}
   #jvPanel{position:fixed;top:0;right:0;bottom:0;width:380px;max-width:100vw;z-index:75;

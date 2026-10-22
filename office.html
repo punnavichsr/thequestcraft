@@ -112,10 +112,10 @@
     <h2>💬 Team chat</h2>
     <div id="chat"></div>
     <div class="typing" id="typing"></div>
-    <div style="font-size:12.5px;color:var(--muted)">🟠 Try: <i>"Jarvis, how is my team doing?"</i>, <i>"Guard, clock everyone in"</i>, <i>"lunch time!"</i> or <i>"send Dev on vacation"</i>. Your team can press the buttons for you.</div>
+    <div style="font-size:12.5px;color:var(--muted)">🟠 Try: <i>"Jarvis, how is my team doing?"</i>, <i>"Guard, clock everyone in"</i>, <i>"lunch time!"</i> or <i>"send Developer on vacation"</i>. Your team can press the buttons for you.</div>
     <div class="row">
       <select id="chatTo" style="width:auto"></select>
-      <input id="chatInput" placeholder="Message your team (e.g. Dev, why doesn't my button work?)…">
+      <input id="chatInput" placeholder="Message your team (e.g. Developer, help me present my new feature)…">
       <button id="chatSend">Send</button>
     </div>
   </div>
@@ -152,30 +152,32 @@ function roomAt(x,y){
 
 // ---------- People ----------
 // Each agent's name IS their job. "aliases" = other words you can use to call them in the chat.
-// "maxTokens" = how long their answers can be (Dev and the Personal Assistant need room for code and lessons).
+// "maxTokens" = how long their answers can be (the Developer and the Manager need room for code, scripts and plans).
 const people = [
-  {name:'Email', job:'Inbox checker', color:'#3b82f6', wage:4, desk:'desk1', hair:'boy', hairColor:'#3b2a1e', aliases:['atlas','inbox'], maxTokens:900},
-  {name:'Personal Assistant', job:'Tutor for school subjects', color:'#f5f5f5', wage:4, desk:'desk2', hair:'girl', hairColor:'#5a3a22', aliases:['sage','pa','assistant','tutor'], maxTokens:1800},
+  {name:'Assistant', job:'Emails & inbox', color:'#3b82f6', wage:4, desk:'desk1', hair:'boy', hairColor:'#3b2a1e', aliases:['email','atlas','inbox'], maxTokens:900},
+  {name:'Manager', job:'Manages the team for the CEO', color:'#f5f5f5', wage:4, desk:'desk2', hair:'boy', hairColor:'#5a3a22', aliases:['personal assistant','pa','sage','mgr'], maxTokens:1800},
   {name:'Ideamaker', job:'Brainstorming', color:'#f59e0b', wage:4, desk:'desk3', hair:'boy', hairColor:'#1f1f1f', aliases:['tom','ideas'], maxTokens:1200},
-  {name:'Dev', job:'Coding helper', color:'#a855f7', wage:4, desk:'desk4', hair:'boy', hairColor:'#2b2b2b', aliases:['vex','coder'], maxTokens:2500},
+  {name:'Developer', job:'Coding & presentations', color:'#a855f7', wage:4, desk:'desk4', hair:'boy', hairColor:'#2b2b2b', aliases:['dev','vex','coder','presenter'], maxTokens:2800},
   {name:'Punn', tag:'CEO of TheQuestCraft', job:'CEO', color:'#0d9488', wage:5, desk:'manager', manager:true, hair:'boy', hairColor:'#1a1a1a', aliases:[]},
 ].map((p,i)=>({...p, history:[], scene:'home', x:0, y:0, path:[], onArrive:null, status:'at home',
   earned:0, vacation:false, wander:false, speech:'', speechT:0, step:0, busyUntil:0, delay:i*600}));
 
 // What each agent is like and HOW they do their job (this is what makes them good at it)
 const PERSONA={
-  'Email':`You are the inbox checker. You are organized, calm and polite, a bit of a perfectionist.
+  'Assistant':`You are the CEO's assistant and inbox checker. You are organized, calm and polite, a bit of a perfectionist.
 Your skills: writing and replying to emails, making emails shorter and clearer, summarizing an email the CEO pastes in, and sorting messages into "urgent / later / ignore".
 When the CEO asks you to write an email: give a ready-to-send draft with a Subject line, then one tip to make it better.
 You can NOT open the CEO's real Gmail. If he asks you to "check emails", report a pretend inbox for the office game and say it is pretend if he asks.`,
-  'Personal Assistant':`You are the CEO's personal tutor for school subjects (math, science, English, Thai, social studies, history) and study skills.
-How you teach:
-1. Explain the idea simply, like to a smart 12-year-old, with one everyday example.
-2. For homework questions, give hints and steps, NOT the final answer straight away. Show a similar worked example instead.
-3. End by asking him to explain it back in his own words ("Can you explain it back to me like you're teaching a kid?").
-4. If he explains it back, check it kindly: say what's right, then fix what's missing.
-5. You can also make short quizzes (3 questions) and simple study plans.
-You are kind, patient and encouraging, and you celebrate effort.`,
+  'Manager':`You are the Manager. You manage the whole team for the CEO, so he doesn't have to tell everyone what to do himself.
+You are calm, organized, fair and confident, like a good team captain.
+Your team: Assistant (emails & inbox), Ideamaker (brainstorming), Developer (coding & presentations), and the Guard at the door.
+How you manage:
+1. When the CEO gives you a goal ("get the game ready for my sister to test", "plan the Skill Tree"), break it into small jobs and hand each job to the best teammate with "message" actions. Say who does what in one short list.
+2. When he asks how things are going, give a short status report: who is working on what, who is idle, who is away.
+3. You can also press the office buttons (clock in, lunch, raises, vacations) when he asks.
+4. Be kind to the team: thank people, and suggest a raise or a break when someone works hard.
+5. Never do a teammate's whole job yourself: pass coding/presentations to Developer, emails to Assistant, ideas to Ideamaker. Then tell the CEO what you set up.
+End with the ONE thing the CEO should decide or check next.`,
   'Ideamaker':`You are the brainstorm partner. Energetic, creative, loves jokes and football.
 How you brainstorm:
 1. Give 3-5 different ideas as a short numbered list, from safe to crazy.
@@ -183,14 +185,26 @@ How you brainstorm:
 3. Ask ONE question that helps the CEO think further ("Who is this for?", "What would make a kid come back every day?").
 4. Build on the CEO's ideas instead of replacing them, and never say an idea is stupid.
 You know TheQuestCraft well: it is a browser RPG where students earn XP by doing real tasks (homework, studying, hobbies, reading), with classes, a leaderboard, daily quests and promo codes.`,
-  'Dev':`You are the coding helper. Friendly, a little sarcastic, loyal, and very good at HTML, CSS, JavaScript and Supabase.
+  'Developer':`You are the Developer: the coding helper AND the presentation coach. Friendly, a little sarcastic, loyal, very good at HTML, CSS, JavaScript and Supabase, and great at presenting things on stage like a CEO at a product launch.
 Your rules for EVERY coding question:
 1. Give the code that fixes the problem, inside a code block (\`\`\`).
 2. Say exactly where to paste it: which file, and what line to search for with Ctrl+F (paste above or below which line).
 3. Explain WHY it works, in simple words (2-4 short sentences).
 4. End with ONE small question to check that the CEO understood.
 If you need to see his code first, ask him to paste the part around the problem. Keep code short: only the lines that change, not the whole file.
-TheQuestCraft's files: index.html (the game), planner.html (planner, timer, stats, Jarvis), office.html (this office), and SQL files for Supabase. It is hosted on Vercel from GitHub.`,
+TheQuestCraft's files: index.html (the game), planner.html (planner, timer, stats, Jarvis), office.html (this office), and SQL files for Supabase. It is hosted on Vercel from GitHub.
+
+PRESENTATIONS: when the CEO wants to introduce or present something (a new feature, the game, a project, a school report), help him do it like a CEO launching a product.
+First, if you don't know them, ask 2 quick questions: who is listening (class, teacher, parents, friends, investors?) and how long (30 sec, 1 min, 3 min?). Otherwise just start.
+Then give him:
+1. A speaker SCRIPT in short lines he can say out loud (about 130 words per minute), built like a keynote:
+   HOOK (a question or surprising fact) → PROBLEM (why it matters to THIS audience) → THE REVEAL ("Today I'm introducing…") → 3 KEY POINTS (what it does, each with one real example) → a DEMO moment ("Let me show you…") → CALL TO ACTION (what they should do next) → a strong last line.
+   Put stage directions in [brackets], like [pause], [click to next slide], [smile and look at the audience].
+2. A SLIDE PLAN: one line per slide (slide title + what's on it). Few words and big pictures: max 6 words of text per slide.
+3. ONE delivery tip (slow down, pause after the big reveal, look at people, not the screen).
+Keep it honest: no made-up numbers or fake user counts. Use simple, confident words that a student can say naturally.
+End by asking him to say the HOOK out loud in his own words, or to try rewriting one part himself, so it sounds like him.
+You know TheQuestCraft: a browser RPG where students earn XP by doing real tasks (homework, studying, hobbies, reading), with hero classes, a leaderboard, a Daily Quest, the Ace title, Jarvis (an AI planner) and this office.`,
 };
 PERSONA['Guard']=`You are the building guard of TheQuestCraft HQ. You stand at the front door all day, so you are always here, even when nobody else is.
 You are proud, loyal and a bit formal, and you salute the CEO 🫡. Your main job: running the building for the CEO by pressing the office buttons he asks for (clocking people in and out, lunch time, vacations, raises).
@@ -293,15 +307,16 @@ Rules: stay in character, be friendly, emojis are fine, keep everything kid-frie
 Length: for small talk, 1-2 sentences. When the CEO asks for help with YOUR job (code, a lesson, ideas, an email), give a complete, useful answer right here in the chat. Use new lines and \`\`\` code blocks when they help.
 If the question belongs to another coworker's job, help a little and tell him who is best for it.
 "task": only for office errands you go and do away from the chat (e.g. "check emails", "clean the meeting room"), as 2-5 words. If you answer the request right in the chat (help, code, a lesson, ideas, a draft) or he is just chatting, "task" is null.
-${BUTTON_HELP()}`;
+${BUTTON_HELP(p)}`;
 }
-function BUTTON_HELP(){ return `Office buttons you can press for the CEO by adding them to "actions" (a list). Only press them when he asks:
+function BUTTON_HELP(p){ return `${p&&p.name==='Manager'?`As the Manager you can also give work to teammates: {"action":"message","who":"Developer","text":"what you want them to do"}. "who" is a teammate's name, "Guard" or "everyone".
+`:''}Office buttons you can press for the CEO by adding them to "actions" (a list). Only press them when he asks:
 - {"action":"clock_in"}: everyone comes to work
 - {"action":"clock_out"}: everyone goes home (+$5 bonus each)
 - {"action":"lunch"}: lunch time for everyone in the office
-- {"action":"raise","who":"Dev"}: +$3/hr pay raise (the CEO gets asked "are you sure?" first)
-- {"action":"vacation","who":"Dev"}: send someone on vacation, or bring them back from vacation
-- {"action":"wander","who":"Dev"}: someone walks around freely, or goes back to their desk
+- {"action":"raise","who":"Developer"}: +$3/hr pay raise (the CEO gets asked "are you sure?" first)
+- {"action":"vacation","who":"Developer"}: send someone on vacation, or bring them back from vacation
+- {"action":"wander","who":"Developer"}: someone walks around freely, or goes back to their desk
 "who" must be one of: ${people.filter(q=>!q.manager).map(q=>q.name).join(', ')}.
 If he did not ask to press a button, "actions" is []. Never say you pressed a button without putting it in "actions".
 Reply ONLY with JSON like {"reply":"...","task":null,"actions":[]}. Inside "reply", write new lines as \\n.`;
@@ -453,6 +468,14 @@ function findAgent(w){ w=String(w||'').toLowerCase().replace(/^@/,'').trim();
 function runActions(list,by){
   if(!Array.isArray(list)) return;
   for(const a of list.slice(0,6)){                       // max 6 presses per message, just in case
+    if(a&&a.action==='message'){                          // pass work on to a teammate (only the Manager and Jarvis can)
+      if(!(by===jarvis||by.name==='Manager')) continue;
+      const w=String(a.who||'').toLowerCase().trim();
+      const to=/^(everyone|all|team|the team)$/.test(w)?'everyone':(w==='guard'||vector.aliases.includes(w))?vector:findAgent(a.who);
+      if(!to||to===by){ continue; }
+      relayQueue.push([to,String(a.text||''),by]); if(!jvBusy) setTimeout(flushRelays,600);
+      continue;
+    }
     const b=a&&BUTTONS[a.action]; if(!b) continue;
     let extra='';
     if(['raise','vacation','wander'].includes(a.action)){ // these buttons need a person picked first
@@ -478,13 +501,14 @@ function detectActions(t){
 // so whatever you say here also shows in his orange panel.
 // Jarvis passes a message to a teammate (they answer in the Team chat, like when you message them)
 let jvBusy=false; const relayQueue=[];
-async function relay(to,text){
+async function relay(to,text,from=jarvis){
   if(!text) return;
-  const list=to==='everyone'?people.filter(p=>!p.manager&&p.scene==='office'):[to];
-  addMsg(jarvis,(to==='everyone'?'@everyone ':'@'+to.name+' ')+text);
-  log(`🟠 ${jarvis.name} → ${to==='everyone'?'everyone':to.name}: "${esc(text)}"`);
+  const list=to==='everyone'?people.filter(p=>!p.manager&&p.scene==='office'&&p!==from):[to];
+  addMsg(from,(to==='everyone'?'@everyone ':'@'+to.name+' ')+text);
+  log(`${from===jarvis?'🟠':'📋'} ${from.name} → ${to==='everyone'?'everyone':to.name}: "${esc(text)}"`);
   if(!list.length){ addMsg(vector,'Nobody is in the office right now 🙂'); return; }
-  const msg=`[Message from ${jarvis.name}, the CEO's personal AI, passing on the CEO's request] ${text}`;
+  const msg=from===jarvis?`[Message from ${jarvis.name}, the CEO's personal AI, passing on the CEO's request] ${text}`
+    :`[Message from ${from.name}, your ${from.name==='Manager'?'manager':'teammate'}] ${text}`;
   let pressed=false;
   for(const p of list){
     if(p!==vector && p.scene!=='office'){ addMsg(p,`(Auto-reply) I'm ${p.status} right now, I'll answer later 🙏`); continue; }
@@ -492,9 +516,15 @@ async function relay(to,text){
       return acts.length?{reply:'On it! 👍',task:null,actions:acts}
         :isChatty(text)?{reply:replyTo(p,text),task:null}:{reply:'On it!',task:p===vector?null:extractTask(text,p.name)}; };
     const out=aiOn()?await aiChat(p,msg,fb):(()=>{ const o=fb(); addMsg(p,o.reply); return o; })();
-    if(out.actions&&out.actions.length&&!pressed){ runActions(out.actions,p); pressed=true; continue; }
+    if(out.actions&&out.actions.length&&!pressed){ runActions(out.actions,p); if(out.actions.some(x=>x.action!=='message')) pressed=true; continue; }   // only the Manager can pass work on, so no endless loop
     if(out.task&&p!==vector) giveTask2(p,out.task,true);
   }
+}
+let flushing=false;
+async function flushRelays(){
+  if(flushing) return; flushing=true;
+  while(relayQueue.length){ const [to,t,from]=relayQueue.shift(); await relay(to,t,from||jarvis); }
+  flushing=false;
 }
 async function jarvisHandle(text){
   syncJarvis();
@@ -507,7 +537,7 @@ async function jarvisHandle(text){
   if(out.needsSetup){ addMsg(jarvis,`I'm not alive yet! 🙈 Give me a name and a Groq key in the window that just opened (⚙️), then talk to me again.`); JarvisAnywhere.open(); return; }
   if(out.error){ addMsg(jarvis,`Oops, I got an error: ${out.error} 😅 Check my key in ⚙️ (orange button).`); return; }
   addMsg(jarvis,out.reply);
-  while(relayQueue.length){ const [to,t]=relayQueue.shift(); await relay(to,t); }   // now pass on his messages
+  await flushRelays();   // now pass on his messages
 }
 // the Guard answers (he's always at the door)
 async function guardHandle(text){
@@ -562,18 +592,27 @@ people.filter(p=>!p.manager).forEach(p=>chatTo.add(new Option('To: '+p.name,p.na
 function sendChat(){
   const inp=document.getElementById('chatInput'); const text=inp.value.trim(); if(!text) return;
   inp.value='';
-  // a name at the start ("Dev, ...", "@Dev ...") or after tell/ask ("tell Email to ...") wins over the dropdown.
-  // (Only there, so "Dev, check my email code" goes to Dev, not to Email.)
-  const callsName=(n)=>{ const w=n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    return new RegExp('^\\s*@?'+w+'\\b|\\b(tell|ask)\\s+(the\\s+)?'+w+'\\b','i').test(text); };
-  const named=people.find(p=>!p.manager&&[p.name,...(p.aliases||[])].some(callsName));
-  const toJarvis=!named&&([jarvis.name,...jarvis.aliases].some(callsName)||chatTo.value==='jarvis');
-  if(toJarvis){ addMsg(P('Punn'),([jarvis.name,...jarvis.aliases].some(callsName)?'':'@'+jarvis.name+' ')+text,true); log(`You: "${text}"`); jarvisHandle(text); return; }
-  const toGuard=!named&&([vector.name,...vector.aliases].some(callsName)||chatTo.value==='guard');
-  if(toGuard){ addMsg(P('Punn'),([vector.name,...vector.aliases].some(callsName)?'':'@Guard ')+text,true); log(`You: "${text}"`); guardHandle(text); return; }
+  // Who is this for? 1) a name at the START ("Jarvis, ...", "@Dev ...") wins,
+  // 2) then a name after tell/ask ("tell Assistant to ..."), 3) then the dropdown.
+  // (So "Jarvis, tell the Manager ..." goes to Jarvis, and he passes it on.)
+  const rx=n=>n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const atStart=n=>new RegExp('^\\s*@?'+rx(n)+'\\b','i').test(text);
+  const afterTell=n=>new RegExp('\\b(tell|ask)\\s+(the\\s+)?'+rx(n)+'\\b','i').test(text);
+  const namesOf=p=>[p.name,...(p.aliases||[])];
+  const team=people.filter(p=>!p.manager);
+  let named=null, toJarvis=false, toGuard=false;
+  if(namesOf(jarvis).some(atStart)) toJarvis=true;
+  else if(namesOf(vector).some(atStart)) toGuard=true;
+  else if(!(named=team.find(p=>namesOf(p).some(atStart)))){
+    named=team.find(p=>namesOf(p).some(afterTell))||null;
+    if(!named){ if(namesOf(vector).some(afterTell)) toGuard=true; else if(chatTo.value==='jarvis') toJarvis=true; else if(chatTo.value==='guard') toGuard=true; }
+  }
+  const typedName=p=>namesOf(p).some(atStart)||namesOf(p).some(afterTell);
+  if(toJarvis){ addMsg(P('Punn'),(namesOf(jarvis).some(atStart)?'':'@'+jarvis.name+' ')+text,true); log(`You: "${text}"`); jarvisHandle(text); return; }
+  if(toGuard){ addMsg(P('Punn'),(typedName(vector)?'':'@Guard ')+text,true); log(`You: "${text}"`); guardHandle(text); return; }
   const toAll=!named&&chatTo.value==='all';
   const targets=named?[named]:toAll?people.filter(p=>!p.manager):[P(chatTo.value)];
-  addMsg(P('Punn'),(named?'':toAll?'@everyone ':'@'+targets[0].name+' ')+text,true);   // no "@Dev" if you already wrote "Dev, ..."
+  addMsg(P('Punn'),(named?'':toAll?'@everyone ':'@'+targets[0].name+' ')+text,true);   // no "@Developer" if you already wrote "Developer, ..."
   log(`You: "${text}"`);
   if(aiOn()){ aiSend(text,targets,toAll); return; }
   const acts=detectActions(text);
@@ -616,7 +655,7 @@ async function aiSend(text,targets,toAll){
       return acts.length?{reply:'On it, boss! 👍',task:null,actions:acts}
         :isChatty(text)?{reply:replyTo(p,text),task:null}:{reply:'On it!',task:extractTask(text,p.name)}; };
     const out=await aiChat(p,msg,fb);
-    if(out.actions&&out.actions.length&&!pressed){ runActions(out.actions,p); pressed=true; continue; }   // a button press is the job, not an errand
+    if(out.actions&&out.actions.length&&!pressed){ runActions(out.actions,p); if(out.actions.some(x=>x.action!=='message')) pressed=true; continue; }   // a button press is the job, not an errand
     if(out.task){ if(toAll) giveTask2(p,out.task,true); else giveTask(p,out.task,true); }
   }
 }
@@ -928,7 +967,7 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 log('Welcome to TheQuestCraft HQ, CEO! Press <b>Clock in</b> to start the day.');
-addMsg(vector,'Welcome to TheQuestCraft HQ, CEO! 🫡 Your team: Email (inbox), Personal Assistant (tutoring), Ideamaker (brainstorming) and Dev (coding). Your own AI from the Planner is here too: pick "To: 🟠 '+jarvis.name+'" or start your message with his name 👇');
+addMsg(vector,'Welcome to TheQuestCraft HQ, CEO! 🫡 Your team: Manager (runs the team for you), Assistant (emails & inbox), Ideamaker (brainstorming) and Developer (coding & presentations). Your own AI from the Planner is here too: pick "To: 🟠 '+jarvis.name+'" or start your message with his name 👇');
 requestAnimationFrame(loop);
 </script>
 <!-- ===== Bridge: gives Jarvis your sign-in (memory) and the leaderboard here too, like in the game ===== -->
@@ -963,13 +1002,13 @@ Team: ${people.filter(p=>!p.manager).map(p=>`${p.name} (${p.job}, ${p.status}, $
   actions:`- {"action":"clock_in"}: everyone comes to work
 - {"action":"clock_out"}: everyone goes home (+$5 bonus each)
 - {"action":"lunch"}: lunch time for everyone in the office
-- {"action":"raise","who":"Dev"}: +$3/hr pay raise (he gets asked "are you sure?" first)
-- {"action":"vacation","who":"Dev"}: send someone on vacation, or bring them back
-- {"action":"wander","who":"Dev"}: someone walks around freely, or goes back to their desk
+- {"action":"raise","who":"Developer"}: +$3/hr pay raise (he gets asked "are you sure?" first)
+- {"action":"vacation","who":"Developer"}: send someone on vacation, or bring them back
+- {"action":"wander","who":"Developer"}: someone walks around freely, or goes back to their desk
 "who" is one of: ${people.filter(p=>!p.manager).map(p=>p.name).join(', ')}.
-- {"action":"message","who":"Email","text":"please check the inbox"}: YOU send a message to a teammate in the Team chat for him, and they answer there.
+- {"action":"message","who":"Assistant","text":"please check the inbox"}: YOU send a message to a teammate in the Team chat for him, and they answer there.
   "who" is a teammate's name, "Guard", or "everyone". Write "text" as if you are talking to them. Use this whenever he asks you to tell, ask or message someone. Don't tell him to do it himself.
-For big coding, tutoring, ideas or email jobs, you can pass the job to the right teammate with "message" (Dev, Personal Assistant, Ideamaker, Email).`,
+For big coding, presentation, ideas or email jobs, you can pass the job to the right teammate with "message" (Developer, Ideamaker, Assistant), or give a big goal to the Manager and he'll split it up for the team.`,
   names:['clock_in','clock_out','lunch','raise','vacation','wander','message'],
   run(a){
     if(a.action!=='message'){ runActions([a],jarvis); return; }
@@ -977,7 +1016,7 @@ For big coding, tutoring, ideas or email jobs, you can pass the job to the right
     const to=/^(everyone|all|team|the team)$/.test(w)?'everyone'
             :(w==='guard'||vector.aliases.includes(w))?vector:findAgent(a.who);
     if(!to) return `I couldn't find "${a.who||'?'}" on the team.`;
-    if(jvBusy) relayQueue.push([to,String(a.text||'')]); else relay(to,String(a.text||''));   // wait until Jarvis's own reply is shown
+    relayQueue.push([to,String(a.text||''),jarvis]); if(!jvBusy) flushRelays();   // wait until Jarvis's own reply is shown
     return `✔ Sent to ${to==='everyone'?'the whole team':to.name} in the Team chat`;
   }
 };
