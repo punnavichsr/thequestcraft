@@ -139,11 +139,12 @@
   .launch-flash{ position:fixed; inset:0; background:#FFF7DF; opacity:0; pointer-events:none; z-index:50; }
 
   /* ---------- HUB ---------- */
-  #hub-screen{ width:100%; max-width:980px; }
+  #hub-screen{ width:100%; max-width:1100px; margin-left:auto; margin-right:auto; }
   .hub-title{ font-family:'Press Start 2P',monospace; font-size:clamp(11px,2.4vw,16px); color:var(--text-light);
     text-shadow:3px 3px 0 #6B3FA0; margin-bottom:30px; letter-spacing:.08em; text-align:center; }
-  .hub-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:18px; width:100%; max-width:1180px; }
-  .hub-card{ position:relative; background:var(--panel); border:2px solid var(--panel-border); padding:28px 20px 24px; cursor:pointer;
+  /* the cards sit in one centered row (they wrap, still centered, on small screens) */
+  .hub-grid{ display:flex; flex-wrap:wrap; justify-content:center; gap:16px; width:100%; }
+  .hub-card{ flex:1 1 170px; max-width:205px; position:relative; background:var(--panel); border:2px solid var(--panel-border); padding:28px 20px 24px; cursor:pointer;
     text-align:center; color:var(--text-light);
     clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
     transition:transform .15s ease, box-shadow .2s ease, border-color .2s ease; }
@@ -745,11 +746,7 @@
       <div class="hub-icon">⚔️</div><h3>QUESTS</h3>
       <div class="desc">Finish today's real-life tasks and collect XP.</div>
     </button>
-    <button class="hub-card c-plan" data-area="planner">
-      <div class="hub-icon">🧍</div><h3>PLANNER</h3>
-      <div class="desc">Pick an activity and see your scene and today's plan.</div>
-    </button>
-       <button class="hub-card c-timer" data-area="timer">
+    <button class="hub-card c-timer" data-area="timer">
       <div class="hub-icon">⏱️</div><h3>TIMER</h3>
       <div class="desc">Time your study, exercise or play, and log it.</div>
     </button>
@@ -1988,7 +1985,7 @@ window.JarvisPage={
 ${activeProfile?`His hero: ${agentName(activeProfile)}, level ${hero.level}, ${hero.totalXP} XP, class ${CLASSES[heroClass()].name}.`:'No hero picked yet.'}`;
   },
   names:['open'],
-  actions:`- {"action":"open","screen":"hub"}: open a game screen. screen is one of: hub, schedule, leaderboard, quests (the Daily Quest), planner, timer, stats, office`,
+  actions:`- {"action":"open","screen":"hub"}: open a game screen. screen is one of: hub, schedule, leaderboard, quests (the Daily Quest), timer, stats, office`,
   async run(a){
     if(!document.body.classList.contains('in-game')) return 'Press ▶ START QUEST first, then I can open things for you 🙂';
     const s=String(a.screen||'').toLowerCase();
