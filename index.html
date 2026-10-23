@@ -712,7 +712,6 @@
       </div>
       <div id="login-msg"></div>
     </div>
-    <button class="btn-logout" id="btn-logout" style="display:none; width:100%;">SIGN OUT</button>
   </div>
 
   <div class="hero-slot" id="hero-slot">
@@ -728,6 +727,8 @@
   <div class="trial-chip" id="trial-chip" hidden></div>
   <button class="btn-promo" id="btn-promo">🎟️ ENTER PROMO CODE</button>
   <div class="art-credit">Art made with AI</div>
+  <!-- at the very bottom, so nobody signs out by accident (it asks first too) -->
+  <button class="btn-logout" id="btn-logout" style="display:none; margin-top:18px;">SIGN OUT</button>
 </div>
 
 <!-- HUB -->
@@ -1020,7 +1021,7 @@ document.getElementById('login-code').addEventListener('input',e=>{
   if(e.target.value.length===6) verifyCode();                    // auto-check when all 6 are typed
 });
 document.getElementById('login-code').addEventListener('keydown',e=>{if(e.key==='Enter') verifyCode();});
-document.getElementById('btn-logout').addEventListener('click',signOut);
+document.getElementById('btn-logout').addEventListener('click',()=>{ if(confirm('Are you sure you want to sign out?')) signOut(); });
 
 // ========== SCREEN NAV ==========
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
