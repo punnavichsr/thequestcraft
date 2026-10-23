@@ -140,6 +140,7 @@
 // ---------- Setup ----------
 // ◀ HUB: go back to the game and tell it to open the hub (not the title screen)
 document.getElementById('backHub').onclick=()=>{
+  saveOffice();                                      // come back to the same office (see "Remember the office" below)
   try{ sessionStorage.setItem('qc-back-to-hub','1'); }catch(e){}
   location.href='index.html';
 };
@@ -224,7 +225,9 @@ PERSONA['Guard']=`You are the building guard of TheQuestCraft HQ. You stand at t
 You are proud, loyal and a bit formal, and you salute the CEO 🫡. Your main job: running the building for the CEO by pressing the office buttons he asks for (clocking people in and out, lunch time, vacations, raises).
 Keep replies short (1-2 sentences).`;
 const vector = {name:'Guard', guard:true, job:'Building guard', wage:3, scene:'office', history:[], maxTokens:500, aliases:['vector','security'],
-  color:'#1e3a8a', hair:'boy', hairColor:'#4a3020', x:90, y:85, status:'guarding the door', step:0, speech:'', speechT:0};
+  color:'#1e3a8a', hair:'boy', hairColor:'#4a3020', x:90, y:85, status:'guarding the door', step:0, speech:'', speechT:0,
+  path:[], onArrive:null};
+const GUARD_POST={x:90,y:85};
 
 // ---------- Jarvis: your own AI from the Planner, now a member of the Team chat ----------
 // (his brain is the REAL Planner Jarvis: see jarvisHandle below)
@@ -242,14 +245,17 @@ function deskSpot(p){
 }
 
 // ---------- Game clock & money ----------
+// "minutes" is the work timer (1 tick every 250ms) for tasks, lunch and wages.
+// The clock on screen shows the real time of your device instead: clockMin().
 let minutes = 8*60, cash = 500, payroll = 0, lunchActive = false, lunchEnd = 0;
+const clockMin=()=>{ const d=new Date(); return d.getHours()*60+d.getMinutes(); };
 function timeStr(m){m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
 
 // ---------- Logging ----------
 const logEl = document.getElementById('log');
 function log(msg){
   const d=document.createElement('div');
-  d.innerHTML=`<b>[${timeStr(minutes)}]</b> ${msg}`;
+  d.innerHTML=`<b>[${timeStr(clockMin())}]</b> ${msg}`;
   logEl.prepend(d);
 }
 function say(p,text,ms=2500){p.speech=text;p.speechT=performance.now()+ms;}
@@ -267,7 +273,7 @@ function addMsg(from,text,mine=false){
   const d=document.createElement('div'); d.className='msg'+(mine?' me':'');
   const col=mine?'#0d9488':from.color, txt=(from.color==='#f5f5f5')?'#333':'#fff';
   d.innerHTML=`<div class="av" style="background:${col};color:${mine?'#fff':txt}">${esc(from.name[0])}</div>
-    <div><div class="who">${esc(mine?'CEO Punn':from.name)} · ${timeStr(minutes)}</div><div class="bubble">${fmt(text)}</div></div>`;
+    <div><div class="who">${esc(mine?'CEO Punn':from.name)} · ${timeStr(clockMin())}</div><div class="bubble">${fmt(text)}</div></div>`;
   chatEl.appendChild(d); chatEl.scrollTop=chatEl.scrollHeight;
 }
 // an agent sends you a message (with a short "typing…" first)
@@ -315,7 +321,7 @@ function systemFor(p){
   return `You are "${p.name}" (your job: ${p.job}), an employee at TheQuestCraft HQ, the office of the company that makes TheQuestCraft (thequestcraft.com).
 ${PERSONA[p.name]||'Friendly office worker.'}
 Your boss is Punn, the CEO of TheQuestCraft. He is a student who built the game himself. Call him "boss" or "CEO". You talk to him in the team chat.
-Right now: game time ${timeStr(minutes)}, you are "${p.status}", wage $${p.wage}/hr${p.vacation?', on vacation':''}.
+Right now: game time ${timeStr(clockMin())}, you are "${p.status}", wage $${p.wage}/hr${p.vacation?', on vacation':''}.
 Coworkers: ${team}. At the front door: the Guard.
 Rules: stay in character, be friendly, emojis are fine, keep everything kid-friendly.
 Length: for small talk, 1-2 sentences. When the CEO asks for help with YOUR job (code, a lesson, ideas, an email), give a complete, useful answer right here in the chat. Use new lines and \`\`\` code blocks when they help.
@@ -437,6 +443,30 @@ function leave(p,reason){
     p.onArrive=()=>{p.scene='home'; p.status=reason||'at home';};
   });
 }
+// The Guard opens the building in the morning and locks up after the last person went home
+function guardArrive(){
+  if(vector.scene==='office'){                       // still inside (maybe on the way out): back to the door
+    if(vector.status==='locking up'){ vector.status='back at the door'; goTo(vector,GUARD_POST,()=>vector.status='guarding the door'); }
+    return;
+  }
+  if(vector.scene!=='street'){ vector.x=-20; vector.y=122; }
+  vector.scene='street'; vector.status='walking to work';
+  vector.path=[{x:STREET_DOOR_X,y:122}];
+  vector.onArrive=()=>{
+    vector.scene='office'; vector.x=DOOR.x; vector.y=DOOR.y+15;
+    say(vector,'Good morning! Doors are open 🫡');
+    goTo(vector,GUARD_POST,()=>vector.status='guarding the door');
+  };
+}
+function guardLeave(){
+  vector.status='locking up'; say(vector,'All clear. Locking up! 🔒');
+  log('🔒 The Guard locked up and went home. Good night! 🌙');
+  goTo(vector,{x:DOOR.x,y:DOOR.y+15},()=>{
+    vector.scene='street'; vector.x=STREET_DOOR_X; vector.y=122;
+    vector.path=[{x:990,y:122}];
+    vector.onArrive=()=>{vector.scene='home'; vector.status='at home';};
+  });
+}
 
 // ---------- Controls ----------
 const agentSel=document.getElementById('agentSel'), focusSel=document.getElementById('focusSel');
@@ -502,13 +532,17 @@ callBtn.onclick=()=>{
 agentSel.addEventListener('change',callLabel); setInterval(callLabel,1000);
 
 document.getElementById('clockIn').onclick=()=>{
+  dayEnded=false; closing=false;
+  const guardAway=vector.scene!=='office';
+  guardArrive();                                     // the Guard opens the doors first
   let n=0;
   people.forEach((p,i)=>{
-    if(p.scene==='home'&&!p.vacation){setTimeout(()=>arrive(p),i*700);n++;}
+    if(p.scene==='home'&&!p.vacation){setTimeout(()=>arrive(p),(guardAway?2500:0)+i*700);n++;}
   });
   log(n?`Clocking in ${n} people…`:'Everyone is already here (or on vacation).');
 };
 document.getElementById('clockOut').onclick=()=>{
+  dayEnded=true; closing=true;                       // the Guard locks up once everyone is gone; the office starts fresh next time
   let n=0;
   people.forEach(p=>{ if(p.scene==='office'){p.earned+=5;cash-=5;payroll+=5;leave(p);n++;} });
   log(n?`Clocking out ${n} people. +$5 bonus each 💵`:'Nobody is clocked in.');
@@ -767,7 +801,7 @@ syncJarvis();
 document.getElementById('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
 
 // ---------- Update loop ----------
-let lastTick=performance.now(), acc=0;
+let lastTick=performance.now(), acc=0, night=0;   // night: 0 = lights on, 1 = dark office
 function update(dt){
   // game time: 1 game minute every 250ms
   acc+=dt;
@@ -789,8 +823,13 @@ function update(dt){
       }
     });
   }
+  // closing time: everyone went home after Clock out -> the Guard locks up
+  if(closing && people.every(p=>p.scene==='home') && vector.scene==='office' && !vector.path.length){ closing=false; guardLeave(); }
+  // lights: dark when nobody (not even the Guard) is inside
+  const empty=vector.scene!=='office' && people.every(p=>p.scene!=='office');
+  night+=((empty?1:0)-night)*Math.min(1,dt/900);
   // walking
-  people.forEach(p=>{
+  [...people,vector].forEach(p=>{
     if(p.scene==='home')return;
     if(p.wander&&!p.path.length) goTo(p,randomSpot());
     if(!p.path.length)return;
@@ -888,8 +927,9 @@ function drawStreet(){
   // building sign (painted over the old "OFFICE ENTRANCE" sign)
   c.fillStyle='#2b2f36'; c.fillRect(408,47,122,19); c.strokeStyle='#fbbf24'; c.lineWidth=1.5; c.strokeRect(408.5,47.5,121,18); c.lineWidth=1;
   c.fillStyle='#fde047'; c.font='bold 11px "Segoe UI",Arial,sans-serif'; c.textAlign='center'; c.fillText('THEQUESTCRAFT',469,61);
-  people.filter(p=>p.scene==='street').forEach(p=>drawPerson(c,p,0.8,false));
+  [...people,vector].filter(p=>p.scene==='street').forEach(p=>drawPerson(c,p,0.8,false));
   if(carImg.complete) c.drawImage(carImg,CAR.x,CAR.y,CAR.w,CAR.h);
+  if(night>0.01){ c.fillStyle=`rgba(8,12,30,${(0.55*night).toFixed(3)})`; c.fillRect(0,0,960,175); }
 }
 
 // ---------- Office art helpers ----------
@@ -950,10 +990,10 @@ function drawOffice(){
   c.fillStyle=hg; c.fillRect(0,200,960,50);
   c.fillStyle='#2b2b2b'; c.font='15px "Segoe UI",Arial,sans-serif'; c.textAlign='center';
   c.fillText('HALLWAY CORRIDOR',480,231); c.textAlign='right'; c.fillText('EXIT',950,231);
-  // kitchenette area
+  // cafeteria corner (fridge + coffee machine)
   c.fillStyle='#b9c3cf'; c.beginPath();
   c.moveTo(865,268); c.lineTo(960,268); c.lineTo(960,440); c.lineTo(900,440); c.lineTo(900,340); c.lineTo(865,330); c.closePath(); c.fill();
-  c.fillStyle='#2b2b2b'; c.font='10px "Segoe UI",Arial,sans-serif'; c.textAlign='left'; c.fillText('KITCHENETTE',868,283);
+  c.fillStyle='#2b2b2b'; c.font='10px "Segoe UI",Arial,sans-serif'; c.textAlign='left'; c.fillText('CAFETERIA',868,283);
   c.fillStyle='#d9dde2'; c.strokeStyle='#888'; c.fillRect(932,290,24,42); c.strokeRect(932.5,290.5,23,41); // fridge
   c.fillStyle='#e8e8e8'; c.fillRect(932,350,24,30); c.strokeRect(932.5,350.5,23,29);
   c.fillStyle='#333'; c.fillRect(936,358,14,12); c.fillStyle='#7a4a2a'; c.fillRect(940,364,6,5); // coffee machine
@@ -979,8 +1019,8 @@ function drawOffice(){
   c.fillStyle='rgba(0,0,0,.15)'; c.beginPath(); c.arc(42,52,18,0,7); c.fill();
   c.fillStyle='#fff'; c.strokeStyle='#333'; c.lineWidth=2.5;
   c.beginPath(); c.arc(40,50,17,0,7); c.fill(); c.stroke(); c.lineWidth=1;
-  const frac=acc/250, mm=minutes+frac;
-  const h=(mm/60)%12, m=mm%60, sec=frac*60;
+  const now=new Date(), sec=now.getSeconds()+now.getMilliseconds()/1000;   // real time of this device
+  const m=now.getMinutes()+sec/60, h=(now.getHours()%12)+m/60;
   for(let i=0;i<12;i++){const a=i/12*6.283; c.fillStyle='#333'; c.fillRect(40+Math.sin(a)*13.5-1,50-Math.cos(a)*13.5-1,2,2);}
   c.strokeStyle='#222'; c.lineWidth=2;
   c.beginPath(); c.moveTo(40,50); c.lineTo(40+Math.sin(h/12*6.283)*8,50-Math.cos(h/12*6.283)*8); c.stroke();
@@ -990,7 +1030,7 @@ function drawOffice(){
   c.fillStyle='#222'; c.beginPath(); c.arc(40,50,1.8,0,7); c.fill();
   c.font='bold 10px monospace'; c.textAlign='center';
   c.fillStyle='#e5e2d8'; c.fillRect(22,74,36,13); c.strokeStyle='#999'; c.strokeRect(22.5,74.5,35,12);
-  c.fillStyle='#222'; c.fillText(timeStr(minutes),40,84);
+  c.fillStyle='#222'; c.fillText(timeStr(clockMin()),40,84);
   c.font='9px "Segoe UI",Arial,sans-serif'; c.fillText('CLOCK',40,98);
   woodDesk(c,68,118,86,26); monitor(c,135,104,26);
 
@@ -1025,12 +1065,21 @@ function drawOffice(){
   c.strokeStyle='#7a5230'; c.lineWidth=1.5; c.stroke(); c.lineWidth=1;
 
   // vector + people
-  vector.step+=16; drawPerson(c,vector);
+  if(vector.scene==='office'){ if(!vector.path.length) vector.step+=16; drawPerson(c,vector); }
   people.filter(p=>p.scene==='office').sort((a,b)=>a.y-b.y).forEach(p=>drawPerson(c,p));
+  // lights off: the office goes dark after the Guard locked up
+  if(night>0.01){
+    c.fillStyle=`rgba(8,12,30,${(0.8*night).toFixed(3)})`; c.fillRect(0,0,960,440);
+    if(night>0.6){ c.globalAlpha=Math.min(1,(night-0.6)/0.4);
+      c.fillStyle='#e2e8f0'; c.font='bold 18px "Segoe UI",Arial,sans-serif'; c.textAlign='center';
+      c.fillText('🌙 Closed for the night',480,212);
+      c.font='12px "Segoe UI",Arial,sans-serif'; c.fillStyle='#94a3b8'; c.fillText('Press ⏱ Clock in to open the office',480,236);
+      c.globalAlpha=1; }
+  }
 }
 
 function updateUI(){
-  document.getElementById('timeStat').textContent='🕒 '+timeStr(minutes)+(lunchActive?' · Lunch':'');
+  document.getElementById('timeStat').textContent='🕒 '+timeStr(clockMin())+(lunchActive?' · Lunch':'');
   document.getElementById('cashStat').textContent='Cash $'+cash;
   document.getElementById('payStat').textContent='Payroll $'+payroll;
   const p=P(focusSel.value);
@@ -1046,8 +1095,53 @@ function loop(now){
   update(dt); updateStreet(dt); drawStreet(); drawOffice(); updateUI();
   requestAnimationFrame(loop);
 }
+// ---------- Remember the office (◀ HUB, reload or closing the tab) until you press Clock out ----------
+const OFFICE_KEY='qc-office-state';
+let dayEnded=false, closing=false;
+function saveOffice(){
+  try{
+    if(dayEnded){ localStorage.removeItem(OFFICE_KEY); return; }   // after Clock out the next visit starts fresh
+    const keep=p=>({name:p.name, scene:p.scene, x:p.x, y:p.y, status:p.status, wage:p.wage, earned:p.earned,
+      vacation:p.vacation, wander:p.wander, busyUntil:p.busyUntil, history:(p.history||[]).slice(-12)});
+    localStorage.setItem(OFFICE_KEY,JSON.stringify({v:1, minutes, cash, payroll, lunchActive, lunchEnd,
+      people:people.map(keep), guard:keep(vector), chat:chatEl.innerHTML, log:logEl.innerHTML}));
+  }catch(e){}
+}
+// someone who was walking somewhere when you left is put where they were going
+function settle(p,d){
+  Object.assign(p,{status:d.status, wage:d.wage, earned:d.earned, vacation:!!d.vacation, wander:!!d.wander,
+    busyUntil:d.busyUntil||0, history:d.history||[], path:[], onArrive:null});
+  const st=String(d.status||'');
+  if(d.scene==='home' || st==='going home' || (d.scene==='street' && st!=='walking to work')){
+    p.scene='home'; if(d.scene!=='home') p.status=p.vacation?'on vacation':'at home'; return;
+  }
+  p.scene='office'; p.x=d.x; p.y=d.y;
+  if(st==='walking to the CEO office'){ p.x=VISIT_SPOTS[0].x; p.y=VISIT_SPOTS[0].y; p.status='in the CEO office'; }
+  else if(st==='walking to lunch' && lunchActive){ p.x=767; p.y=350-55; p.status='eating lunch'; }
+  else if(d.scene==='street' || /^(walking to|heading to|going to|returning)/.test(st)){
+    const s=deskSpot(p); p.x=s.x; p.y=s.y; p.status=p.manager?'managing':'idle'; p.busyUntil=0;
+  }
+}
+function restoreOffice(){
+  let s=null; try{ s=JSON.parse(localStorage.getItem(OFFICE_KEY)||'null'); }catch(e){}
+  if(!s || s.v!==1) return false;
+  ({minutes, cash, payroll, lunchActive, lunchEnd}=s);
+  (s.people||[]).forEach(d=>{ const p=P(d.name); if(p) settle(p,d); });
+  const g=s.guard||{};
+  vector.history=g.history||[]; vector.path=[]; vector.onArrive=null;
+  if(g.scene==='office' && g.status!=='locking up'){ vector.scene='office'; vector.x=GUARD_POST.x; vector.y=GUARD_POST.y; vector.status='guarding the door'; }
+  else { vector.scene='home'; vector.status='at home'; }
+  chatEl.innerHTML=s.chat||''; logEl.innerHTML=s.log||''; chatEl.scrollTop=chatEl.scrollHeight;
+  renderChips();
+  return true;
+}
+window.addEventListener('pagehide',saveOffice);
+
+if(restoreOffice()) log('Welcome back! Your office is just how you left it.');
+else{
 log('Welcome to TheQuestCraft HQ, CEO! Press <b>Clock in</b> to start the day.');
 addMsg(vector,'Welcome to TheQuestCraft HQ, CEO! 🫡 Your team: Manager (runs the team for you), Assistant (emails & inbox), Ideamaker (brainstorming) and Developer (coding & presentations). Your own AI from the Planner is here too: pick "To: 🟠 '+jarvis.name+'" or start your message with his name 👇');
+}
 requestAnimationFrame(loop);
 </script>
 <!-- ===== Bridge: gives Jarvis your sign-in (memory) and the leaderboard here too, like in the game ===== -->
@@ -1076,7 +1170,7 @@ requestAnimationFrame(loop);
 window.JarvisPage={
   name:'TheQuestCraft HQ (the office)',
   context(){
-    return `Office game time ${timeStr(minutes)}${lunchActive?' (lunch time)':''}. Cash $${cash}, payroll $${payroll}.
+    return `Office game time ${timeStr(clockMin())}${lunchActive?' (lunch time)':''}. Cash $${cash}, payroll $${payroll}.
 Team: ${people.filter(p=>!p.manager).map(p=>`${p.name} (${p.job}, ${p.status}, $${p.wage}/hr${p.vacation?', on vacation':''})`).join('; ')}. The Guard is at the door.`;
   },
   actions:`- {"action":"clock_in"}: everyone comes to work
