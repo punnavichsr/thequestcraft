@@ -1958,17 +1958,21 @@ function showAcePop(title){
   pop.classList.add('show');
 }
 </script>
-<!-- ===== Coming back from the Office with ◀ HUB: open the hub again, like pressing START QUEST ===== -->
+<!-- ===== Coming back from the Office with ◀ HUB: go straight to the hub (no title screen in between) ===== -->
 <script>
 (()=>{
   let flag=null; try{ flag=sessionStorage.getItem('qc-back-to-hub'); sessionStorage.removeItem('qc-back-to-hub'); }catch(e){}
-  if(!flag) return;
+  if(!flag || !activeProfile) return;
+  // open the hub right away, before the page is even drawn...
+  document.body.classList.add('in-game'); showScreen('hub-screen'); try{ renderAll(); }catch(e){}
+  // ...and still check sign-in, access and bans while it loads (max 10s), exactly like START QUEST does.
+  // checkAccess() also sends players without access back to the title screen once it knows.
   let tries=0;
-  const t=setInterval(()=>{                 // wait until sign-in, access and your hero are loaded (max 10s)
+  const t=setInterval(()=>{
     tries++;
-    let ready=false; try{ ready=!myBanned && canPlay() && !!activeProfile; }catch(e){}
-    if(ready){ clearInterval(t); document.getElementById('btn-start').click(); }
-    else if(tries>50) clearInterval(t);     // not ready: just stay on the title screen
+    let ok=false, banned=false; try{ banned=myBanned; ok=!banned && canPlay(); }catch(e){}
+    if(ok){ clearInterval(t); renderAll(); }
+    else if(banned || tries>50){ clearInterval(t); if(document.body.classList.contains('in-game')) kickToTitle(); }
   },200);
 })();
 </script>
