@@ -92,8 +92,6 @@
     <h2>Manage agent</h2>
     <div class="row" style="margin-top:0"><select id="agentSel"></select></div>
     <div class="row">
-      <button id="raise">Pay raise (+$3)</button>
-      <button id="vacation">Vacation</button>
       <button id="wander">Walk freely</button>
       <button id="callOffice">📞 Call to my office</button>
     </div>
@@ -208,8 +206,8 @@ Your team: Assistant (emails & inbox), Problem Solver (ideas & fixing problems, 
 How you manage:
 1. When the CEO gives you a goal ("get the game ready for my sister to test", "plan the Skill Tree"), break it into small jobs and hand each job to the best teammate with "message" actions. Say who does what in one short list.
 2. When he asks how things are going, give a short status report: who is working on what, who is idle, who is away.
-3. You can also press the office buttons (meeting, raises, vacations, clock out) when he asks.
-4. Be kind to the team: thank people, and suggest a raise or a break when someone works hard.
+3. You can also press the office buttons (meeting, clock out) when he asks.
+4. Be kind to the team: thank people, and suggest a break when someone works hard.
 5. Never do a teammate's whole job yourself: pass presentations to Presenter, emails to Assistant, ideas and problems (also coding) to Problem Solver. Then tell the CEO what you set up.
 End with the ONE thing the CEO should decide or check next.`},
   study:{label:'📚 Study Coach', job:'Study coach', maxTokens:1400,
@@ -318,7 +316,7 @@ End by asking him to say the HOOK out loud in his own words, so it sounds like h
 You know TheQuestCraft: a browser RPG where students earn XP by doing real tasks (homework, studying, hobbies, reading), with hero classes, a leaderboard, a Daily Quest, the Ace title, Jarvis (an AI planner) and this office.`,
 };
 PERSONA['Guard']=`You are the building guard of TheQuestCraft HQ. You stand at the front door all day, so you are always here, even when nobody else is.
-You are proud, loyal and a bit formal, and you salute the CEO 🫡. Your main job: running the building for the CEO by pressing the office buttons he asks for (clocking people out, meetings, vacations, raises).
+You are proud, loyal and a bit formal, and you salute the CEO 🫡. Your main job: running the building for the CEO by pressing the office buttons he asks for (clocking people out and starting meetings).
 Keep replies short (1-2 sentences).`;
 const vector = {name:'Guard', guard:true, job:'Building guard', wage:3, scene:'office', history:[], maxTokens:500, aliases:['vector','security'],
   color:'#1e3a8a', hair:'boy', hairColor:'#4a3020', x:90, y:85, status:'guarding the door', step:0, speech:'', speechT:0,
@@ -370,7 +368,7 @@ const CHANNELS=[
   {id:'presenter', label:()=>'🎤 Presenter',
    hint:()=>'Private chat with the Presenter. Try: "help me present my science project to my class in 3 minutes".'},
   {id:'meeting',   label:()=>'👥 Meeting Chat',
-   hint:()=>'🟠 Everyone is here. Try: "Jarvis, how is my team doing?", "Guard, clock everyone out", "start a meeting!" or "send Presenter on vacation".'},
+   hint:()=>'🟠 Everyone is here. Try: "Jarvis, how is my team doing?", "Guard, clock everyone out", "start a meeting!" or "Presenter, come to my office".'},
 ];
 const chatBoxes={}, chatTabs={};
 let activeChat='meeting';
@@ -498,8 +496,6 @@ function BUTTON_HELP(p){ return `${isLeader(p)?`As the team manager you can also
 - {"action":"clock_in"}: everyone comes to work
 - {"action":"clock_out"}: everyone goes home (+$5 bonus each)
 - {"action":"meeting"}: everyone (the CEO + the 4 agents) goes to the meeting room; press it again to end the meeting
-- {"action":"raise","who":"Presenter"}: +$3/hr pay raise (the CEO gets asked "are you sure?" first)
-- {"action":"vacation","who":"Presenter"}: send someone on vacation, or bring them back from vacation
 - {"action":"wander","who":"Presenter"}: someone walks around freely, or goes back to their desk
 - {"action":"call_office","who":"Presenter"}: someone (or you) walks to the CEO's office ("come to my office")
 - {"action":"back_to_desk","who":"Presenter"}: someone in the CEO's office goes back to their desk
@@ -681,16 +677,6 @@ function renderChips(){
 }
 renderChips(); focusSel.onchange=renderChips;
 
-document.getElementById('raise').onclick=()=>{
-  const p=selected(); p.wage+=3; log(`${p.name} got a pay raise → $${p.wage}/hr 🎉`);
-  if(p.scene==='office') say(p,'Thank you, boss!'); chat(p,`Wow, thank you for the raise! $${p.wage}/hr 🎉 I'll work even harder!`,900,'meeting'); renderChips();
-};
-document.getElementById('vacation').onclick=()=>{
-  const p=selected();
-  if(p.vacation){p.vacation=false;p.status='at home';log(`${p.name} is back from vacation.`);return;}
-  p.vacation=true; log(`${p.name} is going on vacation 🏖️`); chat(p,'Thanks for the vacation! See you soon 🏖️',900,'meeting');
-  if(p.scene==='office'){say(p,'Beach time!');leave(p,'on vacation');} else p.status='on vacation';
-};
 document.getElementById('wander').onclick=()=>{
   const p=selected();
   if(p.scene!=='office'){log(`${p.name} isn't in the office.`);return;}
@@ -815,7 +801,7 @@ document.getElementById('lunch').onclick=()=>{
 
 // ---------- Hands: agents press the office buttons for you ----------
 const BUTTONS={clock_in:['clockIn','⏱ Clock in'],clock_out:['clockOut','⏱ Clock out'],meeting:['meetingBtn','📅 Meeting'],
-  raise:['raise','Pay raise'],vacation:['vacation','Vacation'],wander:['wander','Walk freely']};
+  wander:['wander','Walk freely']};
 function findAgent(w){ w=String(w||'').toLowerCase().replace(/^@/,'').trim();
   return people.find(p=>!p.manager&&(p.name.toLowerCase()===w||(p.aliases||[]).includes(w))); }
 function runActions(list,by){
@@ -842,11 +828,9 @@ function runActions(list,by){
     }
     const b=a&&BUTTONS[a.action]; if(!b) continue;
     let extra='';
-    if(['raise','vacation','wander'].includes(a.action)){ // these buttons need a person picked first
+    if(['wander'].includes(a.action)){ // these buttons need a person picked first
       const who=findAgent(a.who);
       if(!who){ addMsg(by,`Hmm, I couldn't find anyone called "${a.who||'?'}" 🤔`); continue; }
-      if(a.action==='raise' && !confirm(`${by.name} wants to give ${who.name} a pay raise (+$3/hr). Are you sure?`)){
-        addMsg(by,'Okay, no raise for now 👍'); continue; }
       agentSel.value=who.name; focusSel.value=who.name; renderChips(); extra=` for ${who.name}`;
     }
     log(`🤖 ${by.name} pressed <b>${b[1]}</b>${extra}`);
@@ -1032,7 +1016,7 @@ async function aiSend(text,targets,toAll){
   const here=targets.filter(p=>p.scene==='office');
   if(!toAll) away.forEach(p=>addMsg(p,`(Auto-reply) I'm ${p.status} right now, I'll answer later 🙏`));
   if(!here.length){   // nobody in: the Guard answers if it's for the whole team or about the office buttons
-    if(toAll||detectActions(text).length||/clock|meeting|vacation|raise|wander/i.test(text)) guardHandle(text);
+    if(toAll||detectActions(text).length||/clock|meeting|wander/i.test(text)) guardHandle(text);
     return; }
   const msg=toAll?`[Message to the whole team] ${text}`:text;
   if(toAll) say(P('Punn'),text.length>28?text.slice(0,27)+'…':text);
@@ -1331,7 +1315,7 @@ function savedChats(){
 }
 // someone who was walking somewhere when you left is put where they were going
 function settle(p,d){
-  Object.assign(p,{status:d.status, wage:d.wage, earned:d.earned, vacation:!!d.vacation, wander:!!d.wander,
+  Object.assign(p,{status:d.status, wage:d.wage, earned:d.earned, vacation:false, wander:!!d.wander,
     busyUntil:d.busyUntil||0, history:d.history||[], path:[], onArrive:null});
   const st=String(d.status||'');
   if(d.scene==='home' || st==='going home' || (d.scene==='street' && st!=='walking to work')){
@@ -1364,7 +1348,11 @@ function restoreOffice(){
 }
 window.addEventListener('pagehide',saveOffice);
 
-if(restoreOffice()) log('Welcome back! Your office is just how you left it.');
+if(restoreOffice()){
+  log('Welcome back! Your office is just how you left it.');
+  // anyone still at home (there's no Clock in button any more) walks in
+  setTimeout(()=>{ if(vector.scene==='office' && people.some(p=>p.scene==='home')) document.getElementById('clockIn').click(); },600);
+}
 else{
 log('Welcome to TheQuestCraft HQ, CEO! Your team is coming in.');
 setTimeout(()=>document.getElementById('clockIn').click(),600);   // no Clock in button: everyone arrives by themselves
@@ -1405,8 +1393,6 @@ Team: ${people.filter(p=>!p.manager).map(p=>`${p.name} (${p.job}, ${p.status}, $
   actions:`- {"action":"clock_in"}: everyone comes to work
 - {"action":"clock_out"}: everyone goes home (+$5 bonus each)
 - {"action":"meeting"}: everyone (the CEO + the 4 agents) goes to the meeting room; press it again to end the meeting
-- {"action":"raise","who":"Presenter"}: +$3/hr pay raise (he gets asked "are you sure?" first)
-- {"action":"vacation","who":"Presenter"}: send someone on vacation, or bring them back
 - {"action":"wander","who":"Presenter"}: someone walks around freely, or goes back to their desk
 - {"action":"call_office","who":"Presenter"}: someone walks to the CEO's office ("call the Developer to my office")
 - {"action":"back_to_desk","who":"Presenter"}: someone in the CEO's office goes back to their desk
@@ -1414,7 +1400,7 @@ Team: ${people.filter(p=>!p.manager).map(p=>`${p.name} (${p.job}, ${p.status}, $
 - {"action":"message","who":"Assistant","text":"please check the inbox"}: YOU send a message to a teammate in the Team chat for him, and they answer there.
   "who" is a teammate's name, "Guard", or "everyone". Write "text" as if you are talking to them. Use this whenever he asks you to tell, ask or message someone. Don't tell him to do it himself.
 For big presentation, ideas, problem-solving or email jobs, you can pass the job to the right teammate with "message" (Presenter, Problem Solver, Assistant), ${myJob().leader?`or give a big goal to ${myAgent.name} (the team manager) and they'll split it up for the team.`:`or ask ${myAgent.name} (${myJob().job.toLowerCase()}) for help with that.`}`,
-  names:['clock_in','clock_out','meeting','raise','vacation','wander','call_office','back_to_desk','message'],
+  names:['clock_in','clock_out','meeting','wander','call_office','back_to_desk','message'],
   run(a){
     if(a.action!=='message'){ runActions([a],jarvis); return; }
     const w=String(a.who||'').toLowerCase().trim();
