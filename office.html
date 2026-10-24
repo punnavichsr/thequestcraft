@@ -78,11 +78,6 @@
     <div id="chats"></div>
     <div class="typing" id="typing"></div>
     <div id="chatHint" style="font-size:12.5px;color:var(--muted)"></div>
-    <div class="row" id="designerSetup" style="display:none">
-      <input id="gemKey" type="password" placeholder="Gemini API key (from aistudio.google.com, saved only in this browser)">
-      <input id="gemModel" style="max-width:240px" placeholder="gemini-3.1-flash-image">
-      <button id="gemSave">Save</button>
-    </div>
     <div id="attachPreview" style="display:none"></div>
     <div class="row">
       <select id="chatTo" style="width:auto"></select>
@@ -117,9 +112,11 @@
   <div class="chips" id="chips"></div>
 
   <div class="row">
-    <button id="clockIn">⏱ Clock in</button>
+    <!-- no Clock in button: everyone is at work when you open the office (the hidden button still works for the Guard/AI) -->
+    <button id="clockIn" style="display:none">⏱ Clock in</button>
     <button id="clockOut">⏱ Clock out (+$5 each)</button>
-    <button id="lunch">🍜 Lunch time</button>
+    <button id="lunch" style="display:none">🍜 Lunch time</button>
+    <button id="meetingBtn">📅 Meeting</button>
   </div>
 
   <div class="panel">
@@ -184,7 +181,7 @@ const rooms = {
   desk4:   {name:'DESK 4',            x1:766, x2:960, y1:0,   y2:200, door:863},
   manager: {name:'CEO OFFICE',        x1:0,   x2:190, y1:250, y2:440, door:95},
   meeting: {name:'QUIZ MEETING ROOM', x1:190, x2:574, y1:250, y2:440, door:382},
-  lunch:   {name:'LUNCH ROOM',        x1:574, x2:960, y1:250, y2:440, door:767},
+  lunch:   {name:'',                  x1:574, x2:960, y1:250, y2:440, door:767},   // empty room (the lunch room was removed)
 };
 function roomAt(x,y){
   for(const k in rooms){const r=rooms[k]; if(x>=r.x1&&x<=r.x2&&y>=r.y1&&y<=r.y2) return r;}
@@ -193,14 +190,14 @@ function roomAt(x,y){
 
 // ---------- Your own agent (Desk 2): every player picks its name and its job ----------
 // Coding is not a choice on purpose: the Problem Solver already fixes code problems.
-// "adminOnly" jobs only show up for the owner (OFFICE_OWNERS); "gemini" jobs talk to Google Gemini and can see/make pictures.
+// "adminOnly" jobs only show up for the owner (OFFICE_OWNERS); "vision" jobs can look at pictures you send (Groq).
 // Only the Team Manager job can hand out work to the others ("leader").
 const AGENT_JOBS={
-  designer:{label:'🎨 Designer', job:'Designer', adminOnly:true, gemini:true, maxTokens:1200,
+  designer:{label:'🎨 Designer', job:'Designer', adminOnly:true, vision:true, maxTokens:1200,
     persona:`You are a creative, honest designer with a great eye for games, posters, logos and slides.
 1. When he sends a picture (a design, a screenshot, a drawing): say what works first, then give 2-3 concrete improvements (colors with hex codes, spacing, fonts, layout).
-2. When he asks you to make something (a logo, a poster, a game icon, a character, a slide background, a mockup): CREATE THE PICTURE, plus one short line about the idea behind it.
-3. When he asks to change the latest picture ("make it bluer", "bigger title"), edit that picture and keep the rest the same.
+2. You can't draw pictures yourself. When he asks you to make something (a logo, a poster, a game icon, a character, a slide), plan it so he can build it: layout, colors with hex codes, fonts, what goes where, and a short ready-to-use prompt he can paste into an image generator.
+3. When he sends a new version, compare it with what you suggested before and say what got better and what to fix next.
 4. Keep TheQuestCraft's look (dark purple night sky, gold pixel-art text, fantasy RPG) unless he asks for something else.
 5. Keep everything kid-friendly, and don't copy other companies' logos or characters.
 Reply in plain, short text (no JSON).`},
@@ -211,7 +208,7 @@ Your team: Assistant (emails & inbox), Problem Solver (ideas & fixing problems, 
 How you manage:
 1. When the CEO gives you a goal ("get the game ready for my sister to test", "plan the Skill Tree"), break it into small jobs and hand each job to the best teammate with "message" actions. Say who does what in one short list.
 2. When he asks how things are going, give a short status report: who is working on what, who is idle, who is away.
-3. You can also press the office buttons (clock in, lunch, raises, vacations) when he asks.
+3. You can also press the office buttons (meeting, raises, vacations, clock out) when he asks.
 4. Be kind to the team: thank people, and suggest a raise or a break when someone works hard.
 5. Never do a teammate's whole job yourself: pass presentations to Presenter, emails to Assistant, ideas and problems (also coding) to Problem Solver. Then tell the CEO what you set up.
 End with the ONE thing the CEO should decide or check next.`},
@@ -321,7 +318,7 @@ End by asking him to say the HOOK out loud in his own words, so it sounds like h
 You know TheQuestCraft: a browser RPG where students earn XP by doing real tasks (homework, studying, hobbies, reading), with hero classes, a leaderboard, a Daily Quest, the Ace title, Jarvis (an AI planner) and this office.`,
 };
 PERSONA['Guard']=`You are the building guard of TheQuestCraft HQ. You stand at the front door all day, so you are always here, even when nobody else is.
-You are proud, loyal and a bit formal, and you salute the CEO 🫡. Your main job: running the building for the CEO by pressing the office buttons he asks for (clocking people in and out, lunch time, vacations, raises).
+You are proud, loyal and a bit formal, and you salute the CEO 🫡. Your main job: running the building for the CEO by pressing the office buttons he asks for (clocking people out, meetings, vacations, raises).
 Keep replies short (1-2 sentences).`;
 const vector = {name:'Guard', guard:true, job:'Building guard', wage:3, scene:'office', history:[], maxTokens:500, aliases:['vector','security'],
   color:'#1e3a8a', hair:'boy', hairColor:'#4a3020', x:90, y:85, status:'guarding the door', step:0, speech:'', speechT:0,
@@ -366,14 +363,14 @@ const CHANNELS=[
   {id:'assistant', label:()=>'📧 Email Assistant',
    hint:()=>'Private chat with the Assistant. Try: "what\'s new in my inbox?" or "write a polite email to my teacher".'},
   {id:'custom',    label:()=>myJob().label.split(' ')[0]+' '+myAgent.name,
-   hint:()=>myJob().gemini?'Your Designer 🎨 Send a picture with 📎 for feedback, or ask: "make a pixel-art logo for TheQuestCraft".'
+   hint:()=>myJob().vision?'Your Designer 🎨 Send a picture with 📎 for feedback, or ask: "plan a pixel-art logo for TheQuestCraft".'
                           :`Private chat with ${myAgent.name} (${myJob().job.toLowerCase()}). Change the name and job in "✏️ Your own agent" below.`},
   {id:'solver',    label:()=>'💡 Problem Solver',
    hint:()=>'Private chat with the Problem Solver. Try: "give me 5 ideas for…" or "this doesn\'t work: …".'},
   {id:'presenter', label:()=>'🎤 Presenter',
    hint:()=>'Private chat with the Presenter. Try: "help me present my science project to my class in 3 minutes".'},
   {id:'meeting',   label:()=>'👥 Meeting Chat',
-   hint:()=>'🟠 Everyone is here. Try: "Jarvis, how is my team doing?", "Guard, clock everyone in", "lunch time!" or "send Presenter on vacation".'},
+   hint:()=>'🟠 Everyone is here. Try: "Jarvis, how is my team doing?", "Guard, clock everyone out", "start a meeting!" or "send Presenter on vacation".'},
 ];
 const chatBoxes={}, chatTabs={};
 let activeChat='meeting';
@@ -423,8 +420,7 @@ function showChat(id){
   document.getElementById('chatHint').textContent=c.hint();
   document.getElementById('chatTo').style.display=id==='meeting'?'':'none';
   document.getElementById('chatInput').placeholder=id==='meeting'?'Message the meeting (start with a name, e.g. "Presenter, …")…':`Message ${p?p.name:''}…`;
-  const designer=id==='custom' && myJob().gemini;
-  document.getElementById('designerSetup').style.display=designer?'':'none';
+  const designer=id==='custom' && myJob().vision;
   document.getElementById('chatAttach').style.display=designer?'':'none';
   if(!designer) clearAttachment();
 }
@@ -501,7 +497,7 @@ function BUTTON_HELP(p){ return `${isLeader(p)?`As the team manager you can also
 `:''}Office buttons you can press for the CEO by adding them to "actions" (a list). Only press them when he asks:
 - {"action":"clock_in"}: everyone comes to work
 - {"action":"clock_out"}: everyone goes home (+$5 bonus each)
-- {"action":"lunch"}: lunch time for everyone in the office
+- {"action":"meeting"}: everyone (the CEO + the 4 agents) goes to the meeting room; press it again to end the meeting
 - {"action":"raise","who":"Presenter"}: +$3/hr pay raise (the CEO gets asked "are you sure?" first)
 - {"action":"vacation","who":"Presenter"}: send someone on vacation, or bring them back from vacation
 - {"action":"wander","who":"Presenter"}: someone walks around freely, or goes back to their desk
@@ -531,43 +527,46 @@ async function askAI(p,userText){
   if(p.history.length>24) p.history.splice(0,p.history.length-24);
   return out;
 }
-// ---------- 🎨 Designer: Google Gemini, which can look at pictures AND make new ones ----------
-// Only for the owner (OFFICE_OWNERS). The key is saved only in this browser.
+// ---------- 🎨 Designer: Groq's picture-reading AI (you can send it pictures; it answers in text) ----------
+// Only for the owner (OFFICE_OWNERS). It uses the same Groq key as the other agents.
+// Groq retires vision models now and then, so we try these in order and remember the first one that works.
 const OFFICE_OWNERS=['ss53753@samsenwit.ac.th','punnavich.sr@gmail.com'];   // same list as ADMIN_EMAILS in index.html
 const isOwner=()=>{ const u=window.questcraftBridge&&questcraftBridge.user(); return !!(u&&OFFICE_OWNERS.includes((u.email||'').toLowerCase())); };
-const GEMINI_MODEL='gemini-3.1-flash-image';
-let gemCfg={key:'', model:GEMINI_MODEL};
-try{ const g=JSON.parse(localStorage.getItem('qc-gemini')||'null'); if(g) gemCfg={...gemCfg,...g}; }catch(e){}
-const usesGemini=p=>!!(p && p.key==='custom' && myJob().gemini);
-async function askGemini(p,userText){
+const VISION_MODELS=['qwen/qwen3.8-27b','meta-llama/llama-4-scout-17b-16e-instruct','meta-llama/llama-4-maverick-17b-128e-instruct'];
+const usesVision=p=>!!(p && p.key==='custom' && myJob().vision);
+async function askVision(p,userText){
   if(!isOwner()) throw new Error('The Designer is only for the owner of TheQuestCraft (sign in to the game first).');
-  if(!gemCfg.key) throw new Error('Paste your Gemini API key in the box above (get one free at aistudio.google.com → Get API key), then ask me again.');
+  const b=brain();
+  if(!b.key) throw new Error('I need the AI brain first: set up your Groq key in the Planner, or paste it in the "🤖 AI brain" box below.');
+  if(b.provider!=='groq') throw new Error('Pictures need a Groq key (the AI brain is set to OpenRouter right now).');
   const img=p.pendingImage; p.pendingImage=null;
-  const ref=img||p.lastImage;                         // the picture we're talking about: the new one, or the latest design
-  const parts=[];
-  if(ref) parts.push({inline_data:{mime_type:ref.mimeType, data:ref.data}});
-  parts.push({text:(!img&&ref?'(The picture above is the latest design in our chat.)\n':'')+userText});
-  const contents=[...(p.gemHistory||[]), {role:'user', parts}];
-  const sys=`You are "${p.name}", the CEO's personal designer at TheQuestCraft HQ. The CEO is Punn, a student who built TheQuestCraft himself; call him "boss".
+  const ref=img||p.lastImage;                         // the picture we're talking about: the new one, or the last one you sent
+  if(img) p.lastImage=img;
+  const content=[{type:'text', text:(!img&&ref?'(Still talking about the picture I sent before.)\n':'')+userText}];
+  if(ref) content.push({type:'image_url', image_url:{url:`data:${ref.mimeType};base64,${ref.data}`}});
+  const msgs=[{role:'system', content:`You are "${p.name}", the CEO's personal designer at TheQuestCraft HQ. The CEO is Punn, a student who built TheQuestCraft himself; call him "boss".
 ${myJob().persona}
-Right now it is ${timeStr(clockMin())}.`;
-  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(gemCfg.model||GEMINI_MODEL)}:generateContent`,{
-    method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':gemCfg.key},
-    body:JSON.stringify({systemInstruction:{parts:[{text:sys}]}, contents, generationConfig:{responseModalities:['TEXT','IMAGE']}})});
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error('Gemini: '+((data.error&&data.error.message)||('error '+res.status)));
-  const cand=(data.candidates||[])[0]||{}, out=(cand.content&&cand.content.parts)||[];
-  const text=out.filter(x=>x.text&&!x.thought).map(x=>x.text).join('\n').trim();
-  const images=out.map(x=>x.inlineData||x.inline_data).filter(d=>d&&d.data).map(d=>({mimeType:d.mimeType||d.mime_type||'image/png', data:d.data}));
-  if(!text && !images.length){ const why=cand.finishReason||(data.promptFeedback&&data.promptFeedback.blockReason); throw new Error('Gemini sent nothing back'+(why?` (${why})`:'')+'. Try asking in a different way.'); }
-  if(images.length) p.lastImage=images[images.length-1]; else if(img) p.lastImage=img;
-  // remember the conversation as text only (pictures are big); the latest picture is sent again with the next message
-  p.gemHistory=[...(p.gemHistory||[]),
-    {role:'user', parts:[{text:userText+(img?' [sent a picture]':'')}]},
-    {role:'model', parts:[{text:(text||'Here you go!')+(images.length?' [made a picture]':'')}]}].slice(-12);
-  return {reply:text||'Here you go! 🎨', images, task:null, actions:[]};
-}
-// the 📎 picture you're about to send (made smaller so it uploads fast)
+Right now it is ${timeStr(clockMin())}.`}, ...(p.visionHistory||[]), {role:'user', content}];
+  let saved=null; try{ saved=localStorage.getItem('qc-vision-model'); }catch(e){}
+  const tryModels=[...new Set([saved,...VISION_MODELS].filter(Boolean))];
+  let lastErr='';
+  for(const model of tryModels){
+    const res=await fetch(AI_URL.groq,{method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+b.key},
+      body:JSON.stringify({model, messages:msgs, temperature:0.7, max_tokens:1200})});
+    const data=await res.json().catch(()=>({}));
+    if(res.ok){
+      try{ localStorage.setItem('qc-vision-model',model); }catch(e){}
+      const reply=((data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'').trim()||'Hmm, I have no words for that one 😅';
+      p.visionHistory=[...(p.visionHistory||[]), {role:'user', content:userText+(img?' [sent a picture]':'')}, {role:'assistant', content:reply}].slice(-10);
+      return {reply, task:null, actions:[]};
+    }
+    lastErr=(data.error&&data.error.message)||('error '+res.status);
+    if(res.status===401) throw new Error('Groq says the key is wrong: check it in the Planner or the "🤖 AI brain" box.');
+    if(res.status===429) throw new Error('Groq says too many requests: wait a minute and try again.');
+    // model gone or can't read pictures: try the next one
+  }
+  throw new Error('None of Groq\'s picture models worked with your key ('+lastErr+').');
+}// the 📎 picture you're about to send (made smaller so it uploads fast)
 let pendingImage=null;
 function clearAttachment(){ pendingImage=null; const pv=document.getElementById('attachPreview'); pv.style.display='none'; pv.innerHTML=''; document.getElementById('chatFile').value=''; }
 function readPicture(file){
@@ -587,13 +586,13 @@ function readPicture(file){
 async function aiChat(p,userText,fallback){
   typingEl.textContent=`${p.name} is typing…`;
   try{
-    const out=usesGemini(p)?await askGemini(p,userText):await askAI(p,userText);
+    const out=usesVision(p)?await askVision(p,userText):await askAI(p,userText);
     typingEl.textContent=''; const el=addMsg(p,out.reply);
     if(out.images&&out.images.length) addImages(el,out.images,true);
     return out;
   }
   catch(err){ typingEl.textContent=''; log(`⚠️ AI error for ${p.name}: ${esc(err.message)}`);
-    if(usesGemini(p)){ addMsg(p,`🎨 ${err.message}`); return {reply:'',task:null,actions:[]}; }   // say what's wrong instead of a fake reply
+    if(usesVision(p)){ addMsg(p,`🎨 ${err.message}`); return {reply:'',task:null,actions:[]}; }   // say what's wrong instead of a fake reply
     document.getElementById('aiBadge').textContent='— error, check your key';
     const fb=fallback(); addMsg(p,fb.reply); return fb; }
 }
@@ -628,7 +627,7 @@ function goTo(p,dest,onArrive){
   p.path=path; p.onArrive=onArrive||null;
 }
 function randomSpot(){
-  const keys=['desk1','desk2','desk3','desk4','meeting','lunch','lobby'];
+  const keys=['desk1','desk2','desk3','desk4','meeting','lobby'];
   const r=rooms[keys[Math.floor(Math.random()*keys.length)]];
   return {x:r.x1+30+Math.random()*(r.x2-r.x1-60), y:r.y1+60+Math.random()*(r.y2-r.y1-90)};
 }
@@ -727,6 +726,28 @@ callBtn.onclick=()=>{
 };
 agentSel.addEventListener('change',callLabel); setInterval(callLabel,1000);
 
+// ---------- 📅 Meeting: you + the 4 agents sit around the meeting table (press again to end it) ----------
+const MEETING_SEATS=[{x:262,y:352},{x:335,y:306},{x:435,y:306},{x:335,y:400},{x:435,y:400}];   // CEO at the head, then the 4 agents
+const inMeeting=p=>/meeting/.test(p.status);
+const meetBtn=document.getElementById('meetingBtn');
+const meetLabel=()=>{ meetBtn.textContent=people.some(p=>p.scene==='office'&&inMeeting(p))?'↩ End meeting':'📅 Meeting'; };
+function startMeeting(){
+  if(!people.some(p=>p.scene==='office')){ log('Nobody is in the office for a meeting.'); return; }
+  [P('Punn'),...people.filter(p=>!p.manager)].forEach((p,i)=>{
+    if(p.scene!=='office') return;                   // on vacation / at home: not in the meeting
+    p.wander=false; p.busyUntil=0; p.status='walking to the meeting';
+    goTo(p,MEETING_SEATS[i],()=>p.status='in a meeting');
+  });
+  log('📅 Meeting! Everyone to the meeting room.');
+  addMsg(vector,'📅 Meeting time! Everyone is heading to the meeting room.',false,'meeting');
+}
+function endMeeting(){
+  people.filter(p=>p.scene==='office'&&inMeeting(p)).forEach(p=>goTo(p,deskSpot(p),()=>p.status=p.manager?'managing':'idle'));
+  log('📅 Meeting over, back to work!');
+}
+meetBtn.onclick=()=>{ people.some(p=>p.scene==='office'&&inMeeting(p))?endMeeting():startMeeting(); meetLabel(); };
+setInterval(meetLabel,1000);
+
 // ---------- ✏️ Your own agent: name + job (saved in this browser) ----------
 const myNameEl=document.getElementById('myAgentName'), myJobEl=document.getElementById('myAgentJob'), myBadge=document.getElementById('myAgentBadge');
 // owner-only jobs (the 🎨 Designer) appear once we know you're the owner
@@ -738,16 +759,7 @@ myNameEl.value=myAgent.name; myJobEl.value=myAgent.job;
   let saved=null; try{ saved=localStorage.getItem('qc-my-agent'); }catch(e){}
   if(!saved){ myJobEl.value='designer'; myNameEl.value='Designer'; myBadge.textContent='— 🎨 Designer is ready for you: press Save'; }
 })();
-// 🎨 Designer: Gemini key + model, and the 📎 picture button
-const gemKeyEl=document.getElementById('gemKey'), gemModelEl=document.getElementById('gemModel');
-gemModelEl.value=gemCfg.model||GEMINI_MODEL; if(gemCfg.key) gemKeyEl.placeholder='Gemini key saved ✔ (paste a new one to change it)';
-document.getElementById('gemSave').onclick=()=>{
-  const key=gemKeyEl.value.trim(), model=gemModelEl.value.trim()||GEMINI_MODEL;
-  gemCfg={key:key||gemCfg.key, model};
-  try{ localStorage.setItem('qc-gemini',JSON.stringify(gemCfg)); }catch(e){}
-  gemKeyEl.value=''; gemKeyEl.placeholder=gemCfg.key?'Gemini key saved ✔ (paste a new one to change it)':gemKeyEl.placeholder;
-  log(`🎨 Designer set to ${esc(model)}${gemCfg.key?'':' (no key yet)'}`);
-};
+// 🎨 Designer: the 📎 picture button
 document.getElementById('chatAttach').onclick=()=>document.getElementById('chatFile').click();
 document.getElementById('chatFile').onchange=async e=>{
   try{
@@ -802,7 +814,7 @@ document.getElementById('lunch').onclick=()=>{
 };
 
 // ---------- Hands: agents press the office buttons for you ----------
-const BUTTONS={clock_in:['clockIn','⏱ Clock in'],clock_out:['clockOut','⏱ Clock out'],lunch:['lunch','🍜 Lunch time'],
+const BUTTONS={clock_in:['clockIn','⏱ Clock in'],clock_out:['clockOut','⏱ Clock out'],meeting:['meetingBtn','📅 Meeting'],
   raise:['raise','Pay raise'],vacation:['vacation','Vacation'],wander:['wander','Walk freely']};
 function findAgent(w){ w=String(w||'').toLowerCase().replace(/^@/,'').trim();
   return people.find(p=>!p.manager&&(p.name.toLowerCase()===w||(p.aliases||[]).includes(w))); }
@@ -850,7 +862,7 @@ function detectActions(t,target){
   else if(named && /\b(go|send|get)\b.*\bback\b.*\bdesk\b/i.test(t)) a.push({action:'back_to_desk',who:named.name});
   if(/clock\s*(every(one|body)\s*)?in|start (the )?(work ?)?day|everyone (come )?to work/i.test(t)) a.push({action:'clock_in'});
   else if(/clock\s*(every(one|body)\s*)?out|end (the )?(work ?)?day|everyone go home|send everyone home/i.test(t)) a.push({action:'clock_out'});
-  if(/lunch/i.test(t)) a.push({action:'lunch'});
+  if(/\b(start|have|call)\s+(a\s+)?meeting\b|meeting time|everyone to the meeting/i.test(t)) a.push({action:'meeting'});
   return a;
 }
 // Jarvis answers in the Team chat. It's your REAL Planner Jarvis (same memory, timetable powers and settings),
@@ -989,7 +1001,7 @@ function sendChat(){
 }
 // what happens after you sent a message (the same for the Meeting Chat and the private chats)
 function respond(text,targets,toAll,named){
-  if(aiOn() || (!toAll && usesGemini(targets[0]))){ aiSend(text,targets,toAll); return; }
+  if(aiOn()){ aiSend(text,targets,toAll); return; }
   const acts=detectActions(text,toAll?null:targets[0]);
   if(acts.length){
     const by=(!toAll&&targets[0].scene==='office')?targets[0]:vector;
@@ -1020,7 +1032,7 @@ async function aiSend(text,targets,toAll){
   const here=targets.filter(p=>p.scene==='office');
   if(!toAll) away.forEach(p=>addMsg(p,`(Auto-reply) I'm ${p.status} right now, I'll answer later 🙏`));
   if(!here.length){   // nobody in: the Guard answers if it's for the whole team or about the office buttons
-    if(toAll||detectActions(text).length||/clock|lunch|vacation|raise|wander/i.test(text)) guardHandle(text);
+    if(toAll||detectActions(text).length||/clock|meeting|vacation|raise|wander/i.test(text)) guardHandle(text);
     return; }
   const msg=toAll?`[Message to the whole team] ${text}`:text;
   if(toAll) say(P('Punn'),text.length>28?text.slice(0,27)+'…':text);
@@ -1219,7 +1231,7 @@ function drawOffice(){
   c.fillStyle='#f7f4ec'; c.fillRect(DOOR.x-20,0,40,6); doorSwing(c,DOOR.x-20,3,1);
   plant(c,12,40,1.4); plant(c,24,62,1.0);
   // room labels
-  for(const k in rooms){ const r=rooms[k]; label(c, r.name.startsWith('DESK')?r.name[0]+r.name.slice(1).toLowerCase():r.name, r.x1+10, r.y1+(r.y1?20:20)); }
+  for(const k in rooms){ const r=rooms[k]; if(!r.name) continue; label(c, r.name.startsWith('DESK')?r.name[0]+r.name.slice(1).toLowerCase():r.name, r.x1+10, r.y1+(r.y1?20:20)); }
   c.fillStyle='#2b2b2b'; c.font='10px "Segoe UI",Arial,sans-serif'; c.textAlign='center'; c.fillText('DOOR',DOOR.x,22);
 
   // lobby: corner plant, clock, reception desk
@@ -1265,11 +1277,6 @@ function drawOffice(){
   c.fillStyle=mg; c.beginPath(); c.roundRect(290,316,190,62,4); c.fill();
   c.strokeStyle='#1d4430'; c.stroke();
 
-  // lunch table
-  c.fillStyle='rgba(0,0,0,.15)'; c.beginPath(); c.ellipse(772,356,78,38,0,0,7); c.fill();
-  const lg=c.createRadialGradient(767,345,10,767,350,80); lg.addColorStop(0,'#c99a68'); lg.addColorStop(1,'#a87445');
-  c.fillStyle=lg; c.beginPath(); c.ellipse(767,350,78,38,0,0,7); c.fill();
-  c.strokeStyle='#7a5230'; c.lineWidth=1.5; c.stroke(); c.lineWidth=1;
 
   // vector + people
   if(vector.scene==='office'){ if(!vector.path.length) vector.step+=16; drawPerson(c,vector); }
@@ -1280,7 +1287,7 @@ function drawOffice(){
     if(night>0.6){ c.globalAlpha=Math.min(1,(night-0.6)/0.4);
       c.fillStyle='#e2e8f0'; c.font='bold 18px "Segoe UI",Arial,sans-serif'; c.textAlign='center';
       c.fillText('🌙 Closed for the night',480,212);
-      c.font='12px "Segoe UI",Arial,sans-serif'; c.fillStyle='#94a3b8'; c.fillText('Press ⏱ Clock in to open the office',480,236);
+      c.font='12px "Segoe UI",Arial,sans-serif'; c.fillStyle='#94a3b8'; c.fillText('Open the office again later and everyone will be back',480,236);
       c.globalAlpha=1; }
   }
 }
@@ -1359,7 +1366,8 @@ window.addEventListener('pagehide',saveOffice);
 
 if(restoreOffice()) log('Welcome back! Your office is just how you left it.');
 else{
-log('Welcome to TheQuestCraft HQ, CEO! Press <b>Clock in</b> to start the day.');
+log('Welcome to TheQuestCraft HQ, CEO! Your team is coming in.');
+setTimeout(()=>document.getElementById('clockIn').click(),600);   // no Clock in button: everyone arrives by themselves
 addMsg(vector,'Welcome to TheQuestCraft HQ, CEO! 🫡 This is the Meeting Chat, where everyone is. Your team: '+myAgent.name+' ('+myJob().job.toLowerCase()+', your own agent), Assistant (emails & inbox), Problem Solver (ideas & fixing problems) and Presenter (presentations). Each of them also has a private chat in the tabs above 👆 Your own AI is here too: pick "To: 🟠 '+jarvis.name+'" or start your message with his name.');
 }
 showChat(activeChat);
@@ -1396,7 +1404,7 @@ Team: ${people.filter(p=>!p.manager).map(p=>`${p.name} (${p.job}, ${p.status}, $
   },
   actions:`- {"action":"clock_in"}: everyone comes to work
 - {"action":"clock_out"}: everyone goes home (+$5 bonus each)
-- {"action":"lunch"}: lunch time for everyone in the office
+- {"action":"meeting"}: everyone (the CEO + the 4 agents) goes to the meeting room; press it again to end the meeting
 - {"action":"raise","who":"Presenter"}: +$3/hr pay raise (he gets asked "are you sure?" first)
 - {"action":"vacation","who":"Presenter"}: send someone on vacation, or bring them back
 - {"action":"wander","who":"Presenter"}: someone walks around freely, or goes back to their desk
@@ -1406,7 +1414,7 @@ Team: ${people.filter(p=>!p.manager).map(p=>`${p.name} (${p.job}, ${p.status}, $
 - {"action":"message","who":"Assistant","text":"please check the inbox"}: YOU send a message to a teammate in the Team chat for him, and they answer there.
   "who" is a teammate's name, "Guard", or "everyone". Write "text" as if you are talking to them. Use this whenever he asks you to tell, ask or message someone. Don't tell him to do it himself.
 For big presentation, ideas, problem-solving or email jobs, you can pass the job to the right teammate with "message" (Presenter, Problem Solver, Assistant), ${myJob().leader?`or give a big goal to ${myAgent.name} (the team manager) and they'll split it up for the team.`:`or ask ${myAgent.name} (${myJob().job.toLowerCase()}) for help with that.`}`,
-  names:['clock_in','clock_out','lunch','raise','vacation','wander','call_office','back_to_desk','message'],
+  names:['clock_in','clock_out','meeting','raise','vacation','wander','call_office','back_to_desk','message'],
   run(a){
     if(a.action!=='message'){ runActions([a],jarvis); return; }
     const w=String(a.who||'').toLowerCase().trim();
