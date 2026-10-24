@@ -93,7 +93,7 @@
     <div class="row" style="margin-top:0"><select id="agentSel"></select></div>
     <div class="row">
       <button id="wander">Walk freely</button>
-      <button id="callOffice">📞 Call to my office</button>
+      <button id="callOffice" style="display:none">📞 Call to my office</button>
     </div>
   </div>
 
@@ -114,7 +114,7 @@
     <button id="clockIn" style="display:none">⏱ Clock in</button>
     <button id="clockOut">⏱ Clock out (+$5 each)</button>
     <button id="lunch" style="display:none">🍜 Lunch time</button>
-    <button id="meetingBtn">📅 Meeting</button>
+    <button id="meetingBtn" style="display:none">📅 Meeting</button>
   </div>
 
   <div class="panel">
@@ -126,20 +126,6 @@
   <div class="panel">
     <h2>Office log</h2>
     <div id="log"></div>
-  </div>
-
-  <div class="panel">
-    <h2>🤖 AI brain <span id="aiBadge" style="font-weight:400;font-size:13px;color:var(--muted)"></span></h2>
-    <div class="row" style="margin-top:0">
-      <select id="aiProvider" style="width:auto">
-        <option value="groq">Groq</option>
-        <option value="openrouter">OpenRouter</option>
-      </select>
-      <input id="aiKey" type="password" placeholder="Paste your API key (saved only in this browser)">
-      <button id="aiSave">Save</button>
-      <button id="aiClear">Remove key</button>
-    </div>
-    <div style="font-size:13px;color:var(--muted);margin-top:8px">Model: <code id="aiModel">openai/gpt-oss-120b</code>. Your agents share the AI you set up in the Planner, so no extra key is needed. Paste a key here only if you want the office to use a different one. Without any key, agents use simple built-in replies.</div>
   </div>
 
   <div class="panel">
@@ -273,12 +259,12 @@ const isLeader=p=>!!(p && p.key==='custom' && myJob().leader);   // can hand out
 // Each agent's name IS their job (except your own agent at Desk 2). "aliases" = other words you can use to call them in the chat.
 // "key" = stable id (also the id of their private chat tab). "maxTokens" = how long their answers can be.
 const people = [
-  {key:'assistant', name:'Assistant', job:'Emails & inbox', color:'#3b82f6', wage:4, desk:'desk1', hair:'boy', hairColor:'#3b2a1e', aliases:['email','atlas','inbox'], maxTokens:900},
-  {key:'custom', name:myAgent.name, job:myJob().job, color:'#f5f5f5', wage:4, desk:'desk2', hair:'boy', hairColor:'#5a3a22',
+  {key:'assistant', name:'Assistant', job:'Emails & inbox', color:'#3b82f6', wage:1000, desk:'desk1', hair:'boy', hairColor:'#3b2a1e', aliases:['email','atlas','inbox'], maxTokens:900},
+  {key:'custom', name:myAgent.name, job:myJob().job, color:'#f5f5f5', wage:1000, desk:'desk2', hair:'boy', hairColor:'#5a3a22',
     aliases:['agent','my agent',...(myJob().leader?['manager','mgr']:[])], maxTokens:myJob().maxTokens},
-  {key:'solver', name:'Problem Solver', job:'Ideas & fixing problems', color:'#f59e0b', wage:4, desk:'desk3', hair:'boy', hairColor:'#1f1f1f', aliases:['solver','ideamaker','ideas','tom'], maxTokens:1600},
-  {key:'presenter', name:'Presenter', job:'Presentations & persuasion', color:'#a855f7', wage:4, desk:'desk4', hair:'boy', hairColor:'#2b2b2b', aliases:['developer','dev','vex'], maxTokens:2400},
-  {name:'Punn', tag:'CEO of TheQuestCraft', job:'CEO', color:'#0d9488', wage:5, desk:'manager', manager:true, hair:'boy', hairColor:'#1a1a1a', aliases:[]},
+  {key:'solver', name:'Problem Solver', job:'Ideas & fixing problems', color:'#f59e0b', wage:1000, desk:'desk3', hair:'boy', hairColor:'#1f1f1f', aliases:['solver','ideamaker','ideas','tom'], maxTokens:1600},
+  {key:'presenter', name:'Presenter', job:'Presentations & persuasion', color:'#a855f7', wage:1000, desk:'desk4', hair:'boy', hairColor:'#2b2b2b', aliases:['developer','dev','vex'], maxTokens:2400},
+  {name:'Punn', tag:'CEO of TheQuestCraft', job:'CEO', color:'#0d9488', wage:8653, desk:'manager', manager:true, hair:'boy', hairColor:'#1a1a1a', aliases:[]},
 ].map((p,i)=>({...p, history:[], scene:'home', x:0, y:0, path:[], onArrive:null, status:'at home',
   earned:0, vacation:false, wander:false, speech:'', speechT:0, step:0, busyUntil:0, delay:i*600}));
 
@@ -318,7 +304,7 @@ You know TheQuestCraft: a browser RPG where students earn XP by doing real tasks
 PERSONA['Guard']=`You are the building guard of TheQuestCraft HQ. You stand at the front door all day, so you are always here, even when nobody else is.
 You are proud, loyal and a bit formal, and you salute the CEO 🫡. Your main job: running the building for the CEO by pressing the office buttons he asks for (clocking people out and starting meetings).
 Keep replies short (1-2 sentences).`;
-const vector = {name:'Guard', guard:true, job:'Building guard', wage:3, scene:'office', history:[], maxTokens:500, aliases:['vector','security'],
+const vector = {name:'Guard', guard:true, job:'Building guard', wage:1000, scene:'office', history:[], maxTokens:500, aliases:['vector','security'],
   color:'#1e3a8a', hair:'boy', hairColor:'#4a3020', x:62, y:330, status:'guarding the door', step:0, speech:'', speechT:0,
   path:[], onArrive:null};
 const GUARD_POST={x:62,y:330};   // in the lobby, next to the entrance
@@ -335,13 +321,13 @@ function P(name){return people.find(p=>p.name.toLowerCase()===name.toLowerCase()
 const showName=p=>p.tag||p.name;   // the name shown on screen (the CEO's is longer)
 function deskSpot(p){
   const r=rooms[p.desk];
-  return p.manager ? {x:767,y:385} : {x:(r.x1+r.x2)/2, y:150};
+  return p.manager ? {x:634,y:322} : {x:(r.x1+r.x2)/2, y:150};
 }
 
 // ---------- Game clock & money ----------
 // "minutes" is the work timer (1 tick every 250ms) for tasks, lunch and wages.
 // The clock on screen shows the real time of your device instead: clockMin().
-let minutes = 8*60, cash = 500, payroll = 0, lunchActive = false, lunchEnd = 0;
+let minutes = 8*60, cash = 1000000, payroll = 0, lunchActive = false, lunchEnd = 0;
 const clockMin=()=>{ const d=new Date(); return d.getHours()*60+d.getMinutes(); };
 function timeStr(m){m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
 
@@ -534,8 +520,8 @@ const usesVision=p=>!!(p && p.key==='custom' && myJob().vision);
 async function askVision(p,userText){
   if(!isOwner()) throw new Error('The Designer is only for the owner of TheQuestCraft (sign in to the game first).');
   const b=brain();
-  if(!b.key) throw new Error('I need the AI brain first: set up your Groq key in the Planner, or paste it in the "🤖 AI brain" box below.');
-  if(b.provider!=='groq') throw new Error('Pictures need a Groq key (the AI brain is set to OpenRouter right now).');
+  if(!b.key) throw new Error('I need the AI brain first: open the orange AI button, press ⚙️ and paste your Groq key.');
+  if(b.provider!=='groq') throw new Error('Pictures need a Groq key (your saved key is an OpenRouter key).');
   const img=p.pendingImage; p.pendingImage=null;
   const ref=img||p.lastImage;                         // the picture we're talking about: the new one, or the last one you sent
   if(img) p.lastImage=img;
@@ -558,7 +544,7 @@ Right now it is ${timeStr(clockMin())}.`}, ...(p.visionHistory||[]), {role:'user
       return {reply, task:null, actions:[]};
     }
     lastErr=(data.error&&data.error.message)||('error '+res.status);
-    if(res.status===401) throw new Error('Groq says the key is wrong: check it in the Planner or the "🤖 AI brain" box.');
+    if(res.status===401) throw new Error('Groq says the key is wrong: check it in the orange AI button (⚙️).');
     if(res.status===429) throw new Error('Groq says too many requests: wait a minute and try again.');
     // model gone or can't read pictures: try the next one
   }
@@ -590,7 +576,6 @@ async function aiChat(p,userText,fallback){
   }
   catch(err){ typingEl.textContent=''; log(`⚠️ AI error for ${p.name}: ${esc(err.message)}`);
     if(usesVision(p)){ addMsg(p,`🎨 ${err.message}`); return {reply:'',task:null,actions:[]}; }   // say what's wrong instead of a fake reply
-    document.getElementById('aiBadge').textContent='— error, check your key';
     const fb=fallback(); addMsg(p,fb.reply); return fb; }
 }
 function finishReport(p,task){
@@ -607,7 +592,7 @@ function replyTo(p,text){
   if(/how are you|how's it going|status|update/i.test(text)) return `I'm ${p.status}. All good so far 👍`;
   if(/raise|money|pay|salary/i.test(text)) return `I'm on $${p.wage}/hr now… a raise would be nice 👀`;
   if(/\?$/.test(text.trim())) return pick(['Let me check and get back to you.','Good question, I think so!','Hmm, not sure yet. I\'ll find out.']);
-  return pick(['Got it, boss 👍','Okay, will do!','Understood ✅']);
+  return pick(['Hmm, what do you need me to do, boss? 🤔',"I'm here! Tell me what you need 👍",'Okay! Just say what you want me to work on.']);
 }
 
 // ---------- Movement ----------
@@ -671,7 +656,7 @@ function renderChips(){
   people.forEach(p=>{
     const c=document.createElement('div');
     c.className='chip'+(focusSel.value===p.name?' sel':'');
-    c.innerHTML=`${esc(p.manager?'CEO Punn':p.name)} $${p.wage} <small>/hr</small>`;
+    c.innerHTML=`${esc(p.manager?'CEO Punn':p.name)} $${p.wage.toLocaleString()} <small>/hr</small>`;
     c.onclick=()=>{focusSel.value=p.name; if(!p.manager) agentSel.value=p.name; renderChips();};
     box.appendChild(c);
   });
@@ -686,15 +671,17 @@ document.getElementById('wander').onclick=()=>{
   else{log(`${p.name} went back to their desk.`);goTo(p,deskSpot(p),()=>p.status='idle');}
 };
 // ---------- Call someone to the CEO office ----------
-const VISIT_SPOTS=[{x:830,y:330},{x:705,y:330},{x:830,y:410}];   // inside the CEO office, next to Punn's desk
+const VISIT_SPOTS=[{x:612,y:402},{x:656,y:402},{x:930,y:340},{x:930,y:388}];   // 2 chairs at your desk, then the sofa (2 seats)   // inside the CEO office, next to Punn's desk
 const inCeoOffice=p=>/CEO office/.test(p.status);
 function callToOffice(p){
   if(p.scene!=='office'){ log(`${p.name} isn't in the office.`); return false; }
   if(inCeoOffice(p)) return true;
-  const n=people.filter(q=>q!==p&&inCeoOffice(q)).length;
-  p.wander=false; p.busyUntil=0; p.status='walking to the CEO office';   // drops what they were doing
-  log(`📞 You called ${p.name} to your office.`);
-  goTo(p,VISIT_SPOTS[n%VISIT_SPOTS.length],()=>{ p.status='in the CEO office'; say(p,'You called, boss?'); });
+  // first free seat: the 2 chairs at your desk, then the sofa
+  const taken=people.filter(q=>q!==p&&inCeoOffice(q)).map(q=>q.seat);
+  let seat=VISIT_SPOTS.findIndex((s,i)=>!taken.includes(i)); if(seat<0) seat=0;
+  p.seat=seat; p.wander=false; p.busyUntil=0; p.status='walking to the CEO office';   // drops what they were doing
+  log(`💬 ${p.name} is coming to your office.`);
+  goTo(p,VISIT_SPOTS[seat],()=>{ p.status='in the CEO office'; say(p,'Hi boss!'); });
   return true;
 }
 function sendBackToDesk(p){
@@ -713,6 +700,14 @@ callBtn.onclick=()=>{
 };
 agentSel.addEventListener('change',callLabel); setInterval(callLabel,1000);
 
+// ---------- 💬 Private chat visits: the agent comes to your office and goes back after 2 quiet minutes ----------
+function visitOffice(p){
+  if(!p || p.scene!=='office' || inMeeting(p)) return;
+  p.visitUntil=Date.now()+120000;
+  if(!inCeoOffice(p)) callToOffice(p);
+}
+setInterval(()=>{ people.forEach(p=>{ if(p.visitUntil && Date.now()>p.visitUntil){ p.visitUntil=0; if(inCeoOffice(p)) sendBackToDesk(p); } }); },3000);
+
 // ---------- 📅 Meeting: you + the 4 agents sit around the meeting table (press again to end it) ----------
 const MEETING_SEATS=[{x:262,y:352},{x:335,y:306},{x:435,y:306},{x:335,y:400},{x:435,y:400}];   // CEO at the head, then the 4 agents
 const inMeeting=p=>/meeting/.test(p.status);
@@ -722,7 +717,7 @@ function startMeeting(){
   if(!people.some(p=>p.scene==='office')){ log('Nobody is in the office for a meeting.'); return; }
   [P('Punn'),...people.filter(p=>!p.manager)].forEach((p,i)=>{
     if(p.scene!=='office') return;                   // on vacation / at home: not in the meeting
-    p.wander=false; p.busyUntil=0; p.status='walking to the meeting';
+    p.wander=false; p.busyUntil=0; p.visitUntil=0; p.status='walking to the meeting';
     goTo(p,MEETING_SEATS[i],()=>p.status='in a meeting');
   });
   log('📅 Meeting! Everyone to the meeting room.');
@@ -868,7 +863,7 @@ async function relay(to,text,from=jarvis){
     if(p!==vector && p.scene!=='office'){ addMsg(p,`(Auto-reply) I'm ${p.status} right now, I'll answer later 🙏`); continue; }
     const fb=()=>{ const acts=detectActions(text);
       return acts.length?{reply:'On it! 👍',task:null,actions:acts}
-        :isChatty(text)?{reply:replyTo(p,text),task:null}:{reply:'On it!',task:p===vector?null:extractTask(text,p.name)}; };
+        :(isChatty(text)||!looksLikeTask(text,p.name))?{reply:replyTo(p,text),task:null}:{reply:'On it!',task:p===vector?null:extractTask(text,p.name)}; };
     const out=aiOn()?await aiChat(p,msg,fb):(()=>{ const o=fb(); addMsg(p,o.reply); return o; })();
     if(out.actions&&out.actions.length&&!pressed){ runActions(out.actions,p); if(out.actions.some(x=>x.action!=='message')) pressed=true; continue; }   // only the Manager can pass work on, so no endless loop
     if(out.task&&p!==vector) giveTask2(p,out.task,true);
@@ -929,6 +924,12 @@ function giveTask(target,task,quiet=false){
   });
 }
 // Is the message a task, or just chatting?
+// Does the message sound like an order? ("please…", "can you…", "write the report", "go check the emails")
+function looksLikeTask(t,name){
+  const s=extractTask(t,name).toLowerCase();
+  return /\bplease\b|\bpls\b|^(can|could|would) you\b/i.test(t) ||
+    /^(go|do|make|write|clean|check|call|get|prepare|plan|research|find|fix|start|send|bring|help|organi[sz]e|sort|read|draw|design|print|book|buy|order|tidy|update|finish|create|build|review)\b/.test(s);
+}
 function isChatty(t){
   return /thank|good job|great|nice|well done|\b(hi|hello|hey|morning|bye)\b|how are you|how's it going|status|update|raise|salary|\?\s*$/i.test(t);
 }
@@ -953,12 +954,16 @@ function sendChat(){
     const el=addMsg(P('Punn'),text||'📎 (picture)',true,activeChat);
     if(img){ addImages(el,[img],false); clearAttachment(); }
     p.replyChannel=activeChat; p.pendingImage=img||null;
+    visitOffice(p);                                   // they walk over to your office to talk
     if(!text) text='Please look at this picture and tell me what you think.';
     log(`You → ${p.name}: "${esc(text)}"`);
     respond(text,[p],false,p);
     return;
   }
-  // the Meeting Chat: everyone is here
+  // the Meeting Chat: everyone is here. "meet…" starts a meeting, "meeting over" / "back to work" ends it
+  const meetingNow=people.some(p=>p.scene==='office'&&inMeeting(p));
+  if(/\b(meeting (is )?(over|done)|end (the )?meeting|back to work)\b/i.test(text)){ if(meetingNow) endMeeting(); }
+  else if(/\bmeet/i.test(text) && !meetingNow) startMeeting();
   // Who is this for? 1) a name at the START ("Jarvis, ...", "@Dev ...") wins,
   // 2) then a name after tell/ask ("tell Assistant to ..."), 3) then the dropdown.
   // (So "Jarvis, tell the Manager ..." goes to Jarvis, and he passes it on.)
@@ -994,10 +999,10 @@ function respond(text,targets,toAll,named){
   }
   // no AI key: real help (code, lessons, ideas, drafts) needs the AI brain, so say so instead of faking it
   if(!toAll && targets[0].scene==='office' && /help|explain|how|why|idea|code|bug|error|doesn'?t work|homework|teach|quiz|draft|write an? email/i.test(text)){
-    chat(targets[0],`I'd love to help with that! 🙌 But I need my AI brain first: paste an API key in the "🤖 AI brain" box above, then ask me again.`,300);
+    chat(targets[0],`I'd love to help with that! 🙌 But I need my AI brain first: open the orange AI button, press ⚙️ and paste your Groq key, then ask me again.`,300);
     return;
   }
-  if(isChatty(text)){
+  if(isChatty(text) || !looksLikeTask(text,named&&named.name)){   // just talking, not an order: answer, don't start a task
     const here=toAll?targets.filter(p=>p.scene==='office'):targets;
     if(!here.length){addMsg(vector,'Nobody is in the office right now 🙂');return;}
     here.forEach((p,i)=>chat(p,replyTo(p,text),400+i*1600));
@@ -1025,7 +1030,7 @@ async function aiSend(text,targets,toAll){
   for(const p of here){             // one at a time, like a real group chat
     const fb=()=>{ const acts=detectActions(text);
       return acts.length?{reply:'On it, boss! 👍',task:null,actions:acts}
-        :isChatty(text)?{reply:replyTo(p,text),task:null}:{reply:'On it!',task:extractTask(text,p.name)}; };
+        :(isChatty(text)||!looksLikeTask(text,p.name))?{reply:replyTo(p,text),task:null}:{reply:'On it!',task:extractTask(text,p.name)}; };
     const out=await aiChat(p,msg,fb);
     if(out.actions&&out.actions.length&&!pressed){ runActions(out.actions,p); if(out.actions.some(x=>x.action!=='message')) pressed=true; continue; }   // a button press is the job, not an errand
     if(out.task){ if(toAll) giveTask2(p,out.task,true); else giveTask(p,out.task,true); }
@@ -1034,27 +1039,8 @@ async function aiSend(text,targets,toAll){
 // for "everyone" tasks Punn announces from his desk instead of walking to each person
 function giveTask2(p,task,quiet=false){ const punn=P('Punn'); const saved=punn.scene; punn.scene='__'; giveTask(p,task,quiet); punn.scene=saved; }
 document.getElementById('chatSend').onclick=sendChat;
-const aiBadge=document.getElementById('aiBadge');
-function showAI(){ document.getElementById('aiProvider').value=aiCfg.provider;
-  const b=brain();
-  aiBadge.textContent=!b.key?'— OFF (set up your AI in the Planner, or paste a key here)'
-    :b.from==='planner'?`— ON (connected to ${b.name} in the Planner)`
-    :`— ON (own key, ${aiCfg.provider==='groq'?'Groq':'OpenRouter'})`;
-  aiBadge.style.color=b.key?'#4ade80':'var(--muted)';
-  document.getElementById('aiModel').textContent=b.model; }
-document.getElementById('aiSave').onclick=()=>{
-  const k=document.getElementById('aiKey').value.trim();
-  aiCfg={provider:document.getElementById('aiProvider').value,key:k||aiCfg.key};
-  try{localStorage.setItem('officeAI',JSON.stringify(aiCfg));}catch(e){}
-  document.getElementById('aiKey').value=''; showAI();
-  log(aiOn()?`🤖 AI brain is ON. Your agents now think with ${brain().model}!`:'No key entered.');
-};
-document.getElementById('aiClear').onclick=()=>{ aiCfg={provider:aiCfg.provider,key:''}; try{localStorage.removeItem('officeAI');}catch(e){} showAI();
-  log(aiOn()?'Office key removed. Your agents still use the Planner\'s AI.':'AI key removed.'); };
-showAI();
-// if you set up the AI in the Planner while this page is open, notice it
-window.addEventListener('storage',e=>{ if(e.key==='punn-levelup-ai'||e.key==='officeAI') showAI(); });
-window.addEventListener('focus',()=>{ showAI(); syncJarvis(); });
+// The AI key comes from the orange AI button (Jarvis ⚙️), or an office key saved earlier (aiCfg). No settings box here any more.
+window.addEventListener('focus',()=>{ syncJarvis(); });
 syncJarvis();
 document.getElementById('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
 
@@ -1210,7 +1196,7 @@ function drawOffice(){
     if(r.x1>0) wallV(c,r.x1,r.y1+(r.y1?0:3),r.y2-(r.y1?3:2));
     const wy = r.y1===0 ? 200 : 250;
     wallH(c,r.x1,r.door-20,wy); wallH(c,r.door+20,r.x2,wy);
-    doorSwing(c,r.door-20,wy, r.y1===0?-1:1);
+    if(k!=='lobby') doorSwing(c,r.door-20,wy, r.y1===0?-1:1);   // the lobby has no inner door: the entrance is the one security door
   }
   // entrance door + exit door swings
   c.fillStyle='#f7f4ec'; c.fillRect(DOOR.x-20,434,40,6); doorSwing(c,DOOR.x-20,437,-1);
@@ -1236,7 +1222,7 @@ function drawOffice(){
   c.fillStyle='#e5e2d8'; c.fillRect(22,74,36,13); c.strokeStyle='#999'; c.strokeRect(22.5,74.5,35,12);
   c.fillStyle='#222'; c.fillText(timeStr(clockMin()),40,84);
   c.font='9px "Segoe UI",Arial,sans-serif'; c.fillText('CLOCK',40,98);
-  woodDesk(c,68,300,86,26); monitor(c,135,286,26); plant(c,170,420,1.1);   // reception desk in the lobby
+  woodDesk(c,14,282,28,84); monitor(c,28,272,20); plant(c,170,420,1.1);   // reception desk along the lobby's left wall
 
   // desk cubicles
   ['desk1','desk2','desk3','desk4'].forEach((k,i)=>{
@@ -1254,13 +1240,24 @@ function drawOffice(){
   });
 
   // manager office
-  woodDesk(c,725,300,84,28); monitor(c,767,294,30); chair(c,767,290); plant(c,930,420,1.3);
+  // CEO office: your desk in the left corner, 2 visitor chairs, coffee machine right of the door, soft sofa on the right wall
+  chair(c,634,316); woodDesk(c,592,330,84,28); monitor(c,634,324,30);
+  chair(c,612,394); chair(c,656,394);
+  c.fillStyle='#d6d3cc'; c.fillRect(797,256,56,22); c.strokeStyle='#8c8c8c'; c.strokeRect(797.5,256.5,55,21);      // counter
+  c.fillStyle='#2b2b2b'; c.fillRect(806,252,18,22); c.fillStyle='#dc2626'; c.fillRect(810,258,3,3);              // coffee machine
+  c.fillStyle='#fff'; c.fillRect(832,264,8,9); c.fillStyle='#7a4a2a'; c.fillRect(833,265,6,3);                     // cup of coffee
+  c.fillStyle='#2b2b2b'; c.font='9px "Segoe UI",Arial,sans-serif'; c.textAlign='center'; c.fillText('COFFEE',825,290);
+  c.fillStyle='#5b3f86'; c.beginPath(); c.roundRect(912,300,42,112,10); c.fill();                                // sofa
+  c.fillStyle='#7b5cb0'; c.beginPath(); c.roundRect(918,308,26,46,7); c.fill(); c.beginPath(); c.roundRect(918,358,26,46,7); c.fill();   // cushions
+  c.fillStyle='#4a3370'; c.fillRect(946,300,8,112);                                                               // backrest
+  plant(c,592,422,1.1);
 
   // meeting table
   c.fillStyle='rgba(0,0,0,.15)'; c.beginPath(); c.roundRect(295,322,190,62,4); c.fill();
   const mg=c.createLinearGradient(0,316,0,376); mg.addColorStop(0,'#3f8a62'); mg.addColorStop(1,'#26583e');
   c.fillStyle=mg; c.beginPath(); c.roundRect(290,316,190,62,4); c.fill();
   c.strokeStyle='#1d4430'; c.stroke();
+  MEETING_SEATS.forEach(s=>chair(c,s.x,s.y-8));   // a chair for everyone at the meeting
 
 
   // vector + people
@@ -1279,8 +1276,8 @@ function drawOffice(){
 
 function updateUI(){
   document.getElementById('timeStat').textContent='🕒 '+timeStr(clockMin())+(lunchActive?' · Lunch':'');
-  document.getElementById('cashStat').textContent='Cash $'+cash;
-  document.getElementById('payStat').textContent='Payroll $'+payroll;
+  document.getElementById('cashStat').textContent='Cash $'+cash.toLocaleString();
+  document.getElementById('payStat').textContent='Payroll $'+payroll.toLocaleString();
   const p=P(focusSel.value);
   document.getElementById('info').innerHTML=
     `<b>${esc(showName(p))}</b> — ${esc(p.job)} — wage $${p.wage}/hr<br>`+
@@ -1316,7 +1313,7 @@ function savedChats(){
 }
 // someone who was walking somewhere when you left is put where they were going
 function settle(p,d){
-  Object.assign(p,{status:d.status, wage:d.wage, earned:d.earned, vacation:false, wander:!!d.wander,
+  Object.assign(p,{status:d.status, earned:d.earned, vacation:false, wander:!!d.wander,
     busyUntil:d.busyUntil||0, history:d.history||[], path:[], onArrive:null});
   const st=String(d.status||'');
   if(d.scene==='home' || st==='going home' || (d.scene==='street' && st!=='walking to work')){
