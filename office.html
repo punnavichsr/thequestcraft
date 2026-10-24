@@ -168,18 +168,18 @@ document.getElementById('backHub').onclick=()=>{
 };
 const oc = document.getElementById('office').getContext('2d');
 const CORR_Y = 225;           // corridor walking line
-const DOOR = {x:130, y:40};   // lobby street door
+const DOOR = {x:120, y:405};  // entrance: the bottom wall of the lobby (bottom-left)
 
 // Rooms: x1,x2,y1,y2, door x (on corridor wall)
 const rooms = {
-  lobby:   {name:'LOBBY',             x1:0,   x2:190, y1:0,   y2:200, door:95},
+  clock:   {name:'',                  x1:0,   x2:190, y1:0,   y2:200, door:95},    // small room with the wall clock
   desk1:   {name:'DESK 1',            x1:190, x2:382, y1:0,   y2:200, door:286},
   desk2:   {name:'DESK 2',            x1:382, x2:574, y1:0,   y2:200, door:478},
   desk3:   {name:'DESK 3',            x1:574, x2:766, y1:0,   y2:200, door:670},
   desk4:   {name:'DESK 4',            x1:766, x2:960, y1:0,   y2:200, door:863},
-  manager: {name:'CEO OFFICE',        x1:0,   x2:190, y1:250, y2:440, door:95},
+  lobby:   {name:'LOBBY',             x1:0,   x2:190, y1:250, y2:440, door:95},
   meeting: {name:'QUIZ MEETING ROOM', x1:190, x2:574, y1:250, y2:440, door:382},
-  lunch:   {name:'',                  x1:574, x2:960, y1:250, y2:440, door:767},   // empty room (the lunch room was removed)
+  manager: {name:'CEO OFFICE',        x1:574, x2:960, y1:250, y2:440, door:767},   // the big room (was the lunch room)
 };
 function roomAt(x,y){
   for(const k in rooms){const r=rooms[k]; if(x>=r.x1&&x<=r.x2&&y>=r.y1&&y<=r.y2) return r;}
@@ -319,9 +319,9 @@ PERSONA['Guard']=`You are the building guard of TheQuestCraft HQ. You stand at t
 You are proud, loyal and a bit formal, and you salute the CEO 🫡. Your main job: running the building for the CEO by pressing the office buttons he asks for (clocking people out and starting meetings).
 Keep replies short (1-2 sentences).`;
 const vector = {name:'Guard', guard:true, job:'Building guard', wage:3, scene:'office', history:[], maxTokens:500, aliases:['vector','security'],
-  color:'#1e3a8a', hair:'boy', hairColor:'#4a3020', x:90, y:85, status:'guarding the door', step:0, speech:'', speechT:0,
+  color:'#1e3a8a', hair:'boy', hairColor:'#4a3020', x:62, y:330, status:'guarding the door', step:0, speech:'', speechT:0,
   path:[], onArrive:null};
-const GUARD_POST={x:90,y:85};
+const GUARD_POST={x:62,y:330};   // in the lobby, next to the entrance
 
 // ---------- Jarvis: your own AI from the Planner, now a member of the Team chat ----------
 // (his brain is the REAL Planner Jarvis: see jarvisHandle below)
@@ -335,7 +335,7 @@ function P(name){return people.find(p=>p.name.toLowerCase()===name.toLowerCase()
 const showName=p=>p.tag||p.name;   // the name shown on screen (the CEO's is longer)
 function deskSpot(p){
   const r=rooms[p.desk];
-  return p.manager ? {x:95,y:385} : {x:(r.x1+r.x2)/2, y:150};
+  return p.manager ? {x:767,y:385} : {x:(r.x1+r.x2)/2, y:150};
 }
 
 // ---------- Game clock & money ----------
@@ -507,7 +507,8 @@ async function askAI(p,userText){
   if(p.name==='Assistant' && inbox.addr){   // fresh list of forwarded emails for the Assistant
     try{ await inboxLoad(); }catch(err){ log(`⚠️ Inbox: ${esc(err.message)}`); }
   }
-  const msgs=[{role:'system',content:systemFor(p)},...p.history.slice(-12),{role:'user',content:userText}];
+  // only the last 10 short messages go along, so the AI stays fast (Groq's free plan limits how much text per minute)
+  const msgs=[{role:'system',content:systemFor(p)},...p.history.slice(-10).map(m=>({role:m.role,content:String(m.content).slice(0,1500)})),{role:'user',content:userText}];
   const b=brain();
   const body={model:b.model,messages:msgs,temperature:0.7,max_tokens:(p.maxTokens||700)+800};   // +800 = room for thinking first
   if(/gpt-oss/.test(b.model)){ if(b.provider==='groq') body.reasoning_effort='low'; else body.reasoning={effort:'low'}; }
@@ -520,7 +521,7 @@ async function askAI(p,userText){
   try{ const j=JSON.parse(raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1));
     if(j.reply) out={reply:String(j.reply),task:j.task?String(j.task):null,actions:Array.isArray(j.actions)?j.actions:[]}; }catch(e){}
   p.history.push({role:'user',content:userText},{role:'assistant',content:out.reply});
-  if(p.history.length>24) p.history.splice(0,p.history.length-24);
+  if(p.history.length>12) p.history.splice(0,p.history.length-12);
   return out;
 }
 // ---------- 🎨 Designer: Groq's picture-reading AI (you can send it pictures; it answers in text) ----------
@@ -685,7 +686,7 @@ document.getElementById('wander').onclick=()=>{
   else{log(`${p.name} went back to their desk.`);goTo(p,deskSpot(p),()=>p.status='idle');}
 };
 // ---------- Call someone to the CEO office ----------
-const VISIT_SPOTS=[{x:150,y:330},{x:45,y:330},{x:150,y:410}];   // inside the CEO office, next to Punn's desk
+const VISIT_SPOTS=[{x:830,y:330},{x:705,y:330},{x:830,y:410}];   // inside the CEO office, next to Punn's desk
 const inCeoOffice=p=>/CEO office/.test(p.status);
 function callToOffice(p){
   if(p.scene!=='office'){ log(`${p.name} isn't in the office.`); return false; }
@@ -912,8 +913,8 @@ function giveTask(target,task,quiet=false){
     say(target,'On it!'); target.wander=false;
     let dest=deskSpot(target);
     if(/meet|quiz|discuss|present/i.test(task)) dest={x:300+Math.random()*160,y:360};
-    else if(/eat|lunch|coffee|snack/i.test(task)) dest={x:700+Math.random()*130,y:350};
-    else if(/door|reception|vector|lobby/i.test(task)) dest={x:60,y:120};
+    else if(/eat|lunch|coffee|snack/i.test(task)) dest={x:40+Math.random()*110,y:300};
+    else if(/door|reception|vector|lobby/i.test(task)) dest={x:60,y:330};
     target.status='heading to task';
     goTo(target,dest,()=>{target.status=task; target.busyUntil=minutes+45+Math.floor(Math.random()*45);});
     log(`${target.name} started: ${task}`);
@@ -1212,11 +1213,11 @@ function drawOffice(){
     doorSwing(c,r.door-20,wy, r.y1===0?-1:1);
   }
   // entrance door + exit door swings
-  c.fillStyle='#f7f4ec'; c.fillRect(DOOR.x-20,0,40,6); doorSwing(c,DOOR.x-20,3,1);
+  c.fillStyle='#f7f4ec'; c.fillRect(DOOR.x-20,434,40,6); doorSwing(c,DOOR.x-20,437,-1);
   plant(c,12,40,1.4); plant(c,24,62,1.0);
   // room labels
   for(const k in rooms){ const r=rooms[k]; if(!r.name) continue; label(c, r.name.startsWith('DESK')?r.name[0]+r.name.slice(1).toLowerCase():r.name, r.x1+10, r.y1+(r.y1?20:20)); }
-  c.fillStyle='#2b2b2b'; c.font='10px "Segoe UI",Arial,sans-serif'; c.textAlign='center'; c.fillText('DOOR',DOOR.x,22);
+  c.fillStyle='#2b2b2b'; c.font='10px "Segoe UI",Arial,sans-serif'; c.textAlign='center'; c.fillText('DOOR',DOOR.x,430);
 
   // lobby: corner plant, clock, reception desk
   c.fillStyle='rgba(0,0,0,.15)'; c.beginPath(); c.arc(42,52,18,0,7); c.fill();
@@ -1235,7 +1236,7 @@ function drawOffice(){
   c.fillStyle='#e5e2d8'; c.fillRect(22,74,36,13); c.strokeStyle='#999'; c.strokeRect(22.5,74.5,35,12);
   c.fillStyle='#222'; c.fillText(timeStr(clockMin()),40,84);
   c.font='9px "Segoe UI",Arial,sans-serif'; c.fillText('CLOCK',40,98);
-  woodDesk(c,68,118,86,26); monitor(c,135,104,26);
+  woodDesk(c,68,300,86,26); monitor(c,135,286,26); plant(c,170,420,1.1);   // reception desk in the lobby
 
   // desk cubicles
   ['desk1','desk2','desk3','desk4'].forEach((k,i)=>{
@@ -1253,7 +1254,7 @@ function drawOffice(){
   });
 
   // manager office
-  woodDesk(c,55,300,84,28); monitor(c,97,294,30); chair(c,97,290);
+  woodDesk(c,725,300,84,28); monitor(c,767,294,30); chair(c,767,290); plant(c,930,420,1.3);
 
   // meeting table
   c.fillStyle='rgba(0,0,0,.15)'; c.beginPath(); c.roundRect(295,322,190,62,4); c.fill();
@@ -1301,7 +1302,7 @@ function saveOffice(){
     if(dayEnded){ localStorage.removeItem(OFFICE_KEY); return; }   // after Clock out the next visit starts fresh
     const keep=p=>({name:p.name, key:p.key, scene:p.scene, x:p.x, y:p.y, status:p.status, wage:p.wage, earned:p.earned,
       vacation:p.vacation, wander:p.wander, busyUntil:p.busyUntil, history:(p.history||[]).slice(-12)});
-    localStorage.setItem(OFFICE_KEY,JSON.stringify({v:1, minutes, cash, payroll, lunchActive, lunchEnd,
+    localStorage.setItem(OFFICE_KEY,JSON.stringify({v:2, minutes, cash, payroll, lunchActive, lunchEnd,
       people:people.map(keep), guard:keep(vector), chats:savedChats(), active:activeChat, log:logEl.innerHTML}));
   }catch(e){}
 }
@@ -1330,7 +1331,7 @@ function settle(p,d){
 }
 function restoreOffice(){
   let s=null; try{ s=JSON.parse(localStorage.getItem(OFFICE_KEY)||'null'); }catch(e){}
-  if(!s || s.v!==1) return false;
+  if(!s || (s.v!==1 && s.v!==2)) return false;
   ({minutes, cash, payroll, lunchActive, lunchEnd}=s);
   // your own agent is found by key, so renaming it keeps where it was (old saves called it "Manager")
   const OLD_NAMES={Manager:'custom', Ideamaker:'solver', Developer:'presenter'};   // names from older saves
@@ -1343,6 +1344,7 @@ function restoreOffice(){
   else chatBoxes.meeting.innerHTML=s.chat||'';      // older saves had one Team chat
   if(chatBoxes[s.active]) activeChat=s.active;
   logEl.innerHTML=s.log||'';
+  if(s.v===1) people.forEach(p=>{ if(p.scene==='office' && !p.busyUntil){ const d=deskSpot(p); p.x=d.x; p.y=d.y; p.status=p.manager?'managing':'idle'; } });   // rooms moved since then
   renderChips();
   return true;
 }

@@ -892,6 +892,15 @@
   let ai = { name: "", key: "", model: "openai/gpt-oss-120b" };
   try { ai = { ...ai, ...JSON.parse(localStorage.getItem(AI_KEY)) }; } catch (e) {}
   let history = []; // the conversation so far
+  // Memory limits: every message re-sends this memory to Groq, and the free plan only accepts so much
+  // text per minute. Too much = Jarvis gets slow or stops answering, so keep it small.
+  const MEM_MSGS = 10, MEM_MSG_CHARS = 1200, MEM_BUDGET = 9000;   // last 10 messages, 1200 chars each, ~9000 chars in total
+  const shortMsg = m => ({ role: m.role, content: String(m.content).slice(0, MEM_MSG_CHARS) });
+  function trimHistory(budget = MEM_BUDGET) {
+    history = history.slice(-MEM_MSGS).map(shortMsg);
+    while (history.length > 2 && history.reduce((n, m) => n + m.content.length, 0) > budget) history.shift();
+    if (history[0] && history[0].role === "assistant") history.shift();   // start with something the user said
+  }
   const aiReady = () => Boolean(ai.name && ai.key);   // you must create your AI first
 
   const aiPanel = document.getElementById("aiPanel");
@@ -966,7 +975,7 @@
     try {
       const { data, error } = await game.sb.from("ai_memory").select("notes,history").maybeSingle();
       if (error) throw error;
-      if (data) { memory.notes = data.notes || []; history = Array.isArray(data.history) ? data.history.slice(-20) : []; }
+      if (data) { memory.notes = (data.notes || []).slice(-30); history = Array.isArray(data.history) ? data.history : []; trimHistory(); }
       memory.loaded = true;
       if (history.length) bubble(`(${ai.name} remembers your last chat and ${memory.notes.length} note${memory.notes.length === 1 ? "" : "s"}.)`, "note");
     } catch (e) { console.error("memory load failed", e); }
@@ -975,8 +984,8 @@
     if (!signedIn()) return;
     try {
       const { error } = await game.sb.from("ai_memory").upsert({
-        user_id: game.user().id, notes: memory.notes.slice(-40).map(n => String(n).slice(0, 200)),
-        history: history.slice(-20).map(m => ({ role: m.role, content: String(m.content).slice(0, 4000) })), updated_at: new Date().toISOString()
+        user_id: game.user().id, notes: memory.notes.slice(-30).map(n => String(n).slice(0, 200)),
+        history: history.slice(-MEM_MSGS).map(shortMsg), updated_at: new Date().toISOString()
       }, { onConflict: "user_id" });
       if (error) throw error;
     } catch (e) { console.error("memory save failed", e); }
@@ -1093,7 +1102,7 @@ Only include actions the user asked for or agreed to. Never show this format oth
         else { deleteActivity(act.key); bubble(`🗑 Deleted the activity "${act.name}"`, "note"); }
       }
       if (a.action === "remember" && a.note && signedIn()) {
-        memory.notes.push(String(a.note).slice(0, 200)); memory.notes = memory.notes.slice(-40);
+        memory.notes.push(String(a.note).slice(0, 200)); memory.notes = memory.notes.slice(-30);
         bubble(`🧠 I'll remember: ${a.note}`, "note");
       }
       if (a.action === "forget" && a.note) {
@@ -1162,23 +1171,25 @@ Only include actions the user asked for or agreed to. Never show this format oth
 
   async function askAI(text) {
     if (!aiReady()) { openAiSettings(); return { needsSetup: true }; }
+    if (askBusy) { bubble("One sec, I'm still answering your last message ⏳", "note"); return { error: "busy" }; }
+    askBusy = true;
     await loadMemory();
     bubble(text, "me");
     history.push({ role: "user", content: text });
-    history = history.slice(-20);
+    trimHistory();
     const thinking = bubble("…thinking", "ai");
     try {
       const ctx = await gameContext();
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + ai.key },
-        body: JSON.stringify({ model: ai.model, temperature: 0.6,
-          messages: [{ role: "system", content: systemPrompt(ctx) }, ...history] }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || res.status);
-      let reply = data.choices[0].message.content;
+      let data = await groqChat(systemPrompt(ctx));
+      if (data.tooBig) {                                  // memory too full for Groq: keep only the last few messages and try once more
+        trimHistory(2500);
+        bubble("🧹 My memory was too full, so I tidied it (your notes are kept). Trying again…", "note");
+        data = await groqChat(systemPrompt(ctx));
+      }
+      if (data.error || data.tooBig) throw new Error(data.error || "My memory is still too big for Groq. Open ⚙️ and press 🧹 Clear AI memory.");
+      let reply = data.reply;
       history.push({ role: "assistant", content: reply });
+      trimHistory();
 
     const m = reply.match(/```(?:actions|json)\s*([\s\S]*?)```/);
 reply = reply.replace(/```(?:actions|json)[\s\S]*?```/, "").trim();
@@ -1188,9 +1199,30 @@ reply = reply.replace(/```(?:actions|json)[\s\S]*?```/, "").trim();
       return { reply: reply || "Done! ✅" };
     } catch (err) {
       thinking.remove();
-      bubble("Error: " + err.message + " (check your key / model in ⚙️)", "err");
+      bubble("Error: " + err.message, "err");
       return { error: err.message };
-    }
+    } finally { askBusy = false; }
+  }
+  let askBusy = false;
+  // one request to Groq (max 30 seconds, short answers). {reply} or {error} or {tooBig:true}
+  async function groqChat(system) {
+    const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 30000);
+    try {
+      const body = { model: ai.model, temperature: 0.6, max_tokens: 1200, messages: [{ role: "system", content: system }, ...history] };
+      if (/gpt-oss/.test(ai.model)) body.reasoning_effort = "low";   // think less, answer faster
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST", signal: ctrl.signal,
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + ai.key }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      const msg = (data.error && data.error.message) || "";
+      if (res.status === 413 || /too large|context length|tokens per minute|reduce the length/i.test(msg)) return { tooBig: true };
+      if (res.status === 401) return { error: "Groq says the key is wrong. Check it in ⚙️." };
+      if (res.status === 429) return { error: "Groq says too many messages right now. Wait a minute and try again." };
+      if (!res.ok) return { error: (msg || "error " + res.status) + " (check your key / model in ⚙️)" };
+      return { reply: ((data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || "").trim() };
+    } catch (e) {
+      return { error: e.name === "AbortError" ? "Groq took too long (30s). Try again in a moment." : e.message };
+    } finally { clearTimeout(timer); }
   }
 
   document.getElementById("aiForm").onsubmit = e => {
