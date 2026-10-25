@@ -293,6 +293,10 @@
   .pay-item .action-row{ display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
   .pay-item button{ font-family:'Press Start 2P',monospace; font-size:7px; border:none; padding:7px 9px; cursor:pointer; }
   .pay-item .b-slip{ background:var(--sky); color:#071722; } .pay-item .b-ok{ background:var(--emerald); color:#0A2415; } .pay-item .b-no{ background:var(--danger); color:#fff; }
+  .pay-item.stopped{ opacity:.75; border-color:var(--danger); }
+  .pay-gift-btn{ display:block; width:100%; margin-bottom:8px; font-family:'Press Start 2P',monospace; font-size:8px; border:2px dashed var(--gold);
+    background:transparent; color:var(--gold); padding:9px; cursor:pointer; }
+  .pay-head{ font-family:'Press Start 2P',monospace; font-size:7px; color:var(--text-dim); margin:10px 0 6px; }
   .btn-promo.sub{ color:var(--emerald); border-color:rgba(61,220,132,.55); }
   .btn-promo.sub:hover{ border-color:var(--emerald); box-shadow:0 0 16px rgba(61,220,132,.35); }
   #access-modal button.ghost{ background:transparent; color:var(--text-dim); border:2px solid var(--panel-border); margin-top:10px; }
@@ -1612,7 +1616,7 @@ function showPromoScreen(){
 // Player pays with the QR -> sends the slip -> admin approves under 💳 PAYMENTS ->
 // a single-use code appears here, worth 1 month for that player.
 const PAY_PRICE='฿399';   // shown in step 1 of the pay screen
-let myPayment=null;
+let myPayment=null, shownCodeFor=null;
 function updatePayButton(){
   const b=document.getElementById('btn-pay');
   b.hidden=isAdmin() || myAccess.kind==='vip' || myBanned;
@@ -1626,10 +1630,15 @@ async function refreshMyPayment(){
   if(before==='pending' && myPayment?.status==='approved') showToast('✅ PAYMENT APPROVED','Tap 💳 BUY 1 MONTH to get your code');
   if(before==='pending' && myPayment?.status==='rejected') showToast('❌ PAYMENT NOT FOUND','Tap 💳 BUY 1 MONTH to send it again');
   if(document.getElementById('pay-modal').classList.contains('show')) renderPayModal();
+  // approved while they were away: show the code by itself (once per visit)
+  else if(myPayment?.status==='approved' && !myPayment.code_used && myPayment.code_active && shownCodeFor!==myPayment.id){
+    shownCodeFor=myPayment.id;
+    showPayModal();
+  }
 }
 function renderPayModal(){
   const st=myPayment?.status;
-  const showCode=st==='approved' && !myPayment.code_used;
+  const showCode=st==='approved' && !myPayment.code_used && myPayment.code_active;
   document.getElementById('pay-step-wait').hidden=st!=='pending';
   document.getElementById('pay-step-code').hidden=!showCode;
   document.getElementById('pay-step-rejected').hidden=st!=='rejected';
@@ -1983,27 +1992,68 @@ function renderPromos(){
 
 // ---- PromptPay payments (admin) ----
 // Check your bank app first. APPROVE makes a random 1-month code the player sees on their pay screen.
-let payCache=[];
+// STOP ACCESS turns a 1-month code off (they see "plan expired"); ALLOW AGAIN turns it back on.
+let payCache=[], giftCache=[];
 async function fetchPayments(){
   const {data,error}=await sb.rpc('admin_payment_requests');
   if(error) throw error;
-  payCache=data||[];
+  setPayLists(data);
 }
+function setPayLists(data){ payCache=data?.payments||[]; giftCache=data?.gifts||[]; }
+// where a 1-month code stands, for the admin list
+function codeStatus(active,used,ends){
+  if(!active) return '⛔ Stopped';
+  if(!used) return '🕓 Not used yet';
+  if(new Date(ends)<=new Date()) return '⏳ Ended '+new Date(ends).toLocaleDateString();
+  return '🟢 Playing · '+timeLeft(ends);
+}
+const stopAllowBtn=(code,active)=>active
+  ?`<button class="b-no" data-code="${escapeHtml(code)}" data-on="0">⛔ STOP ACCESS</button>`
+  :`<button class="b-ok" data-code="${escapeHtml(code)}" data-on="1">▶ ALLOW AGAIN</button>`;
 function renderPayments(){
   const pending=payCache.filter(p=>p.status==='pending');
   setToggle('pay-toggle','💳 PAYMENTS',pending.length);
   const box=document.getElementById('pay-list');
-  box.innerHTML=payCache.length?'':'<div class="admin-empty">No payments yet</div>';
+  box.innerHTML='<button class="pay-gift-btn" id="btn-gift">🎁 MAKE FREE 1-MONTH CODE</button>';
+  if(!payCache.length) box.insertAdjacentHTML('beforeend','<div class="admin-empty">No payments yet</div>');
   payCache.forEach(p=>{
-    const item=document.createElement('div'); item.className='pay-item'+(p.status==='pending'?' pending':'');
+    const approved=p.status==='approved';
+    const item=document.createElement('div'); item.className='pay-item'+(p.status==='pending'?' pending':'')+(approved&&!p.code_active?' stopped':'');
     const when=new Date(p.created_at).toLocaleString();
     item.innerHTML=`<div class="em">${escapeHtml(p.email||'?')}</div>Sent: ${when}<br>`+
-      (p.status==='pending'?'⏳ Waiting for you':p.status==='approved'?`✅ Approved · code <span class="pc">${escapeHtml(p.code||'')}</span>`:'❌ Rejected')+
+      (p.status==='pending'?'⏳ Waiting for you':approved?`✅ Paid · code <span class="pc">${escapeHtml(p.code||'')}</span><br>${codeStatus(p.code_active,p.code_used,p.ends_at)}`:'❌ Rejected')+
       `<div class="action-row"><button class="b-slip" data-slip="${escapeHtml(p.slip_path)}">📎 SLIP</button>`+
       (p.status==='pending'?`<button class="b-ok" data-pay="${p.id}" data-ok="1">✅ APPROVE</button><button class="b-no" data-pay="${p.id}" data-ok="0">❌ REJECT</button>`:'')+
+      (approved&&p.code?stopAllowBtn(p.code,p.code_active):'')+
       `</div>`;
     box.appendChild(item);
   });
+  if(giftCache.length) box.insertAdjacentHTML('beforeend','<div class="pay-head">🎁 FREE CODES</div>');
+  giftCache.forEach(g=>{
+    const item=document.createElement('div'); item.className='pay-item'+(g.active?'':' stopped');
+    item.innerHTML=`<span class="pc">${escapeHtml(g.code)}</span><br>`+
+      (g.used_by?`Used by <span class="em">${escapeHtml(g.used_by)}</span><br>`:'')+
+      codeStatus(g.active,!!g.used_by,g.ends_at)+
+      `<div class="action-row">${stopAllowBtn(g.code,g.active)}</div>`;
+    box.appendChild(item);
+  });
+  document.getElementById('btn-gift').addEventListener('click',async e=>{
+    if(!confirm('Make a free 1-month code? Anyone you give it to can use it once.')) return;
+    e.currentTarget.disabled=true;
+    const {data,error}=await sb.rpc('admin_make_gift_code');
+    if(error){ showToast('❌ ACTION FAILED',error.message||''); renderPayments(); return; }
+    setPayLists(data.lists); renderPayments();
+    prompt('Free 1-month code (copy it and send it to them):',data.code);
+  });
+  box.querySelectorAll('[data-code]').forEach(b=>b.addEventListener('click',async()=>{
+    const on=b.dataset.on==='1';
+    if(!confirm(on?`Let code ${b.dataset.code} play again?`:`Stop code ${b.dataset.code}?\n\nWhoever uses it is locked out right away. You can ALLOW AGAIN later.`)) return;
+    b.disabled=true;
+    const {data,error}=await sb.rpc('admin_set_code_active',{p_code:b.dataset.code,p_active:on});
+    if(error){ showToast('❌ ACTION FAILED',error.message||''); renderPayments(); return; }
+    setPayLists(data); renderPayments();
+    showToast(on?'▶ ACCESS ALLOWED':'⛔ ACCESS STOPPED',`Code ${b.dataset.code}`);
+  }));
   box.querySelectorAll('[data-slip]').forEach(b=>b.addEventListener('click',async()=>{
     const tab=window.open('','_blank');   // open now, so pop-up blockers allow it
     const {data,error}=await sb.storage.from('payment-slips').createSignedUrl(b.dataset.slip,300);
@@ -2017,7 +2067,7 @@ function renderPayments(){
     box.querySelectorAll('[data-pay]').forEach(x=>x.disabled=true);
     const {data,error}=await sb.rpc('admin_decide_payment',{p_id:b.dataset.pay,p_approve:ok});
     if(error){ showToast('❌ ACTION FAILED',error.message||''); renderPayments(); return; }
-    payCache=data||[]; renderPayments();
+    setPayLists(data); renderPayments();
     showToast(ok?'✅ PAYMENT APPROVED':'❌ PAYMENT REJECTED',ok?'Their code is on their pay screen':p?.email||'');
   }));
 }
