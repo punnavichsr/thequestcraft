@@ -266,6 +266,35 @@
     background:var(--panel-2); color:var(--text-light); border:2px solid var(--panel-border); margin-bottom:10px; }
   #access-modal button{ font-family:'Press Start 2P',monospace; font-size:9px; border:none; padding:11px 16px; cursor:pointer; width:100%; }
   #btn-redeem{ background:var(--gold); color:#241703; }
+  #btn-buy{ background:var(--emerald); color:#0A2415; margin-bottom:12px; }
+  #access-modal .or{ font-size:12px; color:var(--text-dim); margin-bottom:10px; }
+  /* PromptPay pay screen */
+  #pay-modal{ position:fixed; inset:0; z-index:83; display:none; align-items:center; justify-content:center; background:rgba(5,3,12,.85); padding:16px; overflow-y:auto; }
+  #pay-modal.show{ display:flex; }
+  #pay-modal .box{ background:var(--panel); border:2px solid var(--emerald); padding:22px; width:100%; max-width:380px; text-align:center; margin:auto;
+    clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px); box-shadow:0 0 30px rgba(62,228,134,.25); }
+  #pay-modal h3{ font-family:'Press Start 2P',monospace; font-size:11px; color:var(--emerald); margin:10px 0; line-height:1.6; }
+  #pay-modal p{ font-size:14px; line-height:1.55; margin-bottom:12px; text-align:left; }
+  #pay-modal button, #pay-modal .file-btn{ display:block; font-family:'Press Start 2P',monospace; font-size:9px; border:none; padding:11px 16px; cursor:pointer; width:100%; }
+  #pay-qr{ display:block; width:100%; max-width:280px; margin:0 auto 12px; border-radius:10px; }
+  #pay-qr-missing{ font-size:13px; color:var(--danger); margin-bottom:12px; }
+  #pay-modal .file-btn{ background:var(--panel-2); color:var(--text-light); border:2px dashed var(--panel-border); margin-bottom:8px; }
+  #pay-file-name{ font-size:12px; color:var(--text-dim); min-height:16px; margin-bottom:8px; word-break:break-all; }
+  #btn-pay-send, #btn-pay-use{ background:var(--emerald); color:#0A2415; }
+  #pay-modal button.ghost{ background:transparent; color:var(--text-dim); border:2px solid var(--panel-border); margin-top:10px; }
+  #pay-code{ font-family:'Press Start 2P',monospace; font-size:15px; letter-spacing:3px; color:var(--gold); background:var(--panel-2);
+    border:2px solid var(--gold); padding:12px; margin-bottom:12px; user-select:all; }
+  #pay-msg{ min-height:18px; font-size:13px; margin-top:8px; }
+  .admin-toggle.t-pay{ color:var(--emerald); }
+  .pay-item{ background:var(--panel-2); border:2px solid var(--panel-border); padding:10px; font-size:12px; line-height:1.6; }
+  .pay-item.pending{ border-color:var(--emerald); }
+  .pay-item .em{ font-family:'Press Start 2P',monospace; font-size:8px; color:var(--sky); word-break:break-all; }
+  .pay-item .pc{ font-family:'Press Start 2P',monospace; font-size:9px; color:var(--gold); letter-spacing:2px; }
+  .pay-item .action-row{ display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+  .pay-item button{ font-family:'Press Start 2P',monospace; font-size:7px; border:none; padding:7px 9px; cursor:pointer; }
+  .pay-item .b-slip{ background:var(--sky); color:#071722; } .pay-item .b-ok{ background:var(--emerald); color:#0A2415; } .pay-item .b-no{ background:var(--danger); color:#fff; }
+  .btn-promo.sub{ color:var(--emerald); border-color:rgba(61,220,132,.55); }
+  .btn-promo.sub:hover{ border-color:var(--emerald); box-shadow:0 0 16px rgba(61,220,132,.35); }
   #access-modal button.ghost{ background:transparent; color:var(--text-dim); border:2px solid var(--panel-border); margin-top:10px; }
   #access-msg{ min-height:18px; font-size:13px; margin-top:8px; }
   .admin-toggle.t-promo{ color:var(--emerald); }
@@ -578,6 +607,8 @@
   <div id="admin-body" hidden>
   <button class="admin-toggle t-flag" data-open="admin-list" id="flag-toggle">⚠️ FLAGGED PLAYERS (0) ▼</button>
   <div class="admin-sub admin-list" id="admin-list"></div>
+  <button class="admin-toggle t-pay" data-open="pay-list" id="pay-toggle">💳 PAYMENTS (0) ▼</button>
+  <div class="admin-sub" id="pay-list"></div>
   <button class="admin-toggle t-promo" data-open="promo-list" id="promo-toggle">🎟️ PROMO CODES (0) ▼</button>
   <div class="admin-sub" id="promo-list"></div>
   <button class="admin-toggle t-ban" data-open="banned-list" id="banned-toggle">🚫 BANNED PLAYERS (0) ▼</button>
@@ -592,11 +623,42 @@
   <button id="btn-warn-ok">I UNDERSTAND</button>
 </div></div>
 
+<!-- PAY WITH PROMPTPAY: scan QR -> send slip -> admin approves -> 1-month code -->
+<div id="pay-modal"><div class="box">
+  <div class="lock-ico">💳</div>
+  <h3>1 MONTH OF QUESTCRAFT</h3>
+  <div id="pay-step-rejected" hidden><p>❌ We couldn't find your last payment. Check the amount and send the slip again.</p></div>
+  <div id="pay-step-qr">
+    <p>1. Scan this QR in your banking app and pay <b id="pay-price"></b>.<br>
+       2. Send the payment slip here.<br>
+       3. When the admin checks it, you get a code for 1 month.</p>
+    <img id="pay-qr" src="promptpay-qr.jpg" alt="PromptPay QR code">
+    <div id="pay-qr-missing" hidden>The QR code isn't set up yet. Please try again later.</div>
+    <label class="file-btn">📎 CHOOSE SLIP PICTURE<input type="file" id="pay-slip" accept="image/*" hidden></label>
+    <div id="pay-file-name"></div>
+    <button id="btn-pay-send">📤 SEND SLIP</button>
+  </div>
+  <div id="pay-step-wait" hidden>
+    <p>⏳ Slip sent! The admin will check it soon. You can close this and come back. Your code will show up here.</p>
+  </div>
+  <div id="pay-step-code" hidden>
+    <p>✅ Payment approved! Your 1-month code:</p>
+    <div id="pay-code"></div>
+    <button id="btn-pay-use">🔓 USE MY CODE NOW</button>
+  </div>
+  <div id="pay-msg"></div>
+  <button id="btn-pay-close" class="ghost">CLOSE</button>
+</div></div>
+
 <!-- EARLY ACCESS LOCK / PLAN EXPIRED / SUBSCRIPTION ENDED -->
 <div id="access-modal"><div class="box">
   <div class="lock-ico" id="access-ico">🔒</div>
   <h3 id="access-title">EARLY ACCESS</h3>
   <p id="access-text"></p>
+  <div id="access-pay" hidden>
+    <button id="btn-buy">💳 BUY 1 MONTH (PROMPTPAY)</button>
+    <div class="or">or use a promo code</div>
+  </div>
   <div id="access-form" hidden>
     <input type="text" id="access-code" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="Promo code">
     <button id="btn-redeem">🔓 UNLOCK</button>
@@ -725,6 +787,7 @@
   <div class="login-hint" id="cloud-note"></div>
   <button class="btn-start" id="btn-start">▶ START QUEST</button>
   <div class="trial-chip" id="trial-chip" hidden></div>
+  <button class="btn-promo sub" id="btn-pay">💳 BUY 1 MONTH</button>
   <button class="btn-promo" id="btn-promo">🎟️ ENTER PROMO CODE</button>
   <div class="art-credit">Art made with AI</div>
   <!-- at the very bottom, so nobody signs out by accident (it asks first too) -->
@@ -1471,6 +1534,7 @@ async function checkAccess(){
     if(myAccess.server_now) myAccess.skew=new Date(myAccess.server_now)-Date.now();
   }catch(err){ console.error('access check failed',err); myAccess={status:'error'}; }
   updateStartButton();
+  refreshMyPayment();
   if(!myBanned && !canPlay() && document.body.classList.contains('in-game')){ kickToTitle(); showAccessModal(); }
 }
 function timeLeft(ends){
@@ -1483,6 +1547,7 @@ function updateStartButton(){
   const btn=document.getElementById('btn-start'), chip=document.getElementById('trial-chip');
   btn.classList.remove('terminated','locked','expired');
   chip.hidden=true;
+  updatePayButton();
   if(myBanned){ btn.classList.add('terminated'); btn.textContent='⛔ ACCOUNT TERMINATED'; return; }
   if(canPlay()){
     btn.textContent='▶ START QUEST';
@@ -1504,18 +1569,20 @@ function updateStartButton(){
 }
 function showAccessModal(){
   const st=currentUser?myAccess.status:'signed_out';
-  const set=(ico,title,text,form)=>{
+  // form: show the promo code box · pay: show the BUY 1 MONTH button
+  const set=(ico,title,text,form,pay)=>{
     document.getElementById('access-ico').textContent=ico;
     document.getElementById('access-title').textContent=title;
     document.getElementById('access-text').textContent=text;
     document.getElementById('access-form').hidden=!form;
+    document.getElementById('access-pay').hidden=!pay;
   };
-  if(st==='signed_out') set('🔒','EARLY ACCESS','QuestCraft is in early access. Tap 🔐 SIGN IN TO CLOUD first, then enter your promo code.',false);
-  else if(st==='temp_banned') set('⛔','TEMPORARY BAN',`You got 3 warnings, so the Auto-Admin banned you for 30 minutes. Time left: ${countdownShort(new Date(myAccess.until)-(Date.now()+(myAccess.skew||0)))}. Please play fair when you come back!`,false);
-  else if(st==='plan_expired') set('⏳','PLAN EXPIRED','Your early-access plan has ended. Thanks for testing QuestCraft! Have a new code? Enter it below.',true);
-  else if(st==='subscription_ended') set('⏳','SUBSCRIPTION ENDED','Your QuestCraft subscription has ended. Renew it to keep playing, or enter a code below.',true);
-  else if(st==='error') set('⚠️','CAN\'T CHECK ACCESS','We couldn\'t reach the server. Check your internet and try again.',false);
-  else set('🔒','EARLY ACCESS','QuestCraft is in early access. Enter your promo code to play.',true);
+  if(st==='signed_out') set('🔒','EARLY ACCESS','QuestCraft is in early access. Tap 🔐 SIGN IN TO CLOUD first, then buy a month or enter your promo code.',false,false);
+  else if(st==='temp_banned') set('⛔','TEMPORARY BAN',`You got 3 warnings, so the Auto-Admin banned you for 30 minutes. Time left: ${countdownShort(new Date(myAccess.until)-(Date.now()+(myAccess.skew||0)))}. Please play fair when you come back!`,false,false);
+  else if(st==='plan_expired') set('⏳','PLAN EXPIRED','Your plan has ended. Thanks for playing QuestCraft! Buy another month to keep playing, or enter a new code below.',true,true);
+  else if(st==='subscription_ended') set('⏳','SUBSCRIPTION ENDED','Your QuestCraft subscription has ended. Renew it to keep playing, or enter a code below.',true,true);
+  else if(st==='error') set('⚠️','CAN\'T CHECK ACCESS','We couldn\'t reach the server. Check your internet and try again.',false,false);
+  else set('🔒','EARLY ACCESS','QuestCraft is in early access. Buy a month to play, or enter your promo code.',true,true);
   document.getElementById('access-msg').textContent='';
   document.getElementById('access-code').value='';
   document.getElementById('access-modal').classList.add('show');
@@ -1537,8 +1604,93 @@ function showPromoScreen(){
     ok&&kind==='promo'?'You already have early access. Got a new code? Type it below.':
     'Type your promo code to unlock QuestCraft.';
   document.getElementById('access-form').hidden=false;
+  document.getElementById('access-pay').hidden=true;
   setTimeout(()=>document.getElementById('access-code').focus(),50);
 }
+
+// ---- buy 1 month: your own PromptPay QR ----
+// Player pays with the QR -> sends the slip -> admin approves under 💳 PAYMENTS ->
+// a single-use code appears here, worth 1 month for that player.
+const PAY_PRICE='฿399';   // shown in step 1 of the pay screen
+let myPayment=null;
+function updatePayButton(){
+  const b=document.getElementById('btn-pay');
+  b.hidden=isAdmin() || myAccess.kind==='vip' || myBanned;
+}
+async function refreshMyPayment(){
+  if(!currentUser){ myPayment=null; return; }
+  const before=myPayment?.status;
+  const {data,error}=await sb.rpc('my_payment');
+  if(error){ console.error('payment check failed',error); return; }
+  myPayment=data;
+  if(before==='pending' && myPayment?.status==='approved') showToast('✅ PAYMENT APPROVED','Tap 💳 BUY 1 MONTH to get your code');
+  if(before==='pending' && myPayment?.status==='rejected') showToast('❌ PAYMENT NOT FOUND','Tap 💳 BUY 1 MONTH to send it again');
+  if(document.getElementById('pay-modal').classList.contains('show')) renderPayModal();
+}
+function renderPayModal(){
+  const st=myPayment?.status;
+  const showCode=st==='approved' && !myPayment.code_used;
+  document.getElementById('pay-step-wait').hidden=st!=='pending';
+  document.getElementById('pay-step-code').hidden=!showCode;
+  document.getElementById('pay-step-rejected').hidden=st!=='rejected';
+  // nothing waiting: show the QR to buy (again)
+  document.getElementById('pay-step-qr').hidden=st==='pending' || showCode;
+  document.getElementById('pay-code').textContent=showCode?myPayment.code:'';
+  document.getElementById('pay-price').textContent=PAY_PRICE||'the price';
+}
+async function showPayModal(){
+  if(!currentUser){ showAccessModal(); return; }
+  document.getElementById('access-modal').classList.remove('show');
+  document.getElementById('pay-msg').textContent='';
+  document.getElementById('pay-slip').value=''; document.getElementById('pay-file-name').textContent='';
+  renderPayModal();
+  document.getElementById('pay-modal').classList.add('show');
+  await refreshMyPayment();
+}
+async function sendSlip(){
+  const file=document.getElementById('pay-slip').files[0], msg=document.getElementById('pay-msg');
+  if(!file){ msg.style.color='var(--danger)'; msg.textContent='Choose a picture of your slip first.'; return; }
+  if(file.size>5*1024*1024){ msg.style.color='var(--danger)'; msg.textContent='That picture is too big (max 5 MB).'; return; }
+  const btn=document.getElementById('btn-pay-send'); btn.disabled=true;
+  msg.style.color='var(--text-dim)'; msg.textContent='Sending…';
+  try{
+    const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const path=`${currentUser.id}/${Date.now()}.${ext}`;
+    const up=await sb.storage.from('payment-slips').upload(path,file,{contentType:file.type});
+    if(up.error) throw up.error;
+    const {data,error}=await sb.rpc('submit_payment',{p_slip_path:path});
+    if(error) throw error;
+    myPayment=data; renderPayModal(); msg.textContent='';
+    showToast('📤 SLIP SENT','The admin will check it soon');
+  }catch(err){
+    console.error('slip upload failed',err);
+    msg.style.color='var(--danger)'; msg.textContent='❌ '+(err.message||'Could not send the slip. Try again.');
+  }
+  btn.disabled=false;
+}
+async function useMyCode(){
+  const msg=document.getElementById('pay-msg'), btn=document.getElementById('btn-pay-use'); btn.disabled=true;
+  const {data,error}=await sb.rpc('redeem_code',{p_code:myPayment.code});
+  btn.disabled=false;
+  if(error){ msg.style.color='var(--danger)'; msg.textContent='❌ '+(error.message||'That code did not work.'); return; }
+  myAccess=data||{status:'none'}; updateStartButton();
+  await refreshMyPayment();
+  document.getElementById('pay-modal').classList.remove('show');
+  showToast('🔓 UNLOCKED!','Enjoy your month of QuestCraft');
+}
+document.getElementById('btn-pay').addEventListener('click',showPayModal);
+document.getElementById('btn-buy').addEventListener('click',showPayModal);
+document.getElementById('btn-pay-send').addEventListener('click',sendSlip);
+document.getElementById('btn-pay-use').addEventListener('click',useMyCode);
+document.getElementById('btn-pay-close').addEventListener('click',()=>document.getElementById('pay-modal').classList.remove('show'));
+document.getElementById('pay-slip').addEventListener('change',e=>{
+  document.getElementById('pay-file-name').textContent=e.target.files[0]?.name||'';
+});
+document.getElementById('pay-qr').addEventListener('error',()=>{
+  document.getElementById('pay-qr').hidden=true; document.getElementById('pay-qr-missing').hidden=false;
+});
+// waiting for approval: check every 20s so the code shows up by itself
+setInterval(()=>{ if(currentUser && myPayment?.status==='pending') refreshMyPayment(); },20000);
 document.getElementById('btn-promo').addEventListener('click',showPromoScreen);
 document.getElementById('btn-access-ok').addEventListener('click',()=>document.getElementById('access-modal').classList.remove('show'));
 async function redeem(){
@@ -1743,6 +1895,7 @@ async function renderAdminPanel(useCache){
     const data=(useCache&&lbCache)?lbCache:await fetchLeaderboard();
     renderBannedList(data);
     renderPromos();
+    renderPayments();
     const flagged=data.filter(e=>flagLevel(e));
     setToggle('flag-toggle','⚠️ FLAGGED PLAYERS',flagged.length);
     list.innerHTML='';
@@ -1828,10 +1981,52 @@ function renderPromos(){
   }));
 }
 
+// ---- PromptPay payments (admin) ----
+// Check your bank app first. APPROVE makes a random 1-month code the player sees on their pay screen.
+let payCache=[];
+async function fetchPayments(){
+  const {data,error}=await sb.rpc('admin_payment_requests');
+  if(error) throw error;
+  payCache=data||[];
+}
+function renderPayments(){
+  const pending=payCache.filter(p=>p.status==='pending');
+  setToggle('pay-toggle','💳 PAYMENTS',pending.length);
+  const box=document.getElementById('pay-list');
+  box.innerHTML=payCache.length?'':'<div class="admin-empty">No payments yet</div>';
+  payCache.forEach(p=>{
+    const item=document.createElement('div'); item.className='pay-item'+(p.status==='pending'?' pending':'');
+    const when=new Date(p.created_at).toLocaleString();
+    item.innerHTML=`<div class="em">${escapeHtml(p.email||'?')}</div>Sent: ${when}<br>`+
+      (p.status==='pending'?'⏳ Waiting for you':p.status==='approved'?`✅ Approved · code <span class="pc">${escapeHtml(p.code||'')}</span>`:'❌ Rejected')+
+      `<div class="action-row"><button class="b-slip" data-slip="${escapeHtml(p.slip_path)}">📎 SLIP</button>`+
+      (p.status==='pending'?`<button class="b-ok" data-pay="${p.id}" data-ok="1">✅ APPROVE</button><button class="b-no" data-pay="${p.id}" data-ok="0">❌ REJECT</button>`:'')+
+      `</div>`;
+    box.appendChild(item);
+  });
+  box.querySelectorAll('[data-slip]').forEach(b=>b.addEventListener('click',async()=>{
+    const tab=window.open('','_blank');   // open now, so pop-up blockers allow it
+    const {data,error}=await sb.storage.from('payment-slips').createSignedUrl(b.dataset.slip,300);
+    if(error){ if(tab) tab.close(); showToast('❌ CAN\'T OPEN SLIP',error.message||''); return; }
+    if(tab) tab.location=data.signedUrl; else location.href=data.signedUrl;
+  }));
+  box.querySelectorAll('[data-pay]').forEach(b=>b.addEventListener('click',async()=>{
+    const ok=b.dataset.ok==='1', p=payCache.find(x=>x.id===b.dataset.pay);
+    const ask=ok?`Approve the payment from ${p?.email}?\n\nOnly do this if the money is in your bank. They'll get a 1-month code.`:`Reject the payment from ${p?.email}?`;
+    if(!confirm(ask)) return;
+    box.querySelectorAll('[data-pay]').forEach(x=>x.disabled=true);
+    const {data,error}=await sb.rpc('admin_decide_payment',{p_id:b.dataset.pay,p_approve:ok});
+    if(error){ showToast('❌ ACTION FAILED',error.message||''); renderPayments(); return; }
+    payCache=data||[]; renderPayments();
+    showToast(ok?'✅ PAYMENT APPROVED':'❌ PAYMENT REJECTED',ok?'Their code is on their pay screen':p?.email||'');
+  }));
+}
+
 // redraw whatever moderation views are on screen
 async function refreshModerationViews(refetch){
   if(refetch){ try{ await fetchLeaderboard(); }catch(err){ console.error(err); }
-               if(isAdmin()){ try{ await fetchPromos(); }catch(err){ console.error('promos',err); } } }
+               if(isAdmin()){ try{ await fetchPromos(); }catch(err){ console.error('promos',err); }
+                              try{ await fetchPayments(); }catch(err){ console.error('payments',err); } } }
   if(document.getElementById('leaderboard-screen').classList.contains('active')) renderLeaderboard(true);
   renderAdminPanel(true);
 }
