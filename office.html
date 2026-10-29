@@ -1366,6 +1366,7 @@ requestAnimationFrame(loop);
 (()=>{
   if(!window.supabase) return;                       // no internet to Supabase: Jarvis still works, just without memory
   const sb=window.supabase.createClient('https://gndzjvgpydjchpqqhrns.supabase.co','sb_publishable_rCcAuXMJ92-IZU7Hs53QOQ_o53sslUa');
+  window.qcSb=sb;   // for reminders.js
   let user=null;
   sb.auth.getSession().then(({data})=>{ user=data&&data.session?data.session.user:null; }).catch(()=>{});   // same sign-in as the game
   window.questcraftBridge={
@@ -1517,6 +1518,7 @@ document.getElementById('ibNew').onclick=async()=>{
 };
 inboxShow(); setTimeout(inboxSetup,1000);   // after the sign-in above has loaded
 </script>
+<script src="reminders.js"></script>
 <script src="jarvis.js"></script>
 </body>
 </html>
