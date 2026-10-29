@@ -174,7 +174,7 @@ function roomAt(x,y){
 
 // ---------- Your own agent (Desk 2): every player picks its name and its job ----------
 // Coding is not a choice on purpose: the Problem Solver already fixes code problems.
-// "adminOnly" jobs only show up for the owner (OFFICE_OWNERS); "vision" jobs can look at pictures you send (Groq).
+// "adminOnly" jobs only show up for the owner (isOwner); "vision" jobs can look at pictures you send (Groq).
 // Only the Team Manager job can hand out work to the others ("leader").
 const AGENT_JOBS={
   designer:{label:'🎨 Designer', job:'Designer', adminOnly:true, vision:true, maxTokens:1200,
@@ -511,10 +511,9 @@ async function askAI(p,userText){
   return out;
 }
 // ---------- 🎨 Designer: Groq's picture-reading AI (you can send it pictures; it answers in text) ----------
-// Only for the owner (OFFICE_OWNERS). It uses the same Groq key as the other agents.
+// Only for the owner (isOwner). It uses the same Groq key as the other agents.
 // Groq retires vision models now and then, so we try these in order and remember the first one that works.
-const OFFICE_OWNERS=['ss53753@samsenwit.ac.th','punnavich.sr@gmail.com'];   // same list as ADMIN_EMAILS in index.html
-const isOwner=()=>{ const u=window.questcraftBridge&&questcraftBridge.user(); return !!(u&&OFFICE_OWNERS.includes((u.email||'').toLowerCase())); };
+const isOwner=()=>window.qcOwner===true;   // set below from the database's is_questcraft_admin, so no emails live in this page
 const VISION_MODELS=['qwen/qwen3.8-27b','meta-llama/llama-4-scout-17b-16e-instruct','meta-llama/llama-4-maverick-17b-128e-instruct'];
 const usesVision=p=>!!(p && p.key==='custom' && myJob().vision);
 async function askVision(p,userText){
@@ -1368,7 +1367,10 @@ requestAnimationFrame(loop);
   const sb=window.supabase.createClient('https://gndzjvgpydjchpqqhrns.supabase.co','sb_publishable_rCcAuXMJ92-IZU7Hs53QOQ_o53sslUa');
   window.qcSb=sb;   // for reminders.js
   let user=null;
-  sb.auth.getSession().then(({data})=>{ user=data&&data.session?data.session.user:null; }).catch(()=>{});   // same sign-in as the game
+  sb.auth.getSession().then(({data})=>{
+    user=data&&data.session?data.session.user:null;   // same sign-in as the game
+    if(user) sb.rpc('is_questcraft_admin').then(({data})=>{ window.qcOwner=data===true; });
+  }).catch(()=>{});
   window.questcraftBridge={
     sb,
     user:()=>user,
