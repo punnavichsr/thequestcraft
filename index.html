@@ -265,7 +265,9 @@
   body.lang-th #hub-screen :is(.hub-card .desc,.ts-v,.fs-row), body.lang-th #help-screen :is(.loop-card,.loop-card .b,.help-page .ds,.help-page button,.faq-row .q,.faq-row .a,.loop-detail ul,.help-link), body.lang-th #guide :is(.g-text,.g-skip,.g-doit){ font-family:'Kanit',sans-serif; font-weight:400; }
   @media (max-width:900px){ #guide{ left:64px; } }
   @media (max-width:560px){ #guide{ left:0; } .g-sprite{ width:48px; height:48px; } .g-text{ font-size:15px; } body.in-game #hub-screen{ padding-top:66px; }
-    body:has(#guide:not([hidden])) #jvDot{ bottom:auto; top:12px; }   /* keep the AI button off Aurelius's buttons */ }
+    body:has(#guide:not([hidden])) #jvDot{ bottom:auto; top:12px; }   /* keep the AI button off Aurelius's buttons */
+    body.is-admin:has(#guide:not([hidden])) #jvDot{ top:66px; } }   /* ...and under the ADMIN button */
+  body:has(#admin-panel.open) #jvDot{ display:none; }   /* the open Admin panel needs the corner to itself */
   .c-sched{ --hc:#5EC8FF; --hc-light:#BFE9FF; --hc-glow:rgba(94,200,255,.45); }
   .c-board{ --hc:#FFD75E; --hc-light:#FFF0BC; --hc-glow:rgba(255,215,94,.45); }
   .login-hint{ font-size:12px; font-weight:600; color:var(--text-dim); margin:4px 0 8px; line-height:1.4; text-align:left; }
