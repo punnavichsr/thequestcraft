@@ -685,6 +685,7 @@
   .lb-admin .b-unban{ background:var(--emerald); color:#0A2415; }
   .lb-admin .b-clear{ background:var(--sky); color:#031B1F; }
   .lb-admin .b-reset,.admin-row .btn-reset{ background:var(--mystic); color:#fff; }
+  .lb-admin .b-setxp,.admin-row .btn-setxp{ background:var(--sky); color:#031B1F; }
   .lb-admin button:disabled{ opacity:.4; cursor:default; }
   .lb-status.warned{ background:rgba(255,215,94,.25); color:var(--gold); }
   .lb-status.cleared{ background:rgba(94,200,255,.2); color:var(--sky); }
@@ -1728,9 +1729,36 @@ function stopPresence(){
 }
 function onlineTag(e){ return '<span class="online-slot">'+((e.user_id && onlineIds.has(e.user_id))?'<span class="online-tag"><span class="online-dot"></span>ONLINE</span>':'')+'</span>'; }
 
+// Level and XP into that level for a total XP (each level n needs n×5 XP)
+function levelForXP(total){
+  let level=1, into=Math.max(0,Math.floor(total)||0);
+  while(into>=level*5){ into-=level*5; level++; }
+  return {level,into};
+}
+// admins: set a player's XP; their game applies it the same way as RESET XP
+async function setPlayerXP(e,xp){
+  const {level}=levelForXP(xp);
+  const {error}=await sb.from('leaderboard').update({xp, level, xp_reset_at:new Date().toISOString()}).eq('id',e.id);
+  if(error) return {ok:false,msg:error.message};
+  if(currentUser && e.user_id===currentUser.id) await checkMyWarning();
+  refreshModerationViews(true);
+  return {ok:true,msg:`${displayName(e)} now has ${xp} XP (LV ${level}).`};
+}
+const validXP=n=>Number.isInteger(n) && n>=0 && n<=100000;
+
 // ---- admin actions (the database also checks you are the admin) ----
 async function moderate(id,action){
   const e=(lbCache||[]).find(r=>r.id===id)||{};
+  if(action==='setxp'){
+    if(!isAdmin()) return;
+    const v=prompt(`New XP for ${displayName(e)}\n(LV 5 = 50 XP, LV 10 = 225 XP)`, e.xp||0);
+    if(v===null){ refreshModerationViews(); return; }
+    if(!validXP(Number(v))){ showToast('❌ NOT A NUMBER','Type a whole number from 0 to 100000'); refreshModerationViews(); return; }
+    const r=await setPlayerXP(e,Number(v));
+    showToast(r.ok?'✏️ XP SET':'❌ ACTION FAILED',r.msg);
+    if(!r.ok) refreshModerationViews(true);
+    return;
+  }
   const last=isLastWarning(e);
   const changes={
     warn:{warned:true, warned_at:new Date().toISOString(), warn_message:last?LAST_WARN_TEXT:WARN_TEXT, warn_count:(e.warn_count||0)+1, warned_by:'admin'},
@@ -1758,6 +1786,7 @@ function adminButtons(e){
               :`<button class="b-ban" data-mod="ban" data-id="${e.id}">🚫 BAN</button>`}
     <button class="b-clear" data-mod="clear" data-id="${e.id}">✅ CLEAR</button>
     <button class="b-reset" data-mod="reset" data-id="${e.id}">🔄 RESET XP</button>
+    <button class="b-setxp" data-mod="setxp" data-id="${e.id}">✏️ SET XP</button>
   </div>`;
 }
 function wireModButtons(root){
@@ -1809,12 +1838,22 @@ async function renderLeaderboard(useCache){
   }catch(err){console.error(err);list.innerHTML='<div class="empty-note">Error loading leaderboard</div>';}
 }
 
-// ---- an admin reset this account's XP ----
-function applyXpReset(stamp){
-  hero=freshState().hero;
+// ---- an admin reset (xp 0) or set (xp > 0) this account's XP ----
+function applyXpReset(stamp,xp){
+  xp=Math.max(0,Number(xp)||0);
+  if(!xp) hero=freshState().hero;
+  else{
+    const {level,into}=levelForXP(xp);
+    hero.skillPoints=Math.max(0,(hero.skillPoints||0)+(level-hero.level)*SP_PER_LEVEL);
+    hero.level=level; hero.xpIntoLevel=into; hero.totalXP=xp;
+  }
+  if(hero.level<5) delete hero.officeUnlockSeen;   // below LV 5 again: the Office unlock plays again later
   try{ localStorage.setItem('qc_reset_seen',stamp); }catch(e){}
+  const unlock=hero.level>=5 && !hero.officeUnlockSeen;
+  if(unlock) hero.officeUnlockSeen=true;
   save(); updateHeroSlot(); renderAll();
-  showToast('🔄 XP RESET','An admin reset your XP to 0');
+  showToast(xp?'✏️ XP CHANGED':'🔄 XP RESET', xp?`An admin set your XP to ${xp} (LV ${hero.level})`:'An admin reset your XP to 0');
+  if(unlock) setTimeout(()=>showOfficeUnlock(),1400);
 }
 
 // ---- banned players cannot play ----
@@ -2056,10 +2095,10 @@ let myBanned=false, myRow=null;
 async function checkMyWarning(){
   if(!currentUser){ setBannedUI(false); return; }
   try{
-    const {data}=await sb.from('leaderboard').select('id,banned,perma_banned,warned,warned_at,warn_message,warn_count,xp_reset_at').eq('user_id',currentUser.id).maybeSingle();
+    const {data}=await sb.from('leaderboard').select('id,banned,perma_banned,warned,warned_at,warn_message,warn_count,xp_reset_at,xp').eq('user_id',currentUser.id).maybeSingle();
     myRow=data||null;
     setBannedUI(!!(data && data.banned));
-    if(data && data.xp_reset_at && readSeen('qc_reset_seen')!==data.xp_reset_at) applyXpReset(data.xp_reset_at);
+    if(data && data.xp_reset_at && readSeen('qc_reset_seen')!==data.xp_reset_at) applyXpReset(data.xp_reset_at,data.xp);
     if(myBanned) return;
     if(!data || !data.warned || !data.warned_at) return;
     const last=(data.warn_count||0)>=2;
@@ -2230,6 +2269,7 @@ async function renderAdminPanel(useCache){
             <button class="btn-ban" data-mod="ban" data-id="${e.id}">🚫 BAN</button>
             <button class="btn-clear" data-mod="clear" data-id="${e.id}">✅ CLEAR</button>
             <button class="btn-reset" data-mod="reset" data-id="${e.id}">🔄 RESET XP</button>
+            <button class="btn-setxp" data-mod="setxp" data-id="${e.id}">✏️ SET XP</button>
           </div>
         </div>`;
       row.addEventListener('click',()=>{ openFlagId=(openFlagId===e.id?null:e.id); renderAdminPanel(true); });
@@ -2439,6 +2479,19 @@ window.questcraftBridge={
     }
     await moderate(e.id,action);
     return {ok:true,msg:{warn:`Warned ${displayName(e)}.`,ban:`Banned ${displayName(e)}.`,unban:`Unbanned ${displayName(e)}.`,clear:`Cleared ${displayName(e)}'s warning.`}[action]||'Done.'};
+  },
+  // admins: set a player's XP (asked by Jarvis); "me" = the admin's own hero
+  async setXpByName(player,xp){
+    if(!isAdmin()) return {ok:false,msg:'Only admins can do that.'};
+    xp=Number(xp);
+    if(!validXP(xp)) return {ok:false,msg:'XP must be a whole number from 0 to 100000.'};
+    const data=await fetchLeaderboard();
+    const want=String(player||'').toLowerCase().replace(/^agent\s+/,'').trim();
+    const isMe=['me','myself','i','admin'].includes(want);
+    const hits=data.filter(e=>isMe ? (currentUser && e.user_id===currentUser.id) : String(e.username||'').toLowerCase()===want);
+    if(hits.length!==1) return {ok:false,msg:hits.length?`More than one player is called "${player}".`:`I couldn't find a player called "${player}".`};
+    if(!confirm(`Set ${displayName(hits[0])}'s XP to ${xp}? (asked by your AI)`)) return {ok:false,msg:'Cancelled.'};
+    return setPlayerXP(hits[0],xp);
   },
   // admins: give or take away the Ace title (asked by Jarvis)
   async setAceByName(player,give){

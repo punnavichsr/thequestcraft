@@ -1097,8 +1097,8 @@ ${isAdminUser() ? ` {"action":"set_score_rule","minutes_per_point":60,"activity"
 ADMIN MODE: this user is a QuestCraft admin. Live game report: ${JSON.stringify(ctx.admin)}
 When they ask "what's going on", summarise it simply: who is online, flagged players and their warnings, bans, temporary bans, promo countdowns.
 Admin actions (only when they clearly ask, using the player's name as shown):
- {"action":"warn","player":"Agent Tor"}, {"action":"ban","player":"Agent Tor"}, {"action":"unban","player":"Agent Tor"}, {"action":"clear","player":"Agent Tor"}, {"action":"reset_xp","player":"Agent Tor"}, {"action":"give_ace","player":"Agent Tor"}, {"action":"remove_ace","player":"Agent Tor"}
-give_ace gives a player the Ace title (normally earned by 5 honest Daily Quests in a row); remove_ace takes it away. "Me" means the admin's own player (the leaderboard entry with "you": true).
+ {"action":"warn","player":"Agent Tor"}, {"action":"ban","player":"Agent Tor"}, {"action":"unban","player":"Agent Tor"}, {"action":"clear","player":"Agent Tor"}, {"action":"reset_xp","player":"Agent Tor"}, {"action":"set_xp","player":"Agent Tor","xp":50}, {"action":"give_ace","player":"Agent Tor"}, {"action":"remove_ace","player":"Agent Tor"}
+set_xp sets a player's total XP (each level n needs n×5 XP: LV 5 = 50 XP, LV 10 = 225 XP; the Office unlocks at LV 5). give_ace gives a player the Ace title (normally earned by 5 honest Daily Quests in a row); remove_ace takes it away. "Me" means the admin's own player (the leaderboard entry with "you": true).
 Ban and reset_xp always ask the admin to confirm in a pop-up.` : ""}
 ${host ? `
 YOU ARE FLOATING ON ANOTHER PAGE right now: ${host.name}. The user opened you with the orange button there.
@@ -1164,6 +1164,11 @@ Only include actions the user asked for or agreed to. Never show this format oth
         if (!isAdminUser()) { bubble("Only admins can do that.", "err"); continue; }
         const r = await game.setAceByName(a.player, a.action === "give_ace");
         bubble((r.ok ? "🏅 " : "⚠️ ") + r.msg, r.ok ? "note" : "err");
+      }
+      if (a.action === "set_xp") {
+        if (!isAdminUser()) { bubble("Only admins can do that.", "err"); continue; }
+        const r = await game.setXpByName(a.player, a.xp);
+        bubble((r.ok ? "✏️ " : "⚠️ ") + r.msg, r.ok ? "note" : "err");
       }
       if (["warn", "ban", "unban", "clear", "reset_xp"].includes(a.action)) {
         if (!isAdminUser()) { bubble("Only admins can do that.", "err"); continue; }
