@@ -1009,7 +1009,7 @@
       <button class="hub-card" data-area="office" id="office-card"><span class="hc-n" id="office-n">★</span><h3 data-t="office">OFFICE</h3><div class="desc" id="office-desc">AI helpers at HQ.</div></button>
     </div>
     <div class="fs-box" id="fs-box">
-      <div class="fs-head"><span class="fs-title">★ <span data-t="fsTitle">FIRST STEPS</span></span><span class="fs-count" id="fs-count">0/4 · +20 XP</span></div>
+      <div class="fs-head"><span class="fs-title">★ <span data-t="fsTitle">FIRST STEPS</span></span><span class="fs-count" id="fs-count">0/3 · +15 XP</span></div>
       <div class="fs-list" id="fs-list"></div>
       <button class="fs-resume" id="fs-resume" hidden></button>
     </div>
@@ -2098,7 +2098,7 @@ async function toggleTask(i,btn){
     if(error) throw error;
     dq=data;
     run.checklistTasks=dq.tasks.map((name,j)=>({name,done:(dq.done||[]).includes(j)}));
-    if(data.xp_delta>0){ addXP(data.xp_delta); showToast('✅ TASK DONE!',`+${data.xp_delta} XP`); fsDone('complete'); }
+    if(data.xp_delta>0){ addXP(data.xp_delta); showToast('✅ TASK DONE!',`+${data.xp_delta} XP`); }
     if(data.xp_delta<0){ removeXP(-data.xp_delta); showToast('↩ TASK UNTICKED',`${data.xp_delta} XP`); }
     if(data.completed && data.xp_delta>0){ questsDone.daily=true; showToast('🏆 DAILY QUEST COMPLETE!',`+${data.xp_delta} XP · all tasks done`); }
     syncLeaderboard(); save();
@@ -2132,7 +2132,7 @@ document.querySelectorAll('.hub-card').forEach(c=>{
     const area=c.dataset.area;
     if(area==='schedule'){ openPlanner('timetable','📋 SCHEDULE'); return; }
     if(area==='leaderboard') renderLeaderboard();
-    if(area==='quests'){ openQuiz('daily'); return; }   // one quest: the checklist opens right away
+    if(area==='quests'){ openQuiz('daily'); fsDone('complete'); return; }   // one quest: the checklist opens right away (First Steps: just open it)
        if(area==='planner'){ openPlanner('planner','🧍 PLANNER'); return; }
     if(area==='timer'){ openPlanner('stopwatch','⏱️ TIMER'); return; }
     if(area==='stats'){ document.getElementById('btn-stats').click(); return; }   // the old Stats panel
@@ -2576,18 +2576,17 @@ const T={
     schedule:'SCHEDULE', schedDesc:'Plan your day, hour by hour.', timer:'TIMER', timerDesc:'Time your study and log it.',
     quests:'QUESTS', questsDesc:"Tick off today's tasks for XP.", stats:'HERO STATS', statsDesc:'IQ, Strength, Sleep and more.',
     board:'LEADERBOARD', boardDesc:'See how you rank.', office:'OFFICE', officeDesc:'AI helpers at HQ.', officeLocked:'AI helpers. Unlocks at LV 5.',
-    fsTitle:'FIRST STEPS', fsPlan:'Plan a task in Schedule', fsFocus:'Log a focus session', fsComplete:'Complete a quest', fsGrow:'Earn your first skill point',
+    fsTitle:'FIRST STEPS', fsPlan:'Plan a task in Schedule', fsFocus:'Log a focus session', fsComplete:'Open your Daily Quest',
     fsAllDone:'First Steps complete!', resume:'▶ START TUTORIAL', replay:'↻ REPLAY TUTORIAL',
     guide:'GUIDE', skip:'Skip tutorial', next:'NEXT', finish:'FINISH', takeMe:'TAKE ME THERE ▶', doIt:'↑ Do it on the page', tapGlow:'↑ Click the glowing part to continue',
     gBack:'◀ BACK', tutDone:'★ Tutorial complete!',
     g0:"Welcome, adventurer! I'm Aurelius. Here, real homework and study earn XP for your hero. Let's do your first quest together.",
     g1:'This bar shows your next task, how close you are to the next level, and how long you focused today. Check it first every day.',
-    g2:'Your first quest is First Steps: 4 objectives, +5 XP each. Each one teaches you a page.',
+    g2:'Your first quest is First Steps: 3 objectives, +5 XP each. Each one teaches you a page.',
     g3:'Step 1 · Add Event. Type the thing you must do today, pick a time, category and priority, then press ADD.',
     g4:'Step 2 · Focus. Open Timer and press Start when you sit down to work, then Stop & Log when you finish. For now, 5 seconds is enough.',
-    g5:'Step 3 · Complete. Open Quests and tick a task when it’s really done.',
-    g6:'Step 4 · Grow. Every hour you log on the Timer earns 1 skill point: study → IQ, exercise → Strength, sleep → Sleep. Try it now: log 5 seconds of study, exercise or sleep and watch that stat grow by 1.',
-    g7:'Step 5 · Compare. This is the Leaderboard. Find your hero, then click the glowing list.',
+    g5:'Step 3 · Quests. Open Quests to see your Daily Quest checklist. You don’t need to tick anything now: just take a look.',
+    g7:'Step 4 · Compare. This is the Leaderboard. Find your hero, then click the glowing list.',
     g8:'This is the Office. Its AI helpers: the Problem Solver brainstorms ideas and solves problems, the Email Assistant checks your emails, the Manager is special because you can change his job and name, and the Presenter helps you make presentations. It unlocks at level 5, so no need to open it now.',
     g9:'Stuck on any page? Press ? any time to open How to play and replay a tutorial.',
     g10:'Good luck, Adventurer. The threads of fate are spinning. Let us see what destiny you got on this journey.',
@@ -2598,18 +2597,17 @@ const T={
     schedule:'ตารางเวลา', schedDesc:'วางแผนวันของเจ้าเป็นรายชั่วโมง', timer:'จับเวลา', timerDesc:'จับเวลาการอ่านแล้วบันทึก',
     quests:'เควสต์', questsDesc:'ติ๊กงานวันนี้เพื่อรับ XP', stats:'สเตตัสฮีโร่', statsDesc:'IQ, Strength, Sleep และอื่นๆ',
     board:'กระดานอันดับ', boardDesc:'ดูอันดับของเจ้า', office:'ออฟฟิศ', officeDesc:'ผู้ช่วย AI ที่สำนักงานใหญ่', officeLocked:'ผู้ช่วย AI ปลดล็อกที่ LV 5',
-    fsTitle:'ก้าวแรก', fsPlan:'วางแผนงานในตารางเวลา', fsFocus:'บันทึกการจับเวลา', fsComplete:'ทำเควสต์สำเร็จ', fsGrow:'รับแต้มสกิลแรก',
+    fsTitle:'ก้าวแรก', fsPlan:'วางแผนงานในตารางเวลา', fsFocus:'บันทึกการจับเวลา', fsComplete:'เปิดเควสต์ประจำวัน',
     fsAllDone:'ก้าวแรกสำเร็จแล้ว!', resume:'▶ เริ่มการสอน', replay:'↻ ดูสอนอีกครั้ง',
     guide:'ผู้นำทาง', skip:'ข้ามการสอน', next:'ต่อไป', finish:'เสร็จสิ้น', takeMe:'พาไปเลย ▶', doIt:'↑ ลองทำบนหน้าจอเลย', tapGlow:'↑ กดส่วนที่เรืองแสงเพื่อไปต่อ',
     gBack:'◀ ย้อนกลับ', tutDone:'★ จบการสอนแล้ว!',
     g0:'ยินดีต้อนรับนักผจญภัย! ข้าคือออเรลิอัส ที่นี่การบ้านและการอ่านหนังสือจริงจะได้ XP ให้ฮีโร่ มาทำเควสต์แรกด้วยกัน',
     g1:'แถบนี้บอกงานถัดไป อีกกี่ XP จะเลเวลอัป และวันนี้โฟกัสไปนานเท่าไร ดูตรงนี้ก่อนทุกวัน',
-    g2:'เควสต์แรกคือ ก้าวแรก มี 4 ภารกิจ ได้ภารกิจละ +5 XP แต่ละอันสอนหนึ่งหน้า',
+    g2:'เควสต์แรกคือ ก้าวแรก มี 3 ภารกิจ ได้ภารกิจละ +5 XP แต่ละอันสอนหนึ่งหน้า',
     g3:'ขั้น 1 · เพิ่มกิจกรรม พิมพ์สิ่งที่ต้องทำวันนี้ เลือกเวลา หมวดหมู่ และความสำคัญ แล้วกด ADD',
     g4:'ขั้น 2 · โฟกัส เปิดจับเวลา กด Start ตอนเริ่มลงมือทำ ทำเสร็จแล้วกด Stop & Log ตอนนี้ลองแค่ 5 วินาทีก็พอ',
-    g5:'ขั้น 3 · ทำสำเร็จ เปิดเควสต์ แล้วติ๊กงานเมื่อทำเสร็จจริง',
-    g6:'ขั้น 4 · เติบโต ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลาได้ 1 แต้มสกิล: อ่านหนังสือ → IQ ออกกำลังกาย → Strength นอน → Sleep ลองเลย: บันทึกอ่านหนังสือ ออกกำลังกาย หรือนอน 5 วินาที แล้วดูสเตตัสนั้นเพิ่มขึ้น 1',
-    g7:'ขั้น 5 · เปรียบเทียบ นี่คือกระดานอันดับ หาฮีโร่ของเจ้า แล้วกดรายชื่อที่เรืองแสง',
+    g5:'ขั้น 3 · เควสต์ เปิดเควสต์เพื่อดูรายการเควสต์ประจำวัน ตอนนี้ยังไม่ต้องติ๊กอะไร แค่ดูก่อน',
+    g7:'ขั้น 4 · เปรียบเทียบ นี่คือกระดานอันดับ หาฮีโร่ของเจ้า แล้วกดรายชื่อที่เรืองแสง',
     g8:'นี่คือออฟฟิศ ผู้ช่วย AI ที่นี่: นักแก้ปัญหาช่วยระดมไอเดียและแก้ปัญหา ผู้ช่วยอีเมลช่วยเช็กอีเมล ผู้จัดการพิเศษตรงที่เจ้าเปลี่ยนงานและชื่อของเขาได้ และนักนำเสนอช่วยทำงานนำเสนอ ปลดล็อกที่เลเวล 5 ตอนนี้ยังไม่ต้องเปิด',
     g9:'ติดตรงไหน กด ? ได้ทุกเมื่อ เพื่อเปิดวิธีเล่นและดูสอนซ้ำ',
     g10:'โชคดีนะ นักผจญภัย ด้ายแห่งโชคชะตากำลังหมุนวน มาดูกันว่าเจ้าจะได้พบชะตาแบบใดในการเดินทางครั้งนี้',
@@ -2642,8 +2640,8 @@ function renderTodayStrip(){
   document.getElementById('ts-focus').textContent=mins>=60?`${Math.floor(mins/60)}h ${mins%60}m`:`${mins}m`;
 }
 
-// ---- First Steps: 4 objectives, +5 XP each, saved on the hero ----
-const FS=[['plan','fsPlan'],['focus','fsFocus'],['complete','fsComplete'],['grow','fsGrow']];
+// ---- First Steps: 3 objectives, +5 XP each, saved on the hero ----
+const FS=[['plan','fsPlan'],['focus','fsFocus'],['complete','fsComplete']];
 function fsState(){ if(!hero.fs){ hero.fs={}; hero.fsBase=planCounts(); } return hero.fs; }
 function fsDone(k){
   if(!activeProfile) return;
@@ -2661,7 +2659,6 @@ function checkPlanner(){
   fsState(); const c=planCounts(), b=hero.fsBase||c;
   if(c.ev>b.ev) fsDone('plan');
   if(c.se>b.se) fsDone('focus');
-  if(c.earned>(b.earned||0)) fsDone('grow');   // a full hour on the Timer earned a skill point
 }
 window.addEventListener('storage',e=>{ if(e.key===PLAN_KEY){ checkPlanner(); renderTodayStrip(); } });
 
@@ -2670,8 +2667,8 @@ function renderHub(){
   if(!activeProfile) return;
   renderTodayStrip();
   const fs=fsState(), n=FS.filter(([k])=>fs[k]).length;
-  document.getElementById('fs-count').textContent=`${n}/4 · +20 XP`;
-  document.getElementById('fs-box').classList.toggle('done',n===4);
+  document.getElementById('fs-count').textContent=`${n}/${FS.length} · +${FS.length*5} XP`;
+  document.getElementById('fs-box').classList.toggle('done',n===FS.length);
   document.getElementById('fs-list').innerHTML=FS.map(([k,l])=>
     `<div class="fs-row${fs[k]?' on':''}"><span class="bx">${fs[k]?'✓':''}</span><span class="lb">${escapeHtml(tr(l))}</span><span class="xp">+5 XP</span></div>`).join('');
   const rb=document.getElementById('fs-resume');
@@ -2685,7 +2682,7 @@ function renderHub(){
 // ---- Aurelius, the guide ----
 const GUIDE_STEPS=[
   {adv:'next',t:'g0'}, {adv:'next',t:'g1',hl:'today-strip'}, {adv:'next',t:'g2',hl:'fs-box'},
-  {adv:'plan',t:'g3',go:'schedule'}, {adv:'focus',t:'g4',go:'timer'}, {adv:'complete',t:'g5',go:'quests'}, {adv:'grow',t:'g6',go:'timer'},
+  {adv:'plan',t:'g3',go:'schedule'}, {adv:'focus',t:'g4',go:'timer'}, {adv:'complete',t:'g5',go:'quests'},
   {adv:'board',t:'g7',go:'leaderboard'}, {adv:'next',t:'g8',hl:'office-card'},
   {adv:'next',t:'g9',hl:'btn-help'}, {adv:'finish',t:'g10'}
 ];
@@ -2720,7 +2717,7 @@ function renderGuide(){
 document.getElementById('g-back').addEventListener('click',()=>{ if(hero.tut>0){ hero.tut--; save(); renderGuide(); } });
 // the Planner (iframe) asks which step is on: on Focus / Grow, Stop & Log works after 5 seconds
 window.qcTutorialStep=()=>{ const st=hero&&hero.tut>=0?GUIDE_STEPS[hero.tut]:null; return st&&!(hero.fs||{})[st.adv]?st.adv:null; };
-window.qcTutorialLogged=()=>{ const k=window.qcTutorialStep(); if(k==='focus'||k==='grow') fsDone(k); };
+window.qcTutorialLogged=()=>{ if(window.qcTutorialStep()==='focus') fsDone('focus'); };
 // Compare step: clicking the glowing leaderboard moves on
 document.getElementById('lb-list').addEventListener('click',()=>{
   const st=GUIDE_STEPS[hero.tut]; if(hero.tut>=0 && st && st.adv==='board'){ hero.tut++; save(); setTimeout(()=>showScreen('hub-screen'),600); }   // next steps are on the hub
@@ -2775,8 +2772,8 @@ const LOOPS=[
 const HELP_PAGES=[['schedule',{en:'Add tasks with a time, category and priority.',th:'เพิ่มงานพร้อมเวลา หมวดหมู่ และความสำคัญ'},3],
   ['timer',{en:'Start when you work, Stop & Log when you are done.',th:'กด Start ตอนทำงาน กด Stop & Log เมื่อเสร็จ'},4],
   ['quests',{en:'Tick tasks in your Daily Quest to earn XP.',th:'ติ๊กงานในเควสต์ประจำวันเพื่อรับ XP'},5],
-  ['stats',{en:'Your stats grow by 1 for every hour you log on the Timer.',th:'สเตตัสเพิ่ม 1 ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลา'},6],
-  ['board',{en:'Ranking by XP, shown with hero names.',th:'อันดับตาม XP แสดงชื่อฮีโร่'},7],
+  ['stats',{en:'Your stats grow by 1 for every hour you log on the Timer.',th:'สเตตัสเพิ่ม 1 ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลา'},null],
+  ['board',{en:'Ranking by XP, shown with hero names.',th:'อันดับตาม XP แสดงชื่อฮีโร่'},6],
   ['hubTitle',{en:'Your daily overview and the First Steps quest.',th:'ภาพรวมรายวันและเควสต์ก้าวแรก'},0]];
 const FAQ=[[{en:'How do I earn XP?',th:'ได้ XP ยังไง?'},{en:'Tick tasks in your Daily Quest, and finish First Steps (+5 XP each).',th:'ติ๊กงานในเควสต์ประจำวัน และทำก้าวแรกให้ครบ (ภารกิจละ +5 XP)'}],
   [{en:'How do I get skill points?',th:'ได้แต้มสกิลยังไง?'},{en:'Every hour you log on the Timer earns 1 skill point: study → IQ, exercise → Strength, sleep → Sleep. Gaming doesn’t count.',th:'ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลาได้ 1 แต้มสกิล: อ่านหนังสือ → IQ ออกกำลังกาย → Strength นอน → Sleep เวลาเล่นเกมไม่นับ'}],
@@ -2800,7 +2797,7 @@ function renderHelp(){
   }
   const pages=document.getElementById('help-pages');
   pages.innerHTML=HELP_PAGES.map(([k,d,step])=>`<div class="help-page"><div><div class="nm">${escapeHtml(tr(k))}</div><div class="ds">${escapeHtml(L(d))}</div></div>`+
-    (document.body.classList.contains('in-game')&&activeProfile?`<button data-replay="${step}">${escapeHtml(tr('replayPage'))}</button>`:'')+`</div>`).join('');
+    (document.body.classList.contains('in-game')&&activeProfile&&step!=null?`<button data-replay="${step}">${escapeHtml(tr('replayPage'))}</button>`:'')+`</div>`).join('');
   pages.querySelectorAll('[data-replay]').forEach(b=>b.addEventListener('click',()=>{
     const i=Number(b.dataset.replay), st=GUIDE_STEPS[i]; hero.tut=i; save();
     const card=st&&st.go&&document.querySelector(`.hub-card[data-area="${st.go}"]`);
