@@ -2731,15 +2731,15 @@ document.getElementById('g-next').addEventListener('click',()=>{
 document.getElementById('g-go').addEventListener('click',()=>{
   const st=GUIDE_STEPS[hero.tut]; const card=st&&document.querySelector(`.hub-card[data-area="${st.go}"]`); if(card) card.click();
 });
-document.getElementById('g-skip').addEventListener('click',()=>{ hero.tut=-1; save(); renderHub(); renderGuide(); });
+document.getElementById('g-skip').addEventListener('click',()=>{ hero.tut=-1; hero.tutSkipped=true; save(); renderHub(); renderGuide(); });
 document.getElementById('fs-resume').addEventListener('click',()=>{
-  hero.tut=0;   // always from step 1
+  hero.tut=0; hero.tutSkipped=false;   // always from step 1
   save(); renderHub(); renderGuide();
 });
 // new heroes start the tutorial when they press START QUEST
 document.getElementById('btn-start').addEventListener('click',()=>setTimeout(()=>{
   if(!document.body.classList.contains('in-game') || !activeProfile) return;
-  fsState(); if(hero.tut==null && !hero.tutDone) hero.tut=0;
+  fsState(); if(!hero.tutDone && !hero.tutSkipped) hero.tut=0;   // the tutorial always starts at step 1
   save(); checkPlanner(); renderHub(); renderGuide();
 },350));
 // every screen change: refresh the hub and move Aurelius's highlight
