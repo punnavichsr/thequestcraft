@@ -12,7 +12,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@500;600;700&family=Kanit:wght@400;500;600&display=swap');
 
   :root{
     --bg-deep:#0B0A14;
@@ -139,21 +139,96 @@
   .launch-flash{ position:fixed; inset:0; background:#FFF7DF; opacity:0; pointer-events:none; z-index:50; }
 
   /* ---------- HUB ---------- */
-  #hub-screen{ width:100%; max-width:1100px; margin-left:auto; margin-right:auto; }
-  .hub-title{ font-family:'Press Start 2P',monospace; font-size:clamp(11px,2.4vw,16px); color:var(--text-light);
-    text-shadow:3px 3px 0 #6B3FA0; margin-bottom:30px; letter-spacing:.08em; text-align:center; }
-  /* the cards sit in one centered row (they wrap, still centered, on small screens) */
-  .hub-grid{ display:flex; flex-wrap:wrap; justify-content:center; gap:16px; width:100%; }
-  .hub-card{ flex:1 1 170px; max-width:205px; position:relative; background:var(--panel); border:2px solid var(--panel-border); padding:28px 20px 24px; cursor:pointer;
-    text-align:center; color:var(--text-light);
-    clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
-    transition:transform .15s ease, box-shadow .2s ease, border-color .2s ease; }
-  .hub-card:hover{ transform:translateY(-4px); border-color:var(--hc); box-shadow:0 0 24px var(--hc-glow); }
-  .hub-card .hub-icon{ width:66px; height:66px; border-radius:14px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:30px;
-    background:radial-gradient(circle at 32% 28%, var(--hc-light), var(--hc) 78%);
-    box-shadow:0 0 22px var(--hc-glow), inset 0 -4px 0 rgba(0,0,0,.25); border:2px solid rgba(255,255,255,.18); }
-  .hub-card h3{ font-family:'Press Start 2P',monospace; font-size:11px; margin-bottom:8px; color:var(--hc); letter-spacing:.05em; text-shadow:0 0 10px var(--hc-glow); }
-  .hub-card .desc{ font-size:14px; color:var(--text-dim); font-weight:600; line-height:1.4; }
+  #hub-screen{ width:100%; max-width:980px; margin-left:auto; margin-right:auto; justify-content:flex-start; gap:18px; padding-top:28px; }
+  .hub-head{ display:flex; align-items:center; gap:12px; width:100%; flex-wrap:wrap; }
+  .hub-title{ font-family:'Press Start 2P',monospace; font-size:clamp(11px,2vw,14px); color:var(--gold); letter-spacing:.06em; text-shadow:2px 2px 0 #6B3FA0; }
+  .hub-tools{ margin-left:auto; display:flex; align-items:center; gap:10px; }
+  .help-btn{ width:34px; height:34px; background:var(--panel-2); border:2px solid var(--sky); color:var(--sky); cursor:pointer; font-family:'Press Start 2P',monospace; font-size:12px; }
+  .help-btn:hover{ background:#241a3d; }
+  .lang-sw{ display:flex; gap:4px; }
+  .lang-sw button{ font-family:'Press Start 2P',monospace; font-size:9px; padding:6px 9px; cursor:pointer; background:transparent; color:var(--text-dim); border:2px solid var(--panel-border); }
+  .lang-sw button.on{ background:var(--gold); color:#0B0A14; border-color:var(--gold); }
+  .today-strip{ width:100%; background:var(--panel); border:2px solid var(--panel-border); padding:14px 16px; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+  .ts-k{ font-family:'Press Start 2P',monospace; font-size:8px; color:var(--text-dim); letter-spacing:.06em; margin-bottom:6px; }
+  .ts-v{ font-size:18px; font-weight:700; color:var(--text-light); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ts-v.gold{ color:var(--gold); } .ts-v.green{ color:var(--emerald); }
+  .hub-main{ width:100%; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:20px; align-items:start; }
+  .hub-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; width:100%; }
+  .hub-card{ min-height:118px; text-align:left; background:var(--panel); border:2px solid var(--panel-border); color:var(--text-light); padding:14px; cursor:pointer;
+    display:flex; flex-direction:column; gap:8px; transition:transform .15s ease, border-color .2s ease, box-shadow .2s ease; }
+  .hub-card:hover{ transform:translateY(-3px); border-color:var(--gold); box-shadow:0 0 18px rgba(255,215,94,.25); }
+  .hub-card .hc-n{ font-family:'Press Start 2P',monospace; font-size:9px; color:var(--mystic); }
+  .hub-card h3{ font-family:'Press Start 2P',monospace; font-size:11px; color:var(--gold); letter-spacing:.04em; }
+  .hub-card .desc{ font-size:14px; color:var(--text-dim); font-weight:600; line-height:1.35; }
+  .hub-card.locked{ opacity:.5; cursor:not-allowed; }
+  .hub-card.locked:hover{ transform:none; border-color:var(--panel-border); box-shadow:none; }
+  .fs-box{ background:var(--panel); border:2px solid var(--gold); padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .fs-box.done{ border-color:var(--emerald); }
+  .fs-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .fs-title{ font-family:'Press Start 2P',monospace; font-size:10px; color:var(--gold); }
+  .fs-count{ font-size:14px; font-weight:700; color:var(--emerald); }
+  .fs-row{ display:flex; gap:10px; align-items:center; font-size:15px; font-weight:600; }
+  .fs-row .bx{ width:18px; height:18px; flex:none; display:grid; place-items:center; border:2px solid var(--emerald); color:#0B0A14; font-size:12px; font-weight:800; }
+  .fs-row.on .bx{ background:var(--emerald); }
+  .fs-row.on .lb{ color:var(--text-dim); text-decoration:line-through; }
+  .fs-row .xp{ margin-left:auto; font-size:13px; color:var(--text-dim); }
+  .fs-resume{ background:none; border:2px solid var(--gold); color:var(--gold); padding:8px; cursor:pointer; font-family:'Press Start 2P',monospace; font-size:9px; }
+  .fs-resume[hidden]{ display:none; }
+  /* the guide points at things with a gold glow */
+  .g-hl{ outline:3px solid var(--gold) !important; outline-offset:4px; box-shadow:0 0 0 4px rgba(11,10,20,.9), 0 0 32px 6px rgba(255,215,94,.45) !important; position:relative; z-index:2; }
+  #guide{ position:fixed; left:200px; right:0; bottom:64px; z-index:39; padding:0 12px 12px; display:flex; justify-content:center; pointer-events:none; }
+  #guide[hidden]{ display:none; }
+  .g-box{ pointer-events:auto; width:100%; max-width:760px; background:var(--panel); border:3px solid var(--gold); box-shadow:0 0 0 3px #0B0A14, 0 -8px 40px rgba(0,0,0,.6); padding:14px 16px; display:flex; gap:14px; align-items:flex-start; }
+  .g-sprite{ flex:none; width:64px; height:64px; background:var(--panel-2); border:2px solid var(--mystic); padding:6px; animation:gbob 1.6s ease-in-out infinite; }
+  .g-sprite svg{ width:100%; height:100%; display:block; }
+  @keyframes gbob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-4px); } }
+  .g-body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .g-top{ display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
+  .g-name{ font-family:'Press Start 2P',monospace; font-size:9px; color:var(--mystic); }
+  .g-step{ font-size:13px; color:var(--text-dim); }
+  .g-text{ font-size:17px; font-weight:600; line-height:1.45; }
+  .g-btns{ display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; align-items:center; }
+  .g-doit{ font-size:14px; font-weight:700; color:var(--gold); margin-right:auto; }
+  .g-doit[hidden], .g-go[hidden]{ display:none; }
+  .g-skip{ background:none; border:none; color:var(--text-dim); cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:600; padding:8px; }
+  .g-skip:hover{ color:var(--text-light); }
+  .g-go{ background:linear-gradient(#FFE58A,#F2C14E); color:#2a1d00; border:none; padding:10px 16px; cursor:pointer; font-family:'Press Start 2P',monospace; font-size:9px; }
+  body:has(#quiz-overlay.active) #guide, body:has(#stats-panel.open) #guide{ display:none; }
+  body:has(#guide:not([hidden])) .screen.active{ padding-bottom:230px; }   /* so the guide never covers the last row */
+  /* how to play */
+  .help-h{ font-family:'Press Start 2P',monospace; font-size:11px; color:var(--gold); margin:22px 0 10px; }
+  .loop-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .loop-card{ background:var(--panel); border:2px solid var(--panel-border); color:var(--text-light); padding:12px; display:flex; flex-direction:column; gap:6px; text-align:left; cursor:pointer; font-family:'Rajdhani',sans-serif; }
+  .loop-card.on{ background:var(--panel-2); border-color:var(--gold); }
+  .loop-card .top{ display:flex; justify-content:space-between; }
+  .loop-card .n{ font-family:'Press Start 2P',monospace; font-size:9px; color:var(--mystic); }
+  .loop-card .ar{ font-size:13px; color:var(--text-dim); }
+  .loop-card .t{ font-family:'Press Start 2P',monospace; font-size:10px; color:var(--gold); }
+  .loop-card .b{ font-size:15px; font-weight:600; line-height:1.4; }
+  .loop-detail{ margin-top:10px; background:var(--panel-2); border:2px solid var(--gold); padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .loop-detail[hidden]{ display:none; }
+  .loop-detail .t{ font-family:'Press Start 2P',monospace; font-size:10px; color:var(--gold); }
+  .loop-detail ul{ padding-left:20px; display:flex; flex-direction:column; gap:6px; font-size:16px; font-weight:600; line-height:1.45; }
+  .help-link{ align-self:flex-start; background:none; border:2px solid var(--sky); color:var(--sky); padding:6px 12px; cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:700; }
+  .help-page{ background:var(--panel); border:2px solid var(--panel-border); padding:12px 14px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .help-page .nm{ font-family:'Press Start 2P',monospace; font-size:10px; margin-bottom:6px; }
+  .help-page .ds{ font-size:15px; font-weight:600; color:var(--text-dim); line-height:1.4; }
+  .help-page > div{ flex:1; min-width:200px; }
+  .help-page button{ background:none; border:2px solid var(--gold); color:var(--gold); padding:6px 10px; cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:700; }
+  .faq-row{ border-bottom:1px solid var(--panel-border); padding:8px 0 12px; }
+  .faq-row .q{ font-size:16px; font-weight:700; margin-bottom:4px; }
+  .faq-row .a{ font-size:15px; font-weight:600; color:var(--text-dim); line-height:1.45; }
+  .title-hint{ font-size:14px; font-weight:600; color:var(--text-dim); margin-top:10px; text-align:center; }
+  /* Thai: the pixel font has no Thai letters, so Thai uses Kanit */
+  body.lang-th #hub-screen, body.lang-th #help-screen, body.lang-th #guide, body.lang-th .title-hint{ font-family:'Kanit',sans-serif; }
+  body.lang-th #hub-screen :is(.hub-title,.ts-k,.hub-card h3,.fs-title),
+  body.lang-th #help-screen :is(.area-title,.help-h,.loop-card .t,.loop-detail .t,.help-page .nm),
+  body.lang-th #guide :is(.g-name,.g-go){ font-family:'Kanit',sans-serif; font-weight:600; font-size:15px; letter-spacing:0; }
+  body.lang-th #hub-screen .ts-k{ font-size:13px; }
+  body.lang-th #hub-screen :is(.hub-card .desc,.ts-v,.fs-row), body.lang-th #help-screen :is(.loop-card,.loop-card .b,.help-page .ds,.help-page button,.faq-row .q,.faq-row .a,.loop-detail ul,.help-link), body.lang-th #guide :is(.g-text,.g-skip,.g-doit){ font-family:'Kanit',sans-serif; font-weight:400; }
+  @media (max-width:900px){ #guide{ left:64px; } }
+  @media (max-width:560px){ #guide{ left:0; } .g-sprite{ width:48px; height:48px; } .g-text{ font-size:15px; } body.in-game #hub-screen{ padding-top:66px; }
+    body:has(#guide:not([hidden])) #jvDot{ bottom:auto; top:12px; }   /* keep the AI button off Aurelius's buttons */ }
   .c-sched{ --hc:#5EC8FF; --hc-light:#BFE9FF; --hc-glow:rgba(94,200,255,.45); }
   .c-board{ --hc:#FFD75E; --hc-light:#FFF0BC; --hc-glow:rgba(255,215,94,.45); }
   .login-hint{ font-size:12px; font-weight:600; color:var(--text-dim); margin:4px 0 8px; line-height:1.4; text-align:left; }
@@ -896,10 +971,12 @@
   </div>
   <div class="login-hint" id="cloud-note"></div>
   <button class="btn-start" id="btn-start">▶ START QUEST</button>
+  <div class="title-hint" data-t="titleHint">New here? Aurelius will guide you through your first quest.</div>
   <div class="trial-chip" id="trial-chip" hidden></div>
   <div class="title-extras">
     <button class="btn-promo" id="btn-pay">Buy 1 month</button>
     <button class="btn-promo" id="btn-promo">Have a promo code?</button>
+    <button class="btn-promo" id="btn-howto" data-t="howto" onclick="openHelp()">How to play</button>
   </div>
   <div class="art-credit">Art made with AI</div>
   <!-- at the very bottom, so nobody signs out by accident (it asks first too) -->
@@ -908,28 +985,73 @@
 
 <!-- HUB -->
 <div class="screen" id="hub-screen">
-  <div class="hub-title">◆ ADVENTURER'S DASHBOARD ◆</div>
-  <div class="hub-grid">
-    <button class="hub-card c-sched" data-area="schedule">
-      <div class="hub-icon">📋</div><h3>SCHEDULE</h3>
-      <div class="desc">Plan your day on the timetable, hour by hour.</div>
-    </button>
-    <button class="hub-card c-board" data-area="leaderboard">
-      <div class="hub-icon">🏆</div><h3>LEADERBOARD</h3>
-      <div class="desc">See how you rank against adventurers worldwide.</div>
-    </button>
-    <button class="hub-card c-quest" data-area="quests">
-      <div class="hub-icon">⚔️</div><h3>QUESTS</h3>
-      <div class="desc">Finish today's real-life tasks and collect XP.</div>
-    </button>
-    <button class="hub-card c-timer" data-area="timer">
-      <div class="hub-icon">⏱️</div><h3>TIMER</h3>
-      <div class="desc">Time your study, exercise or play, and log it.</div>
-    </button>
-    <button class="hub-card c-sched" data-area="office">
-      <div class="hub-icon">🏢</div><h3>OFFICE</h3>
-      <div class="desc">Manage your agents at HQ.</div>
-    </button>
+  <div class="hub-head">
+    <div class="hub-title" data-t="hubTitle">ADVENTURER HUB</div>
+    <div class="hub-tools">
+      <button class="help-btn" id="btn-help" aria-label="How to play" title="How to play">?</button>
+      <div class="lang-sw" role="group" aria-label="Language"><button data-lang="en">EN</button><button data-lang="th">TH</button></div>
+    </div>
+  </div>
+  <div class="today-strip" id="today-strip">
+    <div><div class="ts-k" data-t="nextTask">NEXT TASK</div><div class="ts-v" id="ts-next">–</div></div>
+    <div><div class="ts-k" data-t="toLevel">TO NEXT LEVEL</div><div class="ts-v gold" id="ts-level">–</div></div>
+    <div><div class="ts-k" data-t="focused">FOCUSED TODAY</div><div class="ts-v green" id="ts-focus">–</div></div>
+  </div>
+  <div class="hub-main">
+    <div class="hub-grid">
+      <button class="hub-card" data-area="schedule"><span class="hc-n">1</span><h3 data-t="schedule">SCHEDULE</h3><div class="desc" data-t="schedDesc">Plan your day, hour by hour.</div></button>
+      <button class="hub-card" data-area="timer"><span class="hc-n">2</span><h3 data-t="timer">TIMER</h3><div class="desc" data-t="timerDesc">Time your study and log it.</div></button>
+      <button class="hub-card" data-area="quests"><span class="hc-n">3</span><h3 data-t="quests">QUESTS</h3><div class="desc" data-t="questsDesc">Tick off today's tasks for XP.</div></button>
+      <button class="hub-card" data-area="stats"><span class="hc-n">4</span><h3 data-t="stats">HERO STATS</h3><div class="desc" data-t="statsDesc">Spend skill points.</div></button>
+      <button class="hub-card" data-area="leaderboard"><span class="hc-n">★</span><h3 data-t="board">LEADERBOARD</h3><div class="desc" data-t="boardDesc">See how you rank.</div></button>
+      <button class="hub-card" data-area="office" id="office-card"><span class="hc-n" id="office-n">★</span><h3 data-t="office">OFFICE</h3><div class="desc" id="office-desc">AI helpers at HQ.</div></button>
+    </div>
+    <div class="fs-box" id="fs-box">
+      <div class="fs-head"><span class="fs-title">★ <span data-t="fsTitle">FIRST STEPS</span></span><span class="fs-count" id="fs-count">0/4 · +20 XP</span></div>
+      <div class="fs-list" id="fs-list"></div>
+      <button class="fs-resume" id="fs-resume" hidden></button>
+    </div>
+  </div>
+</div>
+
+<!-- HOW TO PLAY (opens from the ? button) -->
+<div class="screen area" id="help-screen">
+  <div class="area-wrap">
+    <div class="area-head">
+      <button class="btn-back" id="help-back">◀ HUB</button>
+      <span class="area-title" data-t="howTitle">HOW TO PLAY</span>
+    </div>
+    <h4 class="help-h" data-t="howWorks">HOW QUESTCRAFT WORKS</h4>
+    <div class="loop-grid" id="loop-grid"></div>
+    <div class="loop-detail" id="loop-detail" hidden></div>
+    <h4 class="help-h" data-t="pages">PAGES</h4>
+    <div class="help-pages" id="help-pages"></div>
+    <h4 class="help-h" data-t="faqTitle">QUESTIONS</h4>
+    <div class="help-faq" id="help-faq"></div>
+  </div>
+</div>
+
+<!-- GUIDE: Aurelius walks new players through First Steps -->
+<div id="guide" hidden>
+  <div class="g-box">
+    <div class="g-sprite" aria-hidden="true"><svg viewBox="0 0 12 12" shape-rendering="crispEdges">
+      <rect x="3" y="0" width="6" height="1" fill="#6B3FA0"/><rect x="2" y="1" width="8" height="1" fill="#7E4FE0"/>
+      <rect x="1" y="2" width="10" height="4" fill="#7E4FE0"/><rect x="3" y="3" width="6" height="3" fill="#1a1230"/>
+      <rect x="4" y="4" width="1" height="1" fill="#5EC8FF"/><rect x="7" y="4" width="1" height="1" fill="#5EC8FF"/>
+      <rect x="2" y="6" width="8" height="5" fill="#4C3970"/><rect x="5" y="6" width="2" height="5" fill="#FFD75E"/>
+      <rect x="1" y="7" width="1" height="3" fill="#4C3970"/><rect x="10" y="7" width="1" height="3" fill="#4C3970"/>
+      <rect x="3" y="11" width="2" height="1" fill="#2B2040"/><rect x="7" y="11" width="2" height="1" fill="#2B2040"/>
+    </svg></div>
+    <div class="g-body">
+      <div class="g-top"><span class="g-name">AURELIUS · <span data-t="guide">GUIDE</span></span><span class="g-step" id="g-step"></span></div>
+      <div class="g-text" id="g-text"></div>
+      <div class="g-btns">
+        <span class="g-doit" id="g-doit" hidden></span>
+        <button class="g-skip" id="g-skip" data-t="skip">Skip tutorial</button>
+        <button class="g-go" id="g-go" hidden></button>
+        <button class="g-go" id="g-next" hidden></button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1973,7 +2095,7 @@ async function toggleTask(i,btn){
     if(error) throw error;
     dq=data;
     run.checklistTasks=dq.tasks.map((name,j)=>({name,done:(dq.done||[]).includes(j)}));
-    if(data.xp_delta>0){ addXP(data.xp_delta); showToast('✅ TASK DONE!',`+${data.xp_delta} XP`); }
+    if(data.xp_delta>0){ addXP(data.xp_delta); showToast('✅ TASK DONE!',`+${data.xp_delta} XP`); fsDone('complete'); }
     if(data.xp_delta<0){ removeXP(-data.xp_delta); showToast('↩ TASK UNTICKED',`${data.xp_delta} XP`); }
     if(data.completed && data.xp_delta>0){ questsDone.daily=true; showToast('🏆 DAILY QUEST COMPLETE!',`+${data.xp_delta} XP · all tasks done`); }
     syncLeaderboard(); save();
@@ -2010,7 +2132,8 @@ document.querySelectorAll('.hub-card').forEach(c=>{
     if(area==='quests'){ openQuiz('daily'); return; }   // one quest: the checklist opens right away
        if(area==='planner'){ openPlanner('planner','🧍 PLANNER'); return; }
     if(area==='timer'){ openPlanner('stopwatch','⏱️ TIMER'); return; }
-    if(area==='office'){ location.href='office.html'; return; }
+    if(area==='stats'){ document.getElementById('btn-stats').click(); return; }   // the old Stats panel
+    if(area==='office'){ if(officeLocked()){ showToast('🔒 '+tr('office'),tr('officeLocked')); return; } location.href='office.html'; return; }
     showScreen(area+'-screen');
   });
 });
@@ -2443,6 +2566,236 @@ document.getElementById('acct-signout').addEventListener('click',async()=>{
   document.getElementById('account-modal').classList.remove('show');
   save(); kickToTitle(); updateHeroSlot(); await signOut();
 });
+
+// ========== NEW HUB: today strip, First Steps, Aurelius the guide, How to play, EN / TH ==========
+const T={
+  en:{ hubTitle:'ADVENTURER HUB', nextTask:'NEXT TASK', toLevel:'TO NEXT LEVEL', focused:'FOCUSED TODAY', nothingYet:'Nothing yet · open Schedule',
+    schedule:'SCHEDULE', schedDesc:'Plan your day, hour by hour.', timer:'TIMER', timerDesc:'Time your study and log it.',
+    quests:'QUESTS', questsDesc:"Tick off today's tasks for XP.", stats:'HERO STATS', statsDesc:'IQ, Strength, Sleep and more.',
+    board:'LEADERBOARD', boardDesc:'See how you rank.', office:'OFFICE', officeDesc:'AI helpers at HQ.', officeLocked:'AI helpers. Unlocks at LV 5.',
+    fsTitle:'FIRST STEPS', fsPlan:'Plan a task in Schedule', fsFocus:'Log a focus session', fsComplete:'Complete a quest', fsGrow:'Earn a skill point on the Timer',
+    fsAllDone:'First Steps complete!', resume:'▶ CONTINUE TUTORIAL', replay:'↻ REPLAY TUTORIAL',
+    guide:'GUIDE', skip:'Skip tutorial', next:'NEXT', finish:'FINISH', takeMe:'TAKE ME THERE ▶', doIt:'↑ Do it on the page',
+    g0:"Welcome, adventurer! I'm Aurelius. Here, real homework and study earn XP for your hero. Let's do your first quest together.",
+    g1:'This bar shows your next task, how close you are to the next level, and how long you focused today. Check it first every day.',
+    g2:'Your first quest is First Steps: 4 objectives, +5 XP each. Each one teaches you a page.',
+    g3:'Step 1 · Plan. Open Schedule, type one thing you must do, pick a time and priority, then press Add.',
+    g4:'Step 2 · Focus. Open Timer and press Start when you sit down to work. When you finish, press Stop & Log.',
+    g5:'Step 3 · Complete. Open Quests and tick a task when it’s really done.',
+    g6:'Step 4 · Grow. Every hour you log on the Timer earns 1 skill point: study → IQ, exercise → Strength, sleep → Sleep. Log a full hour to finish.',
+    g7:'Stuck on any page? Press ? to read How to play or replay a tutorial.',
+    g8:'Quest complete! Plan → Focus → Complete → Grow. Do this loop every day.',
+    howTitle:'HOW TO PLAY', howWorks:'HOW QUESTCRAFT WORKS', pages:'PAGES', faqTitle:'QUESTIONS', replayPage:'↻ Replay tutorial', goTo:'Go to', back:'◀ HUB', backTitle:'◀ BACK',
+    titleHint:'New here? Aurelius will guide you through your first quest.', howto:'How to play' },
+  th:{ hubTitle:'ฮับนักผจญภัย', nextTask:'งานถัดไป', toLevel:'อีกกี่ XP ถึงเลเวลถัดไป', focused:'โฟกัสวันนี้', nothingYet:'ยังไม่มี · ไปที่ตารางเวลา',
+    schedule:'ตารางเวลา', schedDesc:'วางแผนวันของเจ้าเป็นรายชั่วโมง', timer:'จับเวลา', timerDesc:'จับเวลาการอ่านแล้วบันทึก',
+    quests:'เควสต์', questsDesc:'ติ๊กงานวันนี้เพื่อรับ XP', stats:'สเตตัสฮีโร่', statsDesc:'IQ, Strength, Sleep และอื่นๆ',
+    board:'กระดานอันดับ', boardDesc:'ดูอันดับของเจ้า', office:'ออฟฟิศ', officeDesc:'ผู้ช่วย AI ที่สำนักงานใหญ่', officeLocked:'ผู้ช่วย AI ปลดล็อกที่ LV 5',
+    fsTitle:'ก้าวแรก', fsPlan:'วางแผนงานในตารางเวลา', fsFocus:'บันทึกการจับเวลา', fsComplete:'ทำเควสต์สำเร็จ', fsGrow:'รับแต้มสกิลจากการจับเวลา',
+    fsAllDone:'ก้าวแรกสำเร็จแล้ว!', resume:'▶ เรียนต่อ', replay:'↻ ดูสอนอีกครั้ง',
+    guide:'ผู้นำทาง', skip:'ข้ามการสอน', next:'ต่อไป', finish:'เสร็จสิ้น', takeMe:'พาไปเลย ▶', doIt:'↑ ลองทำบนหน้าจอเลย',
+    g0:'ยินดีต้อนรับนักผจญภัย! ข้าคือออเรลิอัส ที่นี่การบ้านและการอ่านหนังสือจริงจะได้ XP ให้ฮีโร่ มาทำเควสต์แรกด้วยกัน',
+    g1:'แถบนี้บอกงานถัดไป อีกกี่ XP จะเลเวลอัป และวันนี้โฟกัสไปนานเท่าไร ดูตรงนี้ก่อนทุกวัน',
+    g2:'เควสต์แรกคือ ก้าวแรก มี 4 ภารกิจ ได้ภารกิจละ +5 XP แต่ละอันสอนหนึ่งหน้า',
+    g3:'ขั้น 1 · วางแผน เปิดตารางเวลา พิมพ์สิ่งที่ต้องทำ เลือกเวลาและความสำคัญ แล้วกด Add',
+    g4:'ขั้น 2 · โฟกัส เปิดจับเวลา กด Start ตอนเริ่มลงมือทำ ทำเสร็จแล้วกด Stop & Log',
+    g5:'ขั้น 3 · ทำสำเร็จ เปิดเควสต์ แล้วติ๊กงานเมื่อทำเสร็จจริง',
+    g6:'ขั้น 4 · เติบโต ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลาได้ 1 แต้มสกิล: อ่านหนังสือ → IQ ออกกำลังกาย → Strength นอน → Sleep บันทึกให้ครบ 1 ชั่วโมงเพื่อจบ',
+    g7:'ติดตรงไหน กด ? เพื่ออ่านวิธีเล่นหรือดูสอนซ้ำได้ทุกหน้า',
+    g8:'เควสต์สำเร็จ! วางแผน → โฟกัส → ทำสำเร็จ → เติบโต ทำแบบนี้ทุกวัน',
+    howTitle:'วิธีเล่น', howWorks:'QuestCraft เล่นยังไง', pages:'หน้าต่างๆ', faqTitle:'คำถามที่พบบ่อย', replayPage:'↻ ดูสอนอีกครั้ง', goTo:'ไปที่', back:'◀ ฮับ', backTitle:'◀ กลับ',
+    titleHint:'มาใหม่ใช่ไหม? ออเรลิอัสจะพาเจ้าทำเควสต์แรก', howto:'วิธีเล่น' }
+};
+let LANG='en'; try{ if(localStorage.getItem('qc-lang')==='th') LANG='th'; }catch(e){}
+const tr=k=>(T[LANG]&&T[LANG][k])||T.en[k]||k;
+
+// ---- what's on the timetable (planner.html saves it in this browser) ----
+const PLAN_KEY='punn-levelup-v1';
+function planEvents(){ try{ return (JSON.parse(localStorage.getItem(PLAN_KEY)||'{}').events)||{}; }catch(e){ return {}; } }
+const isSession=ev=>/session \(\d+ min\)/.test((ev&&ev.title)||'');   // the Timer's Stop & Log adds "… session (25 min)"
+const dayKeyOf=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const hhmmToMin=t=>{ const [h,m]=String(t||'0:0').split(':').map(Number); return h*60+(m||0); };
+function planCounts(){
+  let ev=0,se=0,earned=0;
+  Object.values(planEvents()).forEach(a=>(a||[]).forEach(e=>{ if(isSession(e)) se++; else ev++; }));
+  try{ (JSON.parse(localStorage.getItem(PLAN_KEY)||'{}').stats||[]).forEach(st=>{ earned+=Number(st.earned)||0; }); }catch(e){}
+  return {ev,se,earned};
+}
+
+function renderTodayStrip(){
+  const today=planEvents()[dayKeyOf(new Date())]||[], now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
+  const next=today.filter(e=>!isSession(e)&&hhmmToMin(e.end||e.start)>=nowMin).sort((a,b)=>hhmmToMin(a.start)-hhmmToMin(b.start))[0];
+  document.getElementById('ts-next').textContent=next?`${next.start} · ${next.title}`:tr('nothingYet');
+  document.getElementById('ts-level').textContent=`${Math.max(0,xpNeeded()-hero.xpIntoLevel)} XP`;
+  const mins=today.reduce((n,e)=>{ const m=/session \((\d+) min\)/.exec(e.title||''); return n+(m?Number(m[1]):0); },0);
+  document.getElementById('ts-focus').textContent=mins>=60?`${Math.floor(mins/60)}h ${mins%60}m`:`${mins}m`;
+}
+
+// ---- First Steps: 4 objectives, +5 XP each, saved on the hero ----
+const FS=[['plan','fsPlan'],['focus','fsFocus'],['complete','fsComplete'],['grow','fsGrow']];
+function fsState(){ if(!hero.fs){ hero.fs={}; hero.fsBase=planCounts(); } return hero.fs; }
+function fsDone(k){
+  if(!activeProfile) return;
+  const fs=fsState(); if(fs[k]) return;
+  fs[k]=true;
+  const st=GUIDE_STEPS[hero.tut]; if(hero.tut>=0 && st && st.adv===k) hero.tut++;
+  addXP(5);   // also saves
+  const all=FS.every(([x])=>fs[x]);
+  setTimeout(()=>showToast(all?'★ '+tr('fsAllDone'):'★ '+tr('fsTitle'),`+5 XP · ${tr(FS.find(x=>x[0]===k)[1])}`),1400);
+  renderHub(); renderGuide();
+}
+// the planner lives in an iframe: its saves arrive here as storage events
+function checkPlanner(){
+  if(!activeProfile || !document.body.classList.contains('in-game')) return;
+  fsState(); const c=planCounts(), b=hero.fsBase||c;
+  if(c.ev>b.ev) fsDone('plan');
+  if(c.se>b.se) fsDone('focus');
+  if(c.earned>(b.earned||0)) fsDone('grow');   // a full hour on the Timer earned a skill point
+}
+window.addEventListener('storage',e=>{ if(e.key===PLAN_KEY){ checkPlanner(); renderTodayStrip(); } });
+
+const officeLocked=()=>hero.level<5 && !isAdmin();
+function renderHub(){
+  if(!activeProfile) return;
+  renderTodayStrip();
+  const fs=fsState(), n=FS.filter(([k])=>fs[k]).length;
+  document.getElementById('fs-count').textContent=`${n}/4 · +20 XP`;
+  document.getElementById('fs-box').classList.toggle('done',n===4);
+  document.getElementById('fs-list').innerHTML=FS.map(([k,l])=>
+    `<div class="fs-row${fs[k]?' on':''}"><span class="bx">${fs[k]?'✓':''}</span><span class="lb">${escapeHtml(tr(l))}</span><span class="xp">+5 XP</span></div>`).join('');
+  const rb=document.getElementById('fs-resume');
+  rb.hidden=hero.tut>=0; rb.textContent=hero.tutDone?tr('replay'):tr('resume');
+  const lock=officeLocked();
+  document.getElementById('office-card').classList.toggle('locked',lock);
+  document.getElementById('office-n').textContent=lock?'🔒':'★';
+  document.getElementById('office-desc').textContent=tr(lock?'officeLocked':'officeDesc');
+}
+
+// ---- Aurelius, the guide ----
+const GUIDE_STEPS=[
+  {adv:'next',t:'g0'}, {adv:'next',t:'g1',hl:'today-strip'}, {adv:'next',t:'g2',hl:'fs-box'},
+  {adv:'plan',t:'g3',go:'schedule'}, {adv:'focus',t:'g4',go:'timer'}, {adv:'complete',t:'g5',go:'quests'}, {adv:'grow',t:'g6',go:'timer'},
+  {adv:'next',t:'g7',hl:'btn-help'}, {adv:'finish',t:'g8'}
+];
+function renderGuide(){
+  const g=document.getElementById('guide');
+  document.querySelectorAll('.g-hl').forEach(el=>el.classList.remove('g-hl'));
+  const inGame=document.body.classList.contains('in-game');
+  if(!inGame || !activeProfile || !(hero.tut>=0)){ g.hidden=true; return; }
+  const fs=fsState();
+  while(hero.tut<GUIDE_STEPS.length && fs[GUIDE_STEPS[hero.tut].adv]) hero.tut++;   // already did that one
+  if(hero.tut>=GUIDE_STEPS.length){ hero.tut=-1; hero.tutDone=true; save(); g.hidden=true; renderHub(); return; }
+  const st=GUIDE_STEPS[hero.tut], onHub=document.getElementById('hub-screen').classList.contains('active');
+  const task=!['next','finish'].includes(st.adv);
+  g.hidden=false;
+  document.getElementById('g-step').textContent=`${hero.tut+1} / ${GUIDE_STEPS.length}`;
+  document.getElementById('g-text').textContent=tr(st.t);
+  document.getElementById('g-next').hidden=task;
+  document.getElementById('g-next').textContent=st.adv==='finish'?tr('finish'):tr('next')+' ▶';
+  document.getElementById('g-go').hidden=!(task&&onHub);
+  document.getElementById('g-go').textContent=tr('takeMe');
+  document.getElementById('g-doit').hidden=!(task&&!onHub);
+  document.getElementById('g-doit').textContent=tr('doIt');
+  if(onHub){
+    const el=st.hl?document.getElementById(st.hl):st.go?document.querySelector(`.hub-card[data-area="${st.go}"]`):null;
+    if(el) el.classList.add('g-hl');
+  }
+}
+document.getElementById('g-next').addEventListener('click',()=>{
+  const st=GUIDE_STEPS[hero.tut]; if(!st) return;
+  if(st.adv==='finish'){ hero.tut=-1; hero.tutDone=true; showToast('★ '+tr('fsTitle'),tr('g8').split('!')[0]+'!'); }
+  else hero.tut++;
+  save(); renderHub(); renderGuide();
+});
+document.getElementById('g-go').addEventListener('click',()=>{
+  const st=GUIDE_STEPS[hero.tut]; const card=st&&document.querySelector(`.hub-card[data-area="${st.go}"]`); if(card) card.click();
+});
+document.getElementById('g-skip').addEventListener('click',()=>{ hero.tut=-1; save(); renderHub(); renderGuide(); });
+document.getElementById('fs-resume').addEventListener('click',()=>{
+  const fs=fsState();
+  hero.tut=hero.tutDone?0:Math.max(0,GUIDE_STEPS.findIndex(s=>s.adv!=='next'&&s.adv!=='finish'&&!fs[s.adv]));
+  save(); renderHub(); renderGuide();
+});
+// new heroes start the tutorial when they press START QUEST
+document.getElementById('btn-start').addEventListener('click',()=>setTimeout(()=>{
+  if(!document.body.classList.contains('in-game') || !activeProfile) return;
+  fsState(); if(hero.tut==null && !hero.tutDone) hero.tut=0;
+  save(); checkPlanner(); renderHub(); renderGuide();
+},350));
+// every screen change: refresh the hub and move Aurelius's highlight
+const showScreenBase=showScreen;
+showScreen=function(id){ showScreenBase(id); if(id==='hub-screen'){ checkPlanner(); renderHub(); } renderGuide(); };
+
+// ---- How to play ----
+const LOOPS=[
+  ['1',{en:'PLAN',th:'วางแผน'},{en:'Add tasks and events in Schedule.',th:'เพิ่มงานและกิจกรรมในตารางเวลา'},'schedule',[
+    {en:'Open Schedule and type what you need to do.',th:'เปิดตารางเวลา แล้วพิมพ์สิ่งที่ต้องทำ'},
+    {en:'Pick a start and end time, a category and a priority.',th:'เลือกเวลาเริ่ม เวลาจบ หมวดหมู่ และความสำคัญ'},
+    {en:'Turn on email reminders in ⚙️ Settings to get an email before it starts.',th:'เปิดอีเมลเตือนใน ⚙️ ตั้งค่า เพื่อรับอีเมลก่อนเริ่ม'}]],
+  ['2',{en:'FOCUS',th:'โฟกัส'},{en:'Start the Timer when you work.',th:'เริ่มจับเวลาตอนลงมือทำ'},'timer',[
+    {en:'Open Timer, pick what you are doing and press Start.',th:'เปิดจับเวลา เลือกสิ่งที่ทำ แล้วกด Start'},
+    {en:'Press Stop & Log when you are done.',th:'ทำเสร็จแล้วกด Stop & Log'},
+    {en:'Your session is added to today’s Schedule and to "Focused today".',th:'เวลาที่ทำจะถูกเพิ่มในตารางวันนี้และใน "โฟกัสวันนี้"'}]],
+  ['3',{en:'COMPLETE',th:'ทำสำเร็จ'},{en:'Tick off your Daily Quest for XP.',th:'ติ๊กเควสต์ประจำวันเพื่อรับ XP'},'quests',[
+    {en:'Open Quests to see today’s checklist.',th:'เปิดเควสต์เพื่อดูรายการวันนี้'},
+    {en:'Tick a task when it’s really done to earn its XP.',th:'ติ๊กงานเมื่อทำเสร็จจริงเพื่อรับ XP'},
+    {en:'Finish all of them 5 days in a row to earn the 🏅 Ace title.',th:'ทำครบทุกงาน 5 วันติดเพื่อรับฉายา 🏅 Ace'}]],
+  ['4',{en:'GROW',th:'เติบโต'},{en:'Every hour on the Timer earns a skill point.',th:'ทุก 1 ชั่วโมงที่จับเวลาได้ 1 แต้มสกิล'},'stats',[
+    {en:'Every hour you log on the Timer earns 1 skill point: study → IQ, exercise → Strength, sleep → Sleep.',th:'ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลาได้ 1 แต้มสกิล: อ่านหนังสือ → IQ ออกกำลังกาย → Strength นอน → Sleep'},
+    {en:'Gaming time doesn’t earn points. Leftover minutes add up, so 40 min + 20 min = 1 point.',th:'เวลาเล่นเกมไม่ได้แต้ม นาทีที่เหลือจะสะสมไว้ เช่น 40 นาที + 20 นาที = 1 แต้ม'},
+    {en:'See your stats with the STATS button on the right.',th:'ดูสเตตัสได้ที่ปุ่ม STATS ด้านขวา'}]],
+  ['5',{en:'AI',th:'AI'},{en:'Let AI plan and change your day.',th:'ให้ AI ช่วยวางแผนและปรับวันของเจ้า'},'office',[
+    {en:'Press the orange AI button on any page to talk to Jarvis.',th:'กดปุ่ม AI สีส้มได้ทุกหน้าเพื่อคุยกับ Jarvis'},
+    {en:'Tell him when your plans go wrong, and he can change them for you.',th:'บอกเขาเมื่อแผนผิดพลาด แล้วเขาจะช่วยเปลี่ยนให้'},
+    {en:'More AI helpers live in Office, which unlocks at level 5.',th:'ผู้ช่วย AI เพิ่มเติมอยู่ในออฟฟิศ ปลดล็อกที่เลเวล 5'}]]
+];
+const HELP_PAGES=[['schedule',{en:'Add tasks with a time, category and priority.',th:'เพิ่มงานพร้อมเวลา หมวดหมู่ และความสำคัญ'},3],
+  ['timer',{en:'Start when you work, Stop & Log when you are done.',th:'กด Start ตอนทำงาน กด Stop & Log เมื่อเสร็จ'},4],
+  ['quests',{en:'Tick tasks in your Daily Quest to earn XP.',th:'ติ๊กงานในเควสต์ประจำวันเพื่อรับ XP'},5],
+  ['stats',{en:'Your stats grow by 1 for every hour you log on the Timer.',th:'สเตตัสเพิ่ม 1 ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลา'},6],
+  ['hubTitle',{en:'Your daily overview and the First Steps quest.',th:'ภาพรวมรายวันและเควสต์ก้าวแรก'},0]];
+const FAQ=[[{en:'How do I earn XP?',th:'ได้ XP ยังไง?'},{en:'Tick tasks in your Daily Quest, and finish First Steps (+5 XP each).',th:'ติ๊กงานในเควสต์ประจำวัน และทำก้าวแรกให้ครบ (ภารกิจละ +5 XP)'}],
+  [{en:'How do I get skill points?',th:'ได้แต้มสกิลยังไง?'},{en:'Every hour you log on the Timer earns 1 skill point: study → IQ, exercise → Strength, sleep → Sleep. Gaming doesn’t count.',th:'ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลาได้ 1 แต้มสกิล: อ่านหนังสือ → IQ ออกกำลังกาย → Strength นอน → Sleep เวลาเล่นเกมไม่นับ'}],
+  [{en:'Is my hero saved?',th:'ฮีโร่ถูกบันทึกไหม?'},{en:'Sign in with your email on the title screen and your hero is saved to your account. Without signing in, it’s only saved on this device.',th:'เข้าสู่ระบบด้วยอีเมลที่หน้าแรก ฮีโร่จะถูกบันทึกในบัญชี ถ้าไม่เข้าสู่ระบบ จะบันทึกแค่ในเครื่องนี้'}],
+  [{en:'I paid. Where is my code?',th:'จ่ายแล้ว โค้ดอยู่ไหน?'},{en:'Open "Buy 1 month" on the title screen to see your slip status. When it’s approved, your code shows up there.',th:'เปิด "Buy 1 month" ที่หน้าแรกเพื่อดูสถานะสลิป เมื่ออนุมัติแล้วโค้ดจะแสดงตรงนั้น'}],
+  [{en:'What is Office?',th:'ออฟฟิศคืออะไร?'},{en:'Your HQ with AI helpers: an Email Assistant, a Problem Solver and a Presenter. It unlocks at level 5.',th:'สำนักงานใหญ่ที่มีผู้ช่วย AI: ผู้ช่วยอีเมล นักแก้ปัญหา และนักนำเสนอ ปลดล็อกที่เลเวล 5'}]];
+let openLoop=null;
+const L=o=>o[LANG]||o.en;
+function renderHelp(){
+  const grid=document.getElementById('loop-grid');
+  grid.innerHTML=LOOPS.map(([n,t,b])=>`<button class="loop-card${openLoop===n?' on':''}" data-loop="${n}"><span class="top"><span class="n">${n}</span><span class="ar">${openLoop===n?'▲':'▼'}</span></span><span class="t">${escapeHtml(L(t))}</span><span class="b">${escapeHtml(L(b))}</span></button>`).join('');
+  grid.querySelectorAll('[data-loop]').forEach(b=>b.addEventListener('click',()=>{ openLoop=openLoop===b.dataset.loop?null:b.dataset.loop; renderHelp(); }));
+  const d=LOOPS.find(x=>x[0]===openLoop), box=document.getElementById('loop-detail');
+  box.hidden=!d;
+  if(d){
+    const dest=d[3], destName=dest==='office'?tr('office'):tr(dest);
+    box.innerHTML=`<div class="t">${d[0]} · ${escapeHtml(L(d[1]))}</div><ul>${d[4].map(p=>`<li>${escapeHtml(L(p))}</li>`).join('')}</ul>`+
+      (document.body.classList.contains('in-game')?`<button class="help-link" id="loop-go">${escapeHtml(tr('goTo'))} ${escapeHtml(destName)} ▶</button>`:'');
+    const go=document.getElementById('loop-go');
+    if(go) go.addEventListener('click',()=>{ const c=document.querySelector(`.hub-card[data-area="${dest}"]`); showScreen('hub-screen'); if(c) c.click(); });
+  }
+  const pages=document.getElementById('help-pages');
+  pages.innerHTML=HELP_PAGES.map(([k,d,step])=>`<div class="help-page"><div><div class="nm">${escapeHtml(tr(k))}</div><div class="ds">${escapeHtml(L(d))}</div></div>`+
+    (document.body.classList.contains('in-game')&&activeProfile?`<button data-replay="${step}">${escapeHtml(tr('replayPage'))}</button>`:'')+`</div>`).join('');
+  pages.querySelectorAll('[data-replay]').forEach(b=>b.addEventListener('click',()=>{ hero.tut=Number(b.dataset.replay); save(); showScreen('hub-screen'); }));
+  document.getElementById('help-faq').innerHTML=FAQ.map(([q,a])=>`<div class="faq-row"><div class="q">${escapeHtml(L(q))}</div><div class="a">${escapeHtml(L(a))}</div></div>`).join('');
+  document.getElementById('help-back').textContent=document.body.classList.contains('in-game')?tr('back'):tr('backTitle');
+}
+function openHelp(){ openLoop=null; renderHelp(); showScreen('help-screen'); }
+document.getElementById('btn-help').addEventListener('click',openHelp);
+document.getElementById('help-back').addEventListener('click',()=>showScreen(document.body.classList.contains('in-game')?'hub-screen':'title-screen'));
+
+// ---- EN / TH ----
+function applyLang(){
+  document.querySelectorAll('[data-t]').forEach(el=>{ el.textContent=tr(el.dataset.t); });
+  document.querySelectorAll('.lang-sw [data-lang]').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG));
+  document.body.classList.toggle('lang-th',LANG==='th');
+  renderHub(); renderHelp(); renderGuide();
+}
+document.querySelectorAll('.lang-sw [data-lang]').forEach(b=>b.addEventListener('click',()=>{
+  LANG=b.dataset.lang; try{ localStorage.setItem('qc-lang',LANG); }catch(e){} applyLang();
+}));
+applyLang();
 </script>
 <script src="reminders.js"></script>
 <script src="jarvis.js"></script>

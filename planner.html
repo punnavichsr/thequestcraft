@@ -671,9 +671,11 @@
       title: `${MODES[mode].icon} ${MODES[mode].name} session (${mins} min)`,
       start: hhmm(sessionStart), end: hhmm(end), type: mode,
     });
+    const earned = earnFromTimer(mode, mins);
     resetWatch();
     dayOffset = 0; renderDay();
-    flash("watchMsg", `Logged ${mins} min of ${MODES[mode].name} to today ✔`);
+    flash("watchMsg", `Logged ${mins} min of ${MODES[mode].name} to today ✔` +
+      (earned ? (earned.got ? ` · +${earned.got} skill point${earned.got > 1 ? "s" : ""} to ${earned.stat.name}! 🎉` : ` · ${earned.left} more min for +1 ${earned.stat.name}`) : ""));
   };
 
   // ================= TIMETABLE =================
@@ -788,7 +790,24 @@
   let stats = Array.isArray(save.stats) && save.stats.length ? save.stats : DEFAULT_STATS.map(s => ({ ...s }));
   // Points are always perfectly equal: 500 for every stat, minus what you've spent
   const budget = () => POINTS_PER_STAT * stats.length;
-  let points = Math.max(0, budget() - stats.reduce((sum, s) => sum + s.value, 0));
+  const earnedOf = s => s.earned || 0;               // points the Timer gave this stat (not from the budget)
+  const spentPoints = () => stats.reduce((sum, s) => sum + Math.max(0, s.value - earnedOf(s)), 0);
+  let points = Math.max(0, budget() - spentPoints());
+
+  // Every full hour logged on the Timer = +1 to the matching stat. Gaming earns nothing.
+  // Leftover minutes are kept, so 40 min + 20 min = 1 point.
+  const STAT_FOR_MODE = { iq: "IQ", strength: "Strength", sleep: "Sleep" };
+  function earnFromTimer(modeKey, mins) {
+    const st = stats.find(x => x.name === STAT_FOR_MODE[modeKey]);
+    if (!st || !(mins > 0)) return null;
+    save.timerCarry = save.timerCarry || {};
+    const total = (save.timerCarry[modeKey] || 0) + mins, got = Math.floor(total / 60);
+    save.timerCarry[modeKey] = total % 60;
+    const add = Math.min(got, MAX - st.value);
+    if (add > 0) { st.earned = earnedOf(st) + add; st.value += add; }
+    renderStats();   // also saves
+    return { stat: st, got: add, left: 60 - save.timerCarry[modeKey] };
+  }
 
   function getAmount() {
     const n = parseInt(document.getElementById("amount").value);
@@ -822,7 +841,7 @@
           <div class="bar"><div class="fill" style="width:${s.value / MAX * 100}%; background:${s.color}"></div></div>
         </div>
         <div class="ctrl">
-          <button class="minus" ${s.value <= 0 ? "disabled" : ""}>−</button>
+          <button class="minus" ${s.value <= earnedOf(s) ? "disabled" : ""}>−</button>
           <button class="plus" ${s.value >= MAX || points <= 0 ? "disabled" : ""}>+</button>
           ${s.custom ? '<button class="del" title="Delete this stat">✕</button>' : ""}
         </div>`;
@@ -847,7 +866,7 @@
       }
 
       row.querySelector(".minus").onclick = () => {
-        const take = Math.min(getAmount(), s.value);
+        const take = Math.min(getAmount(), s.value - earnedOf(s));   // Timer-earned points stay
         s.value -= take; points += take; renderStats();
       };
       row.querySelector(".plus").onclick = () => {
@@ -863,7 +882,7 @@
     const i = stats.indexOf(s);
     if (i < 0 || !s.custom) return false;
     // the stat's own points come back, and its +500 bonus leaves with it
-    points = Math.max(0, points + s.value - BONUS_PER_STAT); stats.splice(i, 1); renderStats();
+    points = Math.max(0, points + s.value - earnedOf(s) - BONUS_PER_STAT); stats.splice(i, 1); renderStats();
     if (s.activity && MODES[s.activity]) deleteActivity(s.activity);   // gone from Stopwatch, Timetable and Planner too
     return true;
   }
@@ -882,7 +901,7 @@
   }
   // Move a stat to a target number (never past MAX or past the points you have)
   function setStatValue(st, target) {
-    target = Math.max(0, Math.min(MAX, Math.round(Number(target) || 0)));
+    target = Math.max(earnedOf(st), Math.min(MAX, Math.round(Number(target) || 0)));
     const diff = Math.min(target - st.value, points);
     st.value += diff; points -= diff;
     renderStats();
@@ -898,7 +917,7 @@
   document.getElementById("openBtn").onclick  = () => document.getElementById("overlay").classList.add("show");
   document.getElementById("closeBtn").onclick = () => document.getElementById("overlay").classList.remove("show");
   document.getElementById("resetBtn").onclick = () => {
-    stats.forEach(s => s.value = 0);
+    stats.forEach(s => s.value = earnedOf(s));   // Timer-earned points are kept
     points = budget(); renderStats();
   };
 
@@ -1034,7 +1053,7 @@ For schoolwork: help them PLAN and understand, but don't just do homework for th
 Right now: ${today.toLocaleString("en-GB")}. Today's date key: ${dateKey(today)}. Tomorrow's: ${dateKey(tmr)}.
 Today's timetable: ${day(today)}
 Tomorrow's timetable: ${day(tmr)}
-Stats (each max ${MAX}): ${stats.map(s => s.name + " " + s.value).join(", ")}. Unspent points: ${points}. Creating a new stat gives +${BONUS_PER_STAT} points.
+Every full hour logged on the Stopwatch earns +1 skill point (study/IQ → IQ, Strength → Strength, Sleep → Sleep, Gaming earns nothing). Stats (each max ${MAX}): ${stats.map(s => s.name + " " + s.value).join(", ")}. Unspent points: ${points}. Creating a new stat gives +${BONUS_PER_STAT} points.
 Activity categories (key (name)): ${cats}.
 Your own stats you can rename/delete: ${stats.filter(s => s.custom).map(s => s.name).join(", ") || "none yet"} (IQ, Gaming, Strength and Sleep are built in and can't be deleted).
 Planner activities you can delete: ${save.activities.filter(a => !a.fromStat).map(a => a.name).join(", ") || "none"} (activities made from a stat are deleted by deleting the stat).
@@ -1271,7 +1290,7 @@ reply = reply.replace(/```(?:actions|json)[\s\S]*?```/, "").trim();
       save.activities = Array.isArray(fresh.activities) ? fresh.activities : [];
       save.activities.forEach(a => { MODES[a.key] = { name: a.name, icon: a.icon, color: a.color, custom: true, fromStat: !!a.fromStat }; });
       if (Array.isArray(fresh.stats) && fresh.stats.length) { stats = fresh.stats; save.stats = stats; }
-      points = Math.max(0, budget() - stats.reduce((sum, s) => sum + s.value, 0));
+      points = Math.max(0, budget() - spentPoints());
       refreshTypeSelects(); renderSidebar(); renderStats(); renderDay();
     } catch (err) { console.error("sync failed", err); }
   });
