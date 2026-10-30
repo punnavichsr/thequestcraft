@@ -1901,6 +1901,8 @@ function updateStartButton(){
       chip.hidden=false;
       chip.textContent=myAccess.ends_at?`🎟️ EARLY ACCESS · ${timeLeft(myAccess.ends_at)}`:'🎟️ EARLY ACCESS · countdown not started';
     }
+    else if(myAccess.kind==='admin'){ chip.hidden=false; chip.textContent='🛡️ ADMIN · full access'; }
+    else if(myAccess.kind==='vip'){ chip.hidden=false; chip.textContent='👑 VIP · forever'; }
     return;
   }
   if(myAccess.status==='temp_banned'){
