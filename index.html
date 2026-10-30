@@ -197,6 +197,40 @@
   .g-go{ background:linear-gradient(#FFE58A,#F2C14E); color:#2a1d00; border:none; padding:10px 16px; cursor:pointer; font-family:'Press Start 2P',monospace; font-size:9px; }
   body:has(#quiz-overlay.active) #guide, body:has(#stats-panel.open) #guide{ display:none; }
   body:has(#guide:not([hidden])) .screen.active{ padding-bottom:230px; }   /* so the guide never covers the last row */
+  /* office unlocked */
+  #unlock-fx{ position:fixed; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(8,6,18,.88); animation:ufxFade .3s ease; }
+  #unlock-fx[hidden]{ display:none; }
+  .ufx-stage{ position:relative; display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; }
+  .ufx-svg{ width:min(260px,70vw); height:auto; overflow:visible; position:relative; z-index:1; }
+  .ufx-lock{ transform-origin:120px 150px; animation:ufxPop .5s cubic-bezier(.2,1.5,.4,1) both, ufxRattle .5s ease-in-out .6s 2; }
+  .ufx-chain{ transform-origin:120px 150px; }
+  .ufx-c1{ transform:rotate(32deg); } .ufx-c2{ transform:rotate(-32deg); }
+  .ufx-chain .ufx-half{ transform-box:fill-box; animation:ufxRattle .5s ease-in-out .6s 2; }
+  .ufx-link{ fill:none; stroke:#9C9AB5; stroke-width:5; } .ufx-link.alt{ stroke:#C9C7DC; }
+  #unlock-fx.go .ufx-l{ animation:ufxFlyL .7s cubic-bezier(.4,0,.6,1) forwards; }
+  #unlock-fx.go .ufx-r{ animation:ufxFlyR .7s cubic-bezier(.4,0,.6,1) forwards; }
+  #unlock-fx.open .ufx-shackle, #unlock-fx.open .ufx-shackle-hi{ animation:ufxOpen .55s cubic-bezier(.2,1.6,.4,1) forwards; transform-origin:152px 112px; }
+  .ufx-burst{ position:absolute; left:50%; top:min(130px,35vw); width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%;
+    background:radial-gradient(circle, rgba(255,231,154,.95), rgba(255,215,94,.4) 40%, transparent 70%); opacity:0; }
+  #unlock-fx.open .ufx-burst{ animation:ufxBurst .9s ease-out forwards; }
+  .ufx-title{ font-family:'Press Start 2P',monospace; font-size:clamp(16px,4vw,26px); color:var(--gold); text-shadow:0 0 18px rgba(255,215,94,.7), 3px 3px 0 #6B3FA0; opacity:0; transform:scale(.4); }
+  .ufx-sub{ font-size:17px; font-weight:600; color:var(--text-light); opacity:0; }
+  .ufx-btns{ display:flex; gap:10px; margin-top:8px; opacity:0; }
+  #unlock-fx.open .ufx-title{ animation:ufxText .6s cubic-bezier(.2,1.6,.4,1) .25s forwards; }
+  #unlock-fx.open .ufx-sub, #unlock-fx.open .ufx-btns{ animation:ufxFade .5s ease .7s forwards; }
+  .ufx-go{ background:linear-gradient(#FFE58A,#F2C14E); color:#2a1d00; border:none; padding:12px 18px; cursor:pointer; font-family:'Press Start 2P',monospace; font-size:10px; }
+  .ufx-later{ background:none; border:2px solid var(--panel-border); color:var(--text-dim); padding:10px 16px; cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:700; }
+  @keyframes ufxFade{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes ufxPop{ from{ transform:scale(.3); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  @keyframes ufxRattle{ 0%,100%{ transform:translate(0,0) rotate(0); } 20%{ transform:translate(-4px,1px) rotate(-3deg); } 40%{ transform:translate(4px,-1px) rotate(3deg); } 60%{ transform:translate(-3px,0) rotate(-2deg); } 80%{ transform:translate(3px,1px) rotate(2deg); } }
+  @keyframes ufxFlyL{ to{ transform:translate(-150px,60px) rotate(-40deg); opacity:0; } }
+  @keyframes ufxFlyR{ to{ transform:translate(150px,60px) rotate(40deg); opacity:0; } }
+  @keyframes ufxOpen{ 0%{ transform:translateY(0) rotate(0); } 60%{ transform:translateY(-22px) rotate(0); } 100%{ transform:translateY(-22px) rotate(28deg); } }
+  @keyframes ufxBurst{ 0%{ opacity:1; transform:scale(1); } 100%{ opacity:0; transform:scale(22); } }
+  @keyframes ufxText{ to{ opacity:1; transform:scale(1); } }
+  body.lang-th #unlock-fx :is(.ufx-title,.ufx-go){ font-family:'Kanit',sans-serif; letter-spacing:0; }
+  body.lang-th #unlock-fx .ufx-title{ font-size:clamp(22px,5vw,32px); font-weight:600; }
+  @media (prefers-reduced-motion: reduce){ #unlock-fx *{ animation-duration:.001s !important; animation-delay:0s !important; } }
   /* how to play */
   .help-h{ font-family:'Press Start 2P',monospace; font-size:11px; color:var(--gold); margin:22px 0 10px; }
   .loop-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
@@ -1016,6 +1050,27 @@
   </div>
 </div>
 
+<!-- OFFICE UNLOCKED: chained padlock that breaks open at level 5 -->
+<div id="unlock-fx" hidden>
+  <div class="ufx-stage">
+    <div class="ufx-burst"></div>
+    <svg class="ufx-svg" viewBox="0 0 240 240" aria-hidden="true">
+      <g class="ufx-lock">
+        <path class="ufx-shackle" d="M88 112 V84 a32 32 0 0 1 64 0 V112" fill="none" stroke="#E0A93C" stroke-width="14" stroke-linecap="round"/>
+        <path class="ufx-shackle-hi" d="M88 112 V84 a32 32 0 0 1 64 0 V112" fill="none" stroke="#FFE79A" stroke-width="5" stroke-linecap="round"/>
+        <rect x="66" y="106" width="108" height="92" rx="12" fill="#FFD75E" stroke="#B8862B" stroke-width="5"/>
+        <rect x="74" y="114" width="92" height="12" rx="6" fill="#FFF0BC" opacity=".6"/>
+        <circle cx="120" cy="146" r="11" fill="#3A2510"/><rect x="115" y="150" width="10" height="24" rx="4" fill="#3A2510"/>
+      </g>
+      <g class="ufx-chain ufx-c1"><g class="ufx-half ufx-l"></g><g class="ufx-half ufx-r"></g></g>
+      <g class="ufx-chain ufx-c2"><g class="ufx-half ufx-l"></g><g class="ufx-half ufx-r"></g></g>
+    </svg>
+    <div class="ufx-title" data-t="officeUnlocked">OFFICE UNLOCKED!</div>
+    <div class="ufx-sub" data-t="officeUnlockedSub">Your AI helpers are waiting at HQ.</div>
+    <div class="ufx-btns"><button class="ufx-go" id="ufx-go" data-t="goOffice">GO TO OFFICE ▶</button><button class="ufx-later" id="ufx-later" data-t="later">Later</button></div>
+  </div>
+</div>
+
 <!-- HOW TO PLAY (opens from the ? button) -->
 <div class="screen area" id="help-screen">
   <div class="area-wrap">
@@ -1514,10 +1569,12 @@ document.getElementById('hp-change').addEventListener('click',()=>{ if(hpSelecte
 // ========== XP / LEVEL ==========
 function addXP(xp){
   if(!xp) return;
+  const levelBefore=hero.level;
   hero.totalXP+=xp; hero.xpIntoLevel+=xp;
   let leveled=false;
   while(hero.xpIntoLevel>=xpNeeded()){hero.xpIntoLevel-=xpNeeded();hero.level++;hero.skillPoints+=SP_PER_LEVEL;leveled=true;}
   if(leveled) showToast(`⬆ LEVEL UP!`,`LV ${hero.level} · +${SP_PER_LEVEL} SKILL POINTS`);
+  if(levelBefore<5 && hero.level>=5 && !hero.officeUnlockSeen){ hero.officeUnlockSeen=true; setTimeout(()=>showOfficeUnlock(),1400); }   // after the level-up toast
   renderAll(); save();
 }
 function showToast(main,sub){
@@ -2592,7 +2649,8 @@ const T={
     g10:'Good luck, Adventurer. The threads of fate are spinning. Let us see what destiny you got on this journey.',
     boardHelp:'Ranking by XP, shown with hero names.',
     howTitle:'HOW TO PLAY', howWorks:'HOW QUESTCRAFT WORKS', pages:'PAGES', faqTitle:'QUESTIONS', replayPage:'↻ Replay tutorial', goTo:'Go to', back:'◀ HUB', backTitle:'◀ BACK',
-    titleHint:'New here? Aurelius will guide you through your first quest.', howto:'How to play' },
+    titleHint:'New here? Aurelius will guide you through your first quest.', howto:'How to play',
+    officeUnlocked:'OFFICE UNLOCKED!', officeUnlockedSub:'Your AI helpers are waiting at HQ.', goOffice:'GO TO OFFICE ▶', later:'Later' },
   th:{ hubTitle:'ฮับนักผจญภัย', nextTask:'งานถัดไป', toLevel:'อีกกี่ XP ถึงเลเวลถัดไป', focused:'โฟกัสวันนี้', nothingYet:'ยังไม่มี · ไปที่ตารางเวลา',
     schedule:'ตารางเวลา', schedDesc:'วางแผนวันของเจ้าเป็นรายชั่วโมง', timer:'จับเวลา', timerDesc:'จับเวลาการอ่านแล้วบันทึก',
     quests:'เควสต์', questsDesc:'ติ๊กงานวันนี้เพื่อรับ XP', stats:'สเตตัสฮีโร่', statsDesc:'IQ, Strength, Sleep และอื่นๆ',
@@ -2613,7 +2671,8 @@ const T={
     g10:'โชคดีนะ นักผจญภัย ด้ายแห่งโชคชะตากำลังหมุนวน มาดูกันว่าเจ้าจะได้พบชะตาแบบใดในการเดินทางครั้งนี้',
     boardHelp:'อันดับตาม XP แสดงชื่อฮีโร่',
     howTitle:'วิธีเล่น', howWorks:'QuestCraft เล่นยังไง', pages:'หน้าต่างๆ', faqTitle:'คำถามที่พบบ่อย', replayPage:'↻ ดูสอนอีกครั้ง', goTo:'ไปที่', back:'◀ ฮับ', backTitle:'◀ กลับ',
-    titleHint:'มาใหม่ใช่ไหม? ออเรลิอัสจะพาเจ้าทำเควสต์แรก', howto:'วิธีเล่น' }
+    titleHint:'มาใหม่ใช่ไหม? ออเรลิอัสจะพาเจ้าทำเควสต์แรก', howto:'วิธีเล่น',
+    officeUnlocked:'ปลดล็อกออฟฟิศแล้ว!', officeUnlockedSub:'ผู้ช่วย AI รอเจ้าอยู่ที่สำนักงานใหญ่', goOffice:'ไปที่ออฟฟิศ ▶', later:'ไว้ทีหลัง' }
 };
 let LANG='en'; try{ if(localStorage.getItem('qc-lang')==='th') LANG='th'; }catch(e){}
 const tr=k=>(T[LANG]&&T[LANG][k])||T.en[k]||k;
@@ -2745,6 +2804,30 @@ document.getElementById('btn-start').addEventListener('click',()=>setTimeout(()=
 // every screen change: refresh the hub and move Aurelius's highlight
 const showScreenBase=showScreen;
 showScreen=function(id){ showScreenBase(id); if(id==='hub-screen'){ checkPlanner(); renderHub(); } renderGuide(); };
+
+// ---- OFFICE UNLOCKED (level 5): chains rattle, snap and fly off, the lock opens ----
+(()=>{   // draw the two chains: links along a line, split in a left and right half
+  const link=(x,alt)=>alt?`<rect class="ufx-link alt" x="${x-6}" y="-9" width="12" height="18" rx="6"/>`:`<rect class="ufx-link" x="${x-11}" y="-6" width="22" height="12" rx="6"/>`;
+  document.querySelectorAll('#unlock-fx .ufx-chain').forEach(ch=>{
+    let l='', r='';
+    for(let i=-7;i<=7;i++){ const x=120+i*17; if(i<0) l+=link(x,i%2); else r+=link(x,i%2); }
+    ch.querySelector('.ufx-l').innerHTML=`<g transform="translate(0,150)">${l}</g>`;
+    ch.querySelector('.ufx-r').innerHTML=`<g transform="translate(0,150)">${r}</g>`;
+  });
+})();
+let ufxTimers=[];
+function showOfficeUnlock(){
+  const fx=document.getElementById('unlock-fx');
+  ufxTimers.forEach(clearTimeout); ufxTimers=[];
+  fx.classList.remove('go','open'); fx.hidden=false;
+  void fx.offsetWidth;   // restart the animations
+  ufxTimers.push(setTimeout(()=>fx.classList.add('go'),1650));     // chains snap after the rattle
+  ufxTimers.push(setTimeout(()=>fx.classList.add('open'),2150));   // shackle pops open + burst + text
+  renderHub();
+}
+function hideOfficeUnlock(){ ufxTimers.forEach(clearTimeout); document.getElementById('unlock-fx').hidden=true; }
+document.getElementById('ufx-later').addEventListener('click',hideOfficeUnlock);
+document.getElementById('ufx-go').addEventListener('click',()=>{ hideOfficeUnlock(); const c=document.querySelector('.hub-card[data-area="office"]'); if(c) c.click(); });
 
 // ---- How to play ----
 const LOOPS=[
