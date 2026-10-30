@@ -504,8 +504,14 @@ async function askAI(p,userText){
   const data=await res.json();
   const raw=(data.choices?.[0]?.message?.content||'').trim();
   let out={reply:raw,task:null,actions:[]};
-  try{ const j=JSON.parse(raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1));
-    if(j.reply) out={reply:String(j.reply),task:j.task?String(j.task):null,actions:Array.isArray(j.actions)?j.actions:[]}; }catch(e){}
+  try{
+    const arr=/^\s*\[/.test(raw.replace(/^```\w*\s*/,''));   // sometimes the AI sends just a list of buttons
+    const j=JSON.parse(arr?raw.slice(raw.indexOf('['),raw.lastIndexOf(']')+1):raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1));
+    if(Array.isArray(j)) out={reply:'',task:null,actions:j.filter(x=>x&&x.action)};
+    else if(j.reply||Array.isArray(j.actions)) out={reply:String(j.reply||''),task:j.task?String(j.task):null,actions:Array.isArray(j.actions)?j.actions:[]};
+    else if(j.action) out={reply:'',task:null,actions:[j]};   // or just one button, without the {"reply":...} around it
+  }catch(e){}
+  if(!out.reply.trim()) out.reply=out.actions.length?'On it 👍':'Hmm, I lost my words there 😅 Ask me again?';
   p.history.push({role:'user',content:userText},{role:'assistant',content:out.reply});
   if(p.history.length>12) p.history.splice(0,p.history.length-12);
   return out;
