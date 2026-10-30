@@ -663,8 +663,12 @@
   document.getElementById("logBtn").onclick = () => {
     const total = elapsed + (running ? Date.now() - startedAt : 0);
     const mins = Math.round(total / 60000);
-    if (mins < 1) { flash("watchMsg", "Too short to log (under 1 minute).", true); return; }
-    const end = new Date(sessionStart.getTime() + total);
+    // the game's tutorial (Focus / Grow steps) lets you log after just 5 seconds, so new players aren't stuck waiting
+    const tutStep = (() => { try { return window.parent.qcTutorialStep ? window.parent.qcTutorialStep() : null; } catch (e) { return null; } })();
+    const quick = tutStep === "focus" || tutStep === "grow";
+    if (quick ? total < 5000 : mins < 1) { flash("watchMsg", quick ? "Run it for at least 5 seconds first." : "Too short to log (under 1 minute).", true); return; }
+    if (tutStep === "grow" && !statFor(mode)) { flash("watchMsg", "Pick IQ, Strength or Sleep first: this activity doesn't grow a stat.", true); return; }
+    const end = new Date(sessionStart.getTime() + Math.max(total, 60000));   // a quick tutorial log still shows as a 1-minute block
     addEvent(dateKey(new Date()), {
       title: `${MODES[mode].icon} ${MODES[mode].name} session (${mins} min)`,
       start: hhmm(sessionStart), end: hhmm(end), type: mode,
@@ -672,6 +676,11 @@
     const earned = earnFromTimer(mode, mins);
     resetWatch();
     dayOffset = 0; renderDay();
+    // tutorial Grow step: your first skill point right away, so you can see a stat grow
+    const first = tutStep === "grow" ? statFor(mode) : null;
+    if (first) { first.earned = earnedOf(first) + 1; first.value = first.earned; renderStats(); }
+    if (quick) { try { window.parent.qcTutorialLogged(); } catch (e) {} }
+    if (first) { flash("watchMsg", `+1 skill point! ${first.icon} ${first.name} grew to ${first.value} 🎉`); return; }
     flash("watchMsg", `Logged ${mins} min of ${MODES[mode].name} to today ✔` +
       (earned ? (earned.got ? ` · +${earned.got} skill point${earned.got > 1 ? "s" : ""} to ${earned.stat.name}! 🎉` : ` · ${earned.left} more min for +1 ${earned.stat.name}`) : ""));
   };
@@ -815,10 +824,13 @@
 
   // Every full hour (rules.minutes_per_point) logged on the Timer = +1 to the matching stat. Gaming earns nothing by default.
   // Leftover minutes are kept, so 40 min + 20 min = 1 point.
-  function earnFromTimer(modeKey, mins) {
+  function statFor(modeKey) {
     const actName = MODES[modeKey] && MODES[modeKey].name;
     const statName = actName && Object.entries(rules.modes).find(([act]) => act.toLowerCase() === actName.toLowerCase());
-    const st = statName && stats.find(x => x.name.toLowerCase() === String(statName[1]).toLowerCase());
+    return (statName && stats.find(x => x.name.toLowerCase() === String(statName[1]).toLowerCase())) || null;
+  }
+  function earnFromTimer(modeKey, mins) {
+    const st = statFor(modeKey);
     if (!st || !(mins > 0)) return null;
     const per = Math.max(1, rules.minutes_per_point || 60);
     save.timerCarry = save.timerCarry || {};
