@@ -143,6 +143,7 @@
   .hub-head{ display:flex; align-items:center; gap:12px; width:100%; flex-wrap:wrap; }
   .hub-title{ font-family:'Press Start 2P',monospace; font-size:clamp(11px,2vw,14px); color:var(--gold); letter-spacing:.06em; text-shadow:2px 2px 0 #6B3FA0; }
   .hub-tools{ margin-left:auto; display:flex; align-items:center; gap:10px; }
+  body.is-admin .hub-tools{ margin-right:130px; }   /* leave room for the ADMIN button in the top-right corner */
   .help-btn{ width:34px; height:34px; background:var(--panel-2); border:2px solid var(--sky); color:var(--sky); cursor:pointer; font-family:'Press Start 2P',monospace; font-size:12px; }
   .help-btn:hover{ background:#241a3d; }
   .lang-sw{ display:flex; gap:4px; }
@@ -1665,7 +1666,7 @@ async function checkAdmin(){
   try{
     const {data,error}=await sb.rpc('is_questcraft_admin');
     if(error) throw error;
-    if(currentUser!==u) return;
+    if(!currentUser || currentUser.id!==u.id) return;   // compare ids: saving the hero swaps in a fresh copy of the same user
     adminFor=data===true?u.id:null;
     if(adminFor) updateAuthUI();   // shows the admin panel, refreshes reports
   }catch(err){ adminCheckedFor=null; console.error('admin check',err); }
