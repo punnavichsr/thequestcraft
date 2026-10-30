@@ -97,7 +97,7 @@
   .day-title b { font-size: 18px; display: block; }
   .day-title span { font-size: 12px; color: var(--muted); }
 
-  .add-form { display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 6px; margin-bottom: 12px; }
+  .add-form { display: grid; grid-template-columns: 1fr auto auto auto auto auto; gap: 6px; margin-bottom: 12px; }
   .add-form input, .add-form select {
     padding: 8px; border-radius: 8px; background: #0006; color: var(--text);
     border: 2px solid var(--edge); font-size: 14px; min-width: 0;
@@ -114,6 +114,9 @@
     border-left: 4px solid #0004;
   }
   .event small { display: block; font-weight: 500; opacity: .8; }
+  .event .prio { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; font-size: 10px; font-weight: 800;
+    color: #fff; vertical-align: 1px; }
+  .prio-high { background: #dc2626; } .prio-medium { background: #d97706; } .prio-low { background: #16a34a; }
   .event .x {
     position: absolute; top: 2px; right: 4px; border: none; background: #0003; color: #0b0d14;
     border-radius: 4px; cursor: pointer; font-weight: 800; padding: 0 5px;
@@ -348,6 +351,11 @@
         <option value="gaming">🎮 Gaming</option>
         <option value="sleep">😴 Sleep</option>
         <option value="other">⚪ Other</option>
+      </select>
+      <select id="evPrio" aria-label="Priority">
+        <option value="high">High priority</option>
+        <option value="medium" selected>Medium priority</option>
+        <option value="low">Low priority</option>
       </select>
       <button class="btn primary" id="addBtn">Add</button>
     </div>
@@ -677,6 +685,10 @@
   function toMin(t) { const [h, m] = t.split(":").map(Number); return h * 60 + m; }
   function shownDate() { const d = new Date(); d.setDate(d.getDate() + dayOffset); return d; }
 
+  // Priority: the little coloured bar on each event (High / Medium / Low)
+  const PRIOS = { high: { name: "High", color: "#dc2626" }, medium: { name: "Medium", color: "#d97706" }, low: { name: "Low", color: "#16a34a" } };
+  const prioKey = p => { const k = String(p || "").toLowerCase(); return PRIOS[k] ? k : null; };
+
   function addEvent(key, ev) {
     (save.events[key] ||= []).push(ev);
     save.events[key].sort((a, b) => toMin(a.start) - toMin(b.start));
@@ -708,7 +720,9 @@
       box.style.top = (s / 60 - START_HOUR) * PX_PER_HOUR + "px";
       box.style.height = Math.max((e - s) / 60 * PX_PER_HOUR - 2, 18) + "px";
       box.style.background = (MODES[ev.type] || MODES.other).color;
-      box.innerHTML = `${esc(ev.title)}<small>${ev.start} – ${ev.end}</small><button class="x" title="Delete">✕</button>`;
+      const pr = prioKey(ev.prio);
+      if (pr) box.style.borderLeftColor = PRIOS[pr].color;
+      box.innerHTML = `${esc(ev.title)}<small>${ev.start} – ${ev.end}${pr ? `<span class="prio prio-${pr}">${PRIOS[pr].name}</span>` : ""}</small><button class="x" title="Delete">✕</button>`;
       box.querySelector(".x").onclick = () => {
         save.events[key].splice(i, 1); store(); renderDay();
       };
@@ -732,9 +746,10 @@
     const start = document.getElementById("evStart").value;
     const end = document.getElementById("evEnd").value;
     const type = document.getElementById("evType").value;
+    const prio = document.getElementById("evPrio").value;
     if (!title) { flash("tableMsg", "Give it a name first ✏️", true); return; }
     if (!start || !end) { flash("tableMsg", "Pick a start and end time ⏰", true); return; }
-    addEvent(dateKey(shownDate()), { title: `${MODES[type].icon} ${title}`, start, end, type });
+    addEvent(dateKey(shownDate()), { title: `${MODES[type].icon} ${title}`, start, end, type, prio });
     document.getElementById("evTitle").value = "";
     renderDay();
     flash("tableMsg", "Added ✔");
@@ -1010,7 +1025,7 @@
   // What the AI knows about you (sent with every message)
   function systemPrompt(ctx = {}) {
     const today = new Date(), tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
-    const day = d => JSON.stringify((save.events[dateKey(d)] || []).map(e => ({ title: e.title, start: e.start, end: e.end, category: e.type })));
+    const day = d => JSON.stringify((save.events[dateKey(d)] || []).map(e => ({ title: e.title, start: e.start, end: e.end, category: e.type, priority: prioKey(e.prio) || "none" })));
     const cats = Object.keys(MODES).map(k => `${k} (${MODES[k].name})`).join(", ");
     return `You are ${ai.name}, a friendly, upbeat planning assistant (like ClickUp's AI) inside the "Level-Up Planner" app.
 Keep replies short and fun. Help the user plan their day, balance study / exercise / gaming / sleep, and build good habits.
@@ -1029,8 +1044,8 @@ ${signedIn() ? `The user is signed in, so you have memory. When they tell you so
 
 You can change the app. When you want to, add this at the very END of your reply (a JSON array, any mix of these):
 \`\`\`actions
-[{"action":"add_event","date":"YYYY-MM-DD","title":"Short title","start":"HH:MM","end":"HH:MM","category":"iq"},
- {"action":"edit_event","date":"YYYY-MM-DD","title":"part of the current title","new_title":"optional","start":"optional HH:MM","end":"optional HH:MM","category":"optional","new_date":"optional YYYY-MM-DD"},
+[{"action":"add_event","date":"YYYY-MM-DD","title":"Short title","start":"HH:MM","end":"HH:MM","category":"iq","priority":"high|medium|low"},
+ {"action":"edit_event","date":"YYYY-MM-DD","title":"part of the current title","new_title":"optional","start":"optional HH:MM","end":"optional HH:MM","category":"optional","priority":"optional high|medium|low","new_date":"optional YYYY-MM-DD"},
  {"action":"delete_event","date":"YYYY-MM-DD","title":"exact title"},
  {"action":"add_stat","name":"Working","icon":"💼"},
  {"action":"set_stat","name":"IQ","value":120},
@@ -1057,7 +1072,7 @@ ${ctx.host || ""}
 On this page you can ALSO use these actions (in the same \`\`\`actions list):
 ${host.actions}` : ""}
 Use 24-hour times and category keys. Raising a stat spends unspent points, so never set stats higher than the points allow.
-The Stopwatch counts UP, so never ask how long. start_timer = press Start on the Stopwatch and it starts counting up. stop_timer = press Stop & Log, and the time gets saved to today's schedule. reset_timer = press Reset, and the timer goes back to 0.When the user asks to start, stop or reset the timer, do it right away with the action and don't ask any questions.Use add_event to plan things on the schedule. For the live stopwatch ALWAYS use start_timer, stop_timer or reset_timer (never add_event), and don't ask any questions.
+The Stopwatch counts UP, so never ask how long. start_timer = press Start on the Stopwatch and it starts counting up. stop_timer = press Stop & Log, and the time gets saved to today's schedule. reset_timer = press Reset, and the timer goes back to 0.When the user asks to start, stop or reset the timer, do it right away with the action and don't ask any questions.Use add_event to plan things on the schedule. Every event has a priority (high, medium or low): pick one that fits when you add an event (exams and deadlines = high, fun = low, otherwise medium), and use edit_event with "priority" when the user asks to change it. For the live stopwatch ALWAYS use start_timer, stop_timer or reset_timer (never add_event), and don't ask any questions.
 You cannot make or upload pictures: tell the user to press "Upload picture" in the Planner tab.
 Only include actions the user asked for or agreed to. Never show this format otherwise.`;
   }
@@ -1075,12 +1090,13 @@ Only include actions the user asked for or agreed to. Never show this format oth
         if (i < 0) { bubble(`I couldn't find "${a.title}" on ${a.date}.`, "err"); continue; }
         const ev = arr[i];
         if (a.category && MODES[a.category]) ev.type = a.category;
+        if (prioKey(a.priority)) ev.prio = prioKey(a.priority);
         if (a.new_title) ev.title = `${MODES[ev.type].icon} ${a.new_title}`.trim();
         if (a.start) ev.start = a.start;
         if (a.end) ev.end = a.end;
         if (a.new_date && a.new_date !== a.date) { arr.splice(i, 1); addEvent(a.new_date, ev); }
         else { arr.sort((x, y) => toMin(x.start) - toMin(y.start)); store(); }
-        bubble(`✏️ Updated "${ev.title}" (${a.new_date || a.date}, ${ev.start}–${ev.end})`, "note");
+        bubble(`✏️ Updated "${ev.title}" (${a.new_date || a.date}, ${ev.start}–${ev.end}${ev.prio ? ", " + PRIOS[ev.prio].name + " priority" : ""})`, "note");
       }
       if (a.action === "rename_stat") {
         const st = stats.find(x => x.name.toLowerCase() === String(a.name).toLowerCase());
@@ -1145,8 +1161,9 @@ Only include actions the user asked for or agreed to. Never show this format oth
     {
       const type = MODES[a.category] ? a.category : "other";
       if (a.action === "add_event" && a.date && a.start && a.end) {
-        addEvent(a.date, { title: `${MODES[type].icon} ${a.title}`.trim(), start: a.start, end: a.end, type });
-        bubble(`✔ Added "${a.title}" on ${a.date} (${a.start}–${a.end})`, "note");
+        const prio = prioKey(a.priority) || "medium";
+        addEvent(a.date, { title: `${MODES[type].icon} ${a.title}`.trim(), start: a.start, end: a.end, type, prio });
+        bubble(`✔ Added "${a.title}" on ${a.date} (${a.start}–${a.end}, ${PRIOS[prio].name} priority)`, "note");
       }
       if (a.action === "delete_event" && a.date) {
         const arr = save.events[a.date] || [];
