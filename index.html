@@ -192,6 +192,8 @@
   .g-doit[hidden], .g-go[hidden]{ display:none; }
   .g-skip{ background:none; border:none; color:var(--text-dim); cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:600; padding:8px; }
   .g-skip:hover{ color:var(--text-light); }
+  .g-back{ background:var(--panel-2); border:2px solid var(--panel-border); color:var(--text-light); padding:8px 12px; cursor:pointer; font-family:'Press Start 2P',monospace; font-size:9px; }
+  .g-back[hidden]{ display:none; }
   .g-go{ background:linear-gradient(#FFE58A,#F2C14E); color:#2a1d00; border:none; padding:10px 16px; cursor:pointer; font-family:'Press Start 2P',monospace; font-size:9px; }
   body:has(#quiz-overlay.active) #guide, body:has(#stats-panel.open) #guide{ display:none; }
   body:has(#guide:not([hidden])) .screen.active{ padding-bottom:230px; }   /* so the guide never covers the last row */
@@ -223,7 +225,7 @@
   body.lang-th #hub-screen, body.lang-th #help-screen, body.lang-th #guide, body.lang-th .title-hint{ font-family:'Kanit',sans-serif; }
   body.lang-th #hub-screen :is(.hub-title,.ts-k,.hub-card h3,.fs-title),
   body.lang-th #help-screen :is(.area-title,.help-h,.loop-card .t,.loop-detail .t,.help-page .nm),
-  body.lang-th #guide :is(.g-name,.g-go){ font-family:'Kanit',sans-serif; font-weight:600; font-size:15px; letter-spacing:0; }
+  body.lang-th #guide :is(.g-name,.g-go,.g-back){ font-family:'Kanit',sans-serif; font-weight:600; font-size:15px; letter-spacing:0; }
   body.lang-th #hub-screen .ts-k{ font-size:13px; }
   body.lang-th #hub-screen :is(.hub-card .desc,.ts-v,.fs-row), body.lang-th #help-screen :is(.loop-card,.loop-card .b,.help-page .ds,.help-page button,.faq-row .q,.faq-row .a,.loop-detail ul,.help-link), body.lang-th #guide :is(.g-text,.g-skip,.g-doit){ font-family:'Kanit',sans-serif; font-weight:400; }
   @media (max-width:900px){ #guide{ left:64px; } }
@@ -1048,6 +1050,7 @@
       <div class="g-btns">
         <span class="g-doit" id="g-doit" hidden></span>
         <button class="g-skip" id="g-skip" data-t="skip">Skip tutorial</button>
+        <button class="g-back" id="g-back" hidden></button>
         <button class="g-go" id="g-go" hidden></button>
         <button class="g-go" id="g-next" hidden></button>
       </div>
@@ -2574,8 +2577,9 @@ const T={
     quests:'QUESTS', questsDesc:"Tick off today's tasks for XP.", stats:'HERO STATS', statsDesc:'IQ, Strength, Sleep and more.',
     board:'LEADERBOARD', boardDesc:'See how you rank.', office:'OFFICE', officeDesc:'AI helpers at HQ.', officeLocked:'AI helpers. Unlocks at LV 5.',
     fsTitle:'FIRST STEPS', fsPlan:'Plan a task in Schedule', fsFocus:'Log a focus session', fsComplete:'Complete a quest', fsGrow:'Earn a skill point on the Timer',
-    fsAllDone:'First Steps complete!', resume:'▶ CONTINUE TUTORIAL', replay:'↻ REPLAY TUTORIAL',
-    guide:'GUIDE', skip:'Skip tutorial', next:'NEXT', finish:'FINISH', takeMe:'TAKE ME THERE ▶', doIt:'↑ Do it on the page',
+    fsAllDone:'First Steps complete!', resume:'▶ START TUTORIAL', replay:'↻ REPLAY TUTORIAL',
+    guide:'GUIDE', skip:'Skip tutorial', next:'NEXT', finish:'FINISH', takeMe:'TAKE ME THERE ▶', doIt:'↑ Do it on the page', tapGlow:'↑ Click the glowing part to continue',
+    gBack:'◀ BACK', tutDone:'★ Tutorial complete!',
     g0:"Welcome, adventurer! I'm Aurelius. Here, real homework and study earn XP for your hero. Let's do your first quest together.",
     g1:'This bar shows your next task, how close you are to the next level, and how long you focused today. Check it first every day.',
     g2:'Your first quest is First Steps: 4 objectives, +5 XP each. Each one teaches you a page.',
@@ -2583,8 +2587,11 @@ const T={
     g4:'Step 2 · Focus. Open Timer and press Start when you sit down to work. When you finish, press Stop & Log.',
     g5:'Step 3 · Complete. Open Quests and tick a task when it’s really done.',
     g6:'Step 4 · Grow. Every hour you log on the Timer earns 1 skill point: study → IQ, exercise → Strength, sleep → Sleep. Log a full hour to finish.',
-    g7:'Stuck on any page? Press ? to read How to play or replay a tutorial.',
-    g8:'Quest complete! Plan → Focus → Complete → Grow. Do this loop every day.',
+    g7:'Step 5 · Compare. This is the Leaderboard. Find your hero, then click the glowing list.',
+    g8:'This is the Office. Its AI helpers: the Problem Solver brainstorms ideas and solves problems, the Email Assistant checks your emails, the Manager is special because you can change his job and name, and the Presenter helps you make presentations. It unlocks at level 5, so no need to open it now.',
+    g9:'Stuck on any page? Press ? any time to open How to play and replay a tutorial.',
+    g10:'Good luck, Adventurer. The threads of fate are spinning. Let us see what destiny you got on this journey.',
+    boardHelp:'Ranking by XP, shown with hero names.',
     howTitle:'HOW TO PLAY', howWorks:'HOW QUESTCRAFT WORKS', pages:'PAGES', faqTitle:'QUESTIONS', replayPage:'↻ Replay tutorial', goTo:'Go to', back:'◀ HUB', backTitle:'◀ BACK',
     titleHint:'New here? Aurelius will guide you through your first quest.', howto:'How to play' },
   th:{ hubTitle:'ฮับนักผจญภัย', nextTask:'งานถัดไป', toLevel:'อีกกี่ XP ถึงเลเวลถัดไป', focused:'โฟกัสวันนี้', nothingYet:'ยังไม่มี · ไปที่ตารางเวลา',
@@ -2592,8 +2599,9 @@ const T={
     quests:'เควสต์', questsDesc:'ติ๊กงานวันนี้เพื่อรับ XP', stats:'สเตตัสฮีโร่', statsDesc:'IQ, Strength, Sleep และอื่นๆ',
     board:'กระดานอันดับ', boardDesc:'ดูอันดับของเจ้า', office:'ออฟฟิศ', officeDesc:'ผู้ช่วย AI ที่สำนักงานใหญ่', officeLocked:'ผู้ช่วย AI ปลดล็อกที่ LV 5',
     fsTitle:'ก้าวแรก', fsPlan:'วางแผนงานในตารางเวลา', fsFocus:'บันทึกการจับเวลา', fsComplete:'ทำเควสต์สำเร็จ', fsGrow:'รับแต้มสกิลจากการจับเวลา',
-    fsAllDone:'ก้าวแรกสำเร็จแล้ว!', resume:'▶ เรียนต่อ', replay:'↻ ดูสอนอีกครั้ง',
-    guide:'ผู้นำทาง', skip:'ข้ามการสอน', next:'ต่อไป', finish:'เสร็จสิ้น', takeMe:'พาไปเลย ▶', doIt:'↑ ลองทำบนหน้าจอเลย',
+    fsAllDone:'ก้าวแรกสำเร็จแล้ว!', resume:'▶ เริ่มการสอน', replay:'↻ ดูสอนอีกครั้ง',
+    guide:'ผู้นำทาง', skip:'ข้ามการสอน', next:'ต่อไป', finish:'เสร็จสิ้น', takeMe:'พาไปเลย ▶', doIt:'↑ ลองทำบนหน้าจอเลย', tapGlow:'↑ กดส่วนที่เรืองแสงเพื่อไปต่อ',
+    gBack:'◀ ย้อนกลับ', tutDone:'★ จบการสอนแล้ว!',
     g0:'ยินดีต้อนรับนักผจญภัย! ข้าคือออเรลิอัส ที่นี่การบ้านและการอ่านหนังสือจริงจะได้ XP ให้ฮีโร่ มาทำเควสต์แรกด้วยกัน',
     g1:'แถบนี้บอกงานถัดไป อีกกี่ XP จะเลเวลอัป และวันนี้โฟกัสไปนานเท่าไร ดูตรงนี้ก่อนทุกวัน',
     g2:'เควสต์แรกคือ ก้าวแรก มี 4 ภารกิจ ได้ภารกิจละ +5 XP แต่ละอันสอนหนึ่งหน้า',
@@ -2601,8 +2609,11 @@ const T={
     g4:'ขั้น 2 · โฟกัส เปิดจับเวลา กด Start ตอนเริ่มลงมือทำ ทำเสร็จแล้วกด Stop & Log',
     g5:'ขั้น 3 · ทำสำเร็จ เปิดเควสต์ แล้วติ๊กงานเมื่อทำเสร็จจริง',
     g6:'ขั้น 4 · เติบโต ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลาได้ 1 แต้มสกิล: อ่านหนังสือ → IQ ออกกำลังกาย → Strength นอน → Sleep บันทึกให้ครบ 1 ชั่วโมงเพื่อจบ',
-    g7:'ติดตรงไหน กด ? เพื่ออ่านวิธีเล่นหรือดูสอนซ้ำได้ทุกหน้า',
-    g8:'เควสต์สำเร็จ! วางแผน → โฟกัส → ทำสำเร็จ → เติบโต ทำแบบนี้ทุกวัน',
+    g7:'ขั้น 5 · เปรียบเทียบ นี่คือกระดานอันดับ หาฮีโร่ของเจ้า แล้วกดรายชื่อที่เรืองแสง',
+    g8:'นี่คือออฟฟิศ ผู้ช่วย AI ที่นี่: นักแก้ปัญหาช่วยระดมไอเดียและแก้ปัญหา ผู้ช่วยอีเมลช่วยเช็กอีเมล ผู้จัดการพิเศษตรงที่เจ้าเปลี่ยนงานและชื่อของเขาได้ และนักนำเสนอช่วยทำงานนำเสนอ ปลดล็อกที่เลเวล 5 ตอนนี้ยังไม่ต้องเปิด',
+    g9:'ติดตรงไหน กด ? ได้ทุกเมื่อ เพื่อเปิดวิธีเล่นและดูสอนซ้ำ',
+    g10:'โชคดีนะ นักผจญภัย ด้ายแห่งโชคชะตากำลังหมุนวน มาดูกันว่าเจ้าจะได้พบชะตาแบบใดในการเดินทางครั้งนี้',
+    boardHelp:'อันดับตาม XP แสดงชื่อฮีโร่',
     howTitle:'วิธีเล่น', howWorks:'QuestCraft เล่นยังไง', pages:'หน้าต่างๆ', faqTitle:'คำถามที่พบบ่อย', replayPage:'↻ ดูสอนอีกครั้ง', goTo:'ไปที่', back:'◀ ฮับ', backTitle:'◀ กลับ',
     titleHint:'มาใหม่ใช่ไหม? ออเรลิอัสจะพาเจ้าทำเควสต์แรก', howto:'วิธีเล่น' }
 };
@@ -2675,18 +2686,19 @@ function renderHub(){
 const GUIDE_STEPS=[
   {adv:'next',t:'g0'}, {adv:'next',t:'g1',hl:'today-strip'}, {adv:'next',t:'g2',hl:'fs-box'},
   {adv:'plan',t:'g3',go:'schedule'}, {adv:'focus',t:'g4',go:'timer'}, {adv:'complete',t:'g5',go:'quests'}, {adv:'grow',t:'g6',go:'timer'},
-  {adv:'next',t:'g7',hl:'btn-help'}, {adv:'finish',t:'g8'}
+  {adv:'board',t:'g7',go:'leaderboard'}, {adv:'next',t:'g8',hl:'office-card'},
+  {adv:'next',t:'g9',hl:'btn-help'}, {adv:'finish',t:'g10'}
 ];
+const isObjective=st=>st && FS.some(([k])=>k===st.adv);
 function renderGuide(){
   const g=document.getElementById('guide');
   document.querySelectorAll('.g-hl').forEach(el=>el.classList.remove('g-hl'));
   const inGame=document.body.classList.contains('in-game');
   if(!inGame || !activeProfile || !(hero.tut>=0)){ g.hidden=true; return; }
   const fs=fsState();
-  while(hero.tut<GUIDE_STEPS.length && fs[GUIDE_STEPS[hero.tut].adv]) hero.tut++;   // already did that one
   if(hero.tut>=GUIDE_STEPS.length){ hero.tut=-1; hero.tutDone=true; save(); g.hidden=true; renderHub(); return; }
   const st=GUIDE_STEPS[hero.tut], onHub=document.getElementById('hub-screen').classList.contains('active');
-  const task=!['next','finish'].includes(st.adv);
+  const task=(isObjective(st) && !fs[st.adv]) || st.adv==='board';   // waits for you to do something
   g.hidden=false;
   document.getElementById('g-step').textContent=`${hero.tut+1} / ${GUIDE_STEPS.length}`;
   document.getElementById('g-text').textContent=tr(st.t);
@@ -2695,15 +2707,24 @@ function renderGuide(){
   document.getElementById('g-go').hidden=!(task&&onHub);
   document.getElementById('g-go').textContent=tr('takeMe');
   document.getElementById('g-doit').hidden=!(task&&!onHub);
-  document.getElementById('g-doit').textContent=tr('doIt');
+  document.getElementById('g-doit').textContent=tr(st.adv==='board'?'tapGlow':'doIt');
+  document.getElementById('g-back').hidden=!(hero.tut>0);
+  document.getElementById('g-back').textContent=tr('gBack');
   if(onHub){
-    const el=st.hl?document.getElementById(st.hl):st.go?document.querySelector(`.hub-card[data-area="${st.go}"]`):null;
+    const el=st.hl?document.getElementById(st.hl):(task&&st.go)?document.querySelector(`.hub-card[data-area="${st.go}"]`):null;
     if(el) el.classList.add('g-hl');
+  } else if(st.adv==='board' && document.getElementById('leaderboard-screen').classList.contains('active')){
+    document.getElementById('lb-list').classList.add('g-hl');
   }
 }
+document.getElementById('g-back').addEventListener('click',()=>{ if(hero.tut>0){ hero.tut--; save(); renderGuide(); } });
+// Compare step: clicking the glowing leaderboard moves on
+document.getElementById('lb-list').addEventListener('click',()=>{
+  const st=GUIDE_STEPS[hero.tut]; if(hero.tut>=0 && st && st.adv==='board'){ hero.tut++; save(); setTimeout(()=>showScreen('hub-screen'),600); }   // next steps are on the hub
+});
 document.getElementById('g-next').addEventListener('click',()=>{
   const st=GUIDE_STEPS[hero.tut]; if(!st) return;
-  if(st.adv==='finish'){ hero.tut=-1; hero.tutDone=true; showToast('★ '+tr('fsTitle'),tr('g8').split('!')[0]+'!'); }
+  if(st.adv==='finish'){ hero.tut=-1; hero.tutDone=true; showToast(tr('tutDone'),''); }
   else hero.tut++;
   save(); renderHub(); renderGuide();
 });
@@ -2712,8 +2733,7 @@ document.getElementById('g-go').addEventListener('click',()=>{
 });
 document.getElementById('g-skip').addEventListener('click',()=>{ hero.tut=-1; save(); renderHub(); renderGuide(); });
 document.getElementById('fs-resume').addEventListener('click',()=>{
-  const fs=fsState();
-  hero.tut=hero.tutDone?0:Math.max(0,GUIDE_STEPS.findIndex(s=>s.adv!=='next'&&s.adv!=='finish'&&!fs[s.adv]));
+  hero.tut=0;   // always from step 1
   save(); renderHub(); renderGuide();
 });
 // new heroes start the tutorial when they press START QUEST
@@ -2753,6 +2773,7 @@ const HELP_PAGES=[['schedule',{en:'Add tasks with a time, category and priority.
   ['timer',{en:'Start when you work, Stop & Log when you are done.',th:'กด Start ตอนทำงาน กด Stop & Log เมื่อเสร็จ'},4],
   ['quests',{en:'Tick tasks in your Daily Quest to earn XP.',th:'ติ๊กงานในเควสต์ประจำวันเพื่อรับ XP'},5],
   ['stats',{en:'Your stats grow by 1 for every hour you log on the Timer.',th:'สเตตัสเพิ่ม 1 ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลา'},6],
+  ['board',{en:'Ranking by XP, shown with hero names.',th:'อันดับตาม XP แสดงชื่อฮีโร่'},7],
   ['hubTitle',{en:'Your daily overview and the First Steps quest.',th:'ภาพรวมรายวันและเควสต์ก้าวแรก'},0]];
 const FAQ=[[{en:'How do I earn XP?',th:'ได้ XP ยังไง?'},{en:'Tick tasks in your Daily Quest, and finish First Steps (+5 XP each).',th:'ติ๊กงานในเควสต์ประจำวัน และทำก้าวแรกให้ครบ (ภารกิจละ +5 XP)'}],
   [{en:'How do I get skill points?',th:'ได้แต้มสกิลยังไง?'},{en:'Every hour you log on the Timer earns 1 skill point: study → IQ, exercise → Strength, sleep → Sleep. Gaming doesn’t count.',th:'ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลาได้ 1 แต้มสกิล: อ่านหนังสือ → IQ ออกกำลังกาย → Strength นอน → Sleep เวลาเล่นเกมไม่นับ'}],
@@ -2777,7 +2798,11 @@ function renderHelp(){
   const pages=document.getElementById('help-pages');
   pages.innerHTML=HELP_PAGES.map(([k,d,step])=>`<div class="help-page"><div><div class="nm">${escapeHtml(tr(k))}</div><div class="ds">${escapeHtml(L(d))}</div></div>`+
     (document.body.classList.contains('in-game')&&activeProfile?`<button data-replay="${step}">${escapeHtml(tr('replayPage'))}</button>`:'')+`</div>`).join('');
-  pages.querySelectorAll('[data-replay]').forEach(b=>b.addEventListener('click',()=>{ hero.tut=Number(b.dataset.replay); save(); showScreen('hub-screen'); }));
+  pages.querySelectorAll('[data-replay]').forEach(b=>b.addEventListener('click',()=>{
+    const i=Number(b.dataset.replay), st=GUIDE_STEPS[i]; hero.tut=i; save();
+    const card=st&&st.go&&document.querySelector(`.hub-card[data-area="${st.go}"]`);
+    showScreen('hub-screen'); if(card && i>0) card.click();   // go straight to that page
+  }));
   document.getElementById('help-faq').innerHTML=FAQ.map(([q,a])=>`<div class="faq-row"><div class="q">${escapeHtml(L(q))}</div><div class="a">${escapeHtml(L(a))}</div></div>`).join('');
   document.getElementById('help-back').textContent=document.body.classList.contains('in-game')?tr('back'):tr('backTitle');
 }
