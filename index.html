@@ -1304,6 +1304,7 @@ function save(){
   try{
     localStorage.setItem('questology_save_'+activeProfile, JSON.stringify({hero,tasks,questsDone}));
     localStorage.setItem('questology_active', activeProfile);   // remember which hero you were playing
+    if(currentUser) localStorage.setItem('questology_owner_'+activeProfile, currentUser.id);   // which account this hero's save belongs to
   }catch(e){}
   queueCloudSave();
 }
@@ -1333,15 +1334,24 @@ function queueCloudSave(){
   },1500);
 }
 // Runs right after signing in: bring your account's heroes onto this device
+// Saves on this device are kept per hero NAME, so two accounts with a hero called the same thing
+// (e.g. your main and a +test account) used to share one save, and the higher level leaked across.
+// Now each save remembers its account: the local copy only wins if it's THIS account's and further ahead.
+const ownerOf=name=>{ try{ return localStorage.getItem('questology_owner_'+name)||''; }catch(e){ return ''; } };
 function pullCloud(){
-  const qc=cloudData(), heroes=qc.heroes||{};
+  const qc=cloudData(), heroes=qc.heroes||{}, me=currentUser&&currentUser.id;
   Object.keys(heroes).forEach(name=>{
     let local=null; try{ local=JSON.parse(localStorage.getItem('questology_save_'+name)); }catch(e){}
     const cloudXP=(heroes[name].hero && heroes[name].hero.totalXP)||0;
     const localXP=(local && local.hero && local.hero.totalXP)||0;
-    // keep whichever copy has more progress
-    if(!local || cloudXP>=localXP){ try{ localStorage.setItem('questology_save_'+name, JSON.stringify(heroes[name])); }catch(e){} }
+    const mine=me && ownerOf(name)===me;
+    if(!local || !mine || cloudXP>=localXP){   // your account's copy, unless this device has your own newer progress
+      try{ localStorage.setItem('questology_save_'+name, JSON.stringify(heroes[name])); localStorage.setItem('questology_owner_'+name, me); }catch(e){}
+    }
   });
+  // the hero left open on this device belongs to another account: open this account's own hero instead
+  if(activeProfile && me && ownerOf(activeProfile) && ownerOf(activeProfile)!==me && !heroes[activeProfile])
+    activeProfile=heroes[qc.active]?qc.active:(Object.keys(heroes)[0]||'');
   if(!activeProfile && qc.active && heroes[qc.active]) activeProfile=qc.active;
   if(activeProfile){ load(); updateHeroSlot(); renderAll(); save(); }   // save() also uploads a hero you made before signing in
 }

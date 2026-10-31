@@ -79,12 +79,15 @@
 <script>
 // the hub checks this too; this stops a direct link to office.html skipping it
 (()=>{
-  let lv=1;
-  try{ const n=localStorage.getItem('questology_active'), s=n && JSON.parse(localStorage.getItem('questology_save_'+n)); lv=(s && s.hero && s.hero.level)||1; }catch(e){}
-  if(lv>=5) return;
+  let lv=1, owner='';
+  try{ const n=localStorage.getItem('questology_active'), s=n && JSON.parse(localStorage.getItem('questology_save_'+n)); lv=(s && s.hero && s.hero.level)||1;
+    owner=(n && localStorage.getItem('questology_owner_'+n))||''; }catch(e){}
+  if(lv>=5 && !owner) return;                        // LV 5+ hero that isn't tied to an account: open
+  // under LV 5, or a save that belongs to an account: hidden until the sign-in check below (a save left
+  // on this device by ANOTHER account doesn't count, so a +test account can't borrow your main's level)
   const root=document.documentElement;
   root.classList.add('office-locked');
-  window.qcOffice={ unlock:()=>root.classList.remove('office-locked'), checked:()=>root.classList.add('office-checked') };
+  window.qcOffice={ lv, owner, unlock:()=>root.classList.remove('office-locked'), checked:()=>root.classList.add('office-checked') };
   document.getElementById('lockBack').onclick=()=>{ try{ sessionStorage.setItem('qc-back-to-hub','1'); }catch(e){} location.href='index.html'; };
 })();
 </script>
@@ -1400,19 +1403,21 @@ requestAnimationFrame(loop);
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (()=>{
-  const lock=window.qcOffice;                         // only set when the hero is under LV 5
-  if(!window.supabase){ if(lock) lock.checked(); return; }   // no internet to Supabase: Jarvis still works, just without memory
+  const lock=window.qcOffice;                         // set when the Office must check before opening (see the top of the page)
+  // LV 5+ and the save is this account's (or you're playing signed out, like the hub allows): open. Otherwise the lock box.
+  const decide=uid=>{ if(!lock) return; if(lock.lv>=5 && (!lock.owner || !uid || lock.owner===uid)) lock.unlock(); else lock.checked(); };
+  if(!window.supabase){ decide(null); return; }       // no internet to Supabase: Jarvis still works, just without memory
   const sb=window.supabase.createClient('https://gndzjvgpydjchpqqhrns.supabase.co','sb_publishable_rCcAuXMJ92-IZU7Hs53QOQ_o53sslUa');
   window.qcSb=sb;   // for reminders.js
   let user=null;
   sb.auth.getSession().then(({data})=>{
     user=data&&data.session?data.session.user:null;   // same sign-in as the game
-    if(!user){ if(lock) lock.checked(); return; }
+    if(!user){ decide(null); return; }
     sb.rpc('is_questcraft_admin').then(({data})=>{
       window.qcOwner=data===true;
-      if(lock){ if(window.qcOwner) lock.unlock(); else lock.checked(); }   // admins skip the LV 5 lock
-    },()=>{ if(lock) lock.checked(); });
-  }).catch(()=>{ if(lock) lock.checked(); });
+      if(lock){ if(window.qcOwner) lock.unlock(); else decide(user.id); }   // admins skip the LV 5 lock
+    },()=>decide(user.id));
+  }).catch(()=>decide(null));
   window.questcraftBridge={
     sb,
     user:()=>user,
