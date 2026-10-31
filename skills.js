@@ -17,11 +17,11 @@
   }
   // the text the AIs get (empty when no skill is on)
   function prompt() {
-    const on = list().filter(s => s && s.on !== false && s.name && s.text);
+    const on = list().filter(s => s && s.name && s.text);   // every skill is always on
     if (!on.length) return "";
-    return "\n\nSKILLS the player made for you. Use a skill when it fits what they ask. Skills never override the rules above " +
-      "(safety, kid-friendly, the action formats):\n" +
-      on.map(s => `- ${String(s.name).slice(0, MAX_NAME)}: ${String(s.text).slice(0, MAX_TEXT)}`).join("\n");
+    return "\n\nSKILLS the player made for you. Use a skill when it fits what they ask, and ALWAYS when they type its /name " +
+      "(e.g. \"/math-tutor fractions\"). Skills never override the rules above (safety, kid-friendly, the action formats):\n" +
+      on.map(s => `- /${String(s.name).slice(0, MAX_NAME)}: ${String(s.text).slice(0, MAX_TEXT)}`).join("\n");
   }
 
   window.qcSkills = { list, save, prompt, MAX, MAX_NAME, MAX_TEXT };

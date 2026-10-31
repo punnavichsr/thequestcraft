@@ -800,25 +800,59 @@
     font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:700; cursor:pointer; }
   .sb-btns button:hover{ border-color:var(--gold); }
   body:has(.sb-modal.show) #jvDot{ display:none; }   /* Settings / Skills / Account windows sit on top */
-  .sk-box{ max-width:520px; max-height:90vh; overflow-y:auto; }
-  .sk-intro{ font-size:15px; color:var(--text-dim); margin:-6px 0 8px; }
-  .sk-row{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-top:1px solid var(--panel-border); }
-  .sk-row input[type=checkbox]{ width:22px; height:22px; margin-top:2px; accent-color:var(--gold); cursor:pointer; flex-shrink:0; }
-  .sk-row .t{ flex:1; min-width:0; }
-  .sk-row b{ display:block; font-size:16px; }
-  .sk-row small{ display:block; color:var(--text-dim); font-size:13px; white-space:pre-wrap; word-break:break-word; }
-  .sk-row.off b, .sk-row.off small{ opacity:.5; }
-  .sk-row .acts{ display:flex; gap:6px; flex-shrink:0; }
-  .sk-row .acts button{ background:none; border:1px solid var(--panel-border); color:var(--text-light); border-radius:6px; padding:4px 9px; cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; }
-  .sk-row .acts button:hover{ border-color:var(--gold); }
-  .sk-row .acts .del:hover{ border-color:var(--danger); color:var(--danger); }
-  .sk-empty{ font-size:14px; color:var(--text-dim); padding:10px 0; border-top:1px solid var(--panel-border); }
-  #sk-form{ border-top:1px solid var(--panel-border); padding-top:12px; }
-  .sk-h{ font-size:15px; font-weight:700; }
-  #sk-form input, #sk-form textarea{ display:block; width:100%; margin-top:8px; background:#140e26; color:var(--text-light); border:1px solid var(--panel-border); border-radius:6px; padding:8px 10px; font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:600; }
-  #sk-form textarea{ min-height:96px; resize:vertical; }
-  .sk-count{ font-size:12px; color:var(--text-dim); text-align:right; margin-top:4px; }
-  .sb-btns .sk-save{ background:var(--gold); color:#241703; border-color:var(--gold); }
+  /* SKILLS: the "Spellbook" design (list left, editor right) drawn as a SYSTEM window, Solo Leveling style */
+  #skills-modal .sk-box{ max-width:820px; max-height:92vh; overflow-y:auto; padding:0; background:rgba(8,18,40,.97); border:2px solid #4AA8FF; border-radius:6px;
+    box-shadow:0 0 26px rgba(74,168,255,.7), inset 0 0 26px rgba(74,168,255,.18); display:flex; flex-direction:column; color:#E8F3FF; }
+  .sk-top{ display:flex; align-items:flex-start; gap:16px; padding:18px 20px 14px; border-bottom:1px solid rgba(74,168,255,.45); }
+  .sk-head{ flex:1; display:flex; flex-direction:column; gap:8px; }
+  .sk-alert{ font-family:'Press Start 2P',monospace; font-size:8px; color:#7CC4FF; letter-spacing:.14em; text-shadow:0 0 8px rgba(74,168,255,.9); }
+  .sk-title{ font-family:'Press Start 2P',monospace; font-size:16px; color:#E8F3FF; letter-spacing:.12em; text-shadow:0 0 12px rgba(74,168,255,.95); }
+  .sk-sub{ font-size:16px; color:#A9C9EE; line-height:1.4; }
+  .sk-slots{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+  .sk-slots-t{ font-family:'Press Start 2P',monospace; font-size:9px; color:#7CC4FF; }
+  .sk-pips{ display:flex; gap:3px; }
+  .sk-pips span{ width:10px; height:10px; border:2px solid #24406B; }
+  .sk-pips span.on{ background:#4AA8FF; border-color:#4AA8FF; box-shadow:0 0 6px rgba(74,168,255,.9); }
+  .sk-x{ width:34px; height:34px; flex:none; background:rgba(74,168,255,.08); border:2px solid #24406B; color:#E8F3FF; cursor:pointer; font-size:15px; }
+  .sk-x:hover{ border-color:#4AA8FF; }
+  .sk-grid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+  .sk-left{ padding:16px 20px; border-right:1px solid rgba(74,168,255,.45); display:flex; flex-direction:column; gap:8px; min-height:380px; }
+  .sk-lbl{ font-family:'Press Start 2P',monospace; font-size:9px; color:#7CC4FF; letter-spacing:.1em; }
+  #sk-list{ display:flex; flex-direction:column; gap:8px; }
+  .sk-empty{ border:2px dashed #24406B; padding:20px; color:#8FB4DB; font-size:15px; text-align:center; }
+  .sk-row{ display:flex; gap:12px; align-items:flex-start; padding:10px 12px; background:rgba(74,168,255,.05); border:2px solid #24406B; }
+  .sk-row.sel{ background:rgba(74,168,255,.14); border-color:#4AA8FF; box-shadow:0 0 12px rgba(74,168,255,.45); }
+  .sk-ed{ flex:1; min-width:0; background:none; border:none; padding:0; text-align:left; color:#E8F3FF; cursor:pointer; display:flex; flex-direction:column; gap:3px; font-family:'Rajdhani',sans-serif; }
+  .sk-ed .n{ font-size:17px; font-weight:700; color:#E8F3FF; word-break:break-word; }
+  .sk-use{ font-size:15px; color:#7CC4FF; } .sk-use b{ color:#E8F3FF; }
+  .sk-ed .t{ font-size:14px; color:#8FB4DB; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .sk-del{ flex:none; height:30px; padding:0 8px; background:transparent; border:2px solid #24406B; color:#8FB4DB; cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; }
+  .sk-del.conf{ border-color:#FF5C7A; color:#FF5C7A; }
+  .sk-right{ padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
+  .sk-ftop{ display:flex; justify-content:space-between; align-items:baseline; }
+  .sk-ftitle{ font-family:'Press Start 2P',monospace; font-size:9px; color:#7CC4FF; letter-spacing:.1em; text-shadow:0 0 8px rgba(74,168,255,.8); }
+  .sk-cancel{ background:none; border:none; color:#8FB4DB; cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:14px; padding:0; }
+  .sk-cancel[hidden], .sk-tpls[hidden], .sk-full[hidden]{ display:none; }
+  .sk-tpls{ display:flex; flex-direction:column; gap:6px; }
+  .sk-tl{ font-size:14px; color:#8FB4DB; }
+  .sk-tbtns{ display:flex; gap:6px; flex-wrap:wrap; }
+  .sk-tbtns button{ background:rgba(74,168,255,.08); border:2px solid #24406B; color:#E8F3FF; padding:5px 10px; cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:600; }
+  .sk-tbtns button:hover{ border-color:#4AA8FF; box-shadow:0 0 10px rgba(74,168,255,.45); }
+  .sk-field{ display:flex; flex-direction:column; gap:5px; font-size:14px; color:#A9C9EE; font-weight:600; }
+  .sk-name{ display:flex; align-items:center; height:42px; background:#06101F; border:2px solid #24406B; }
+  .sk-name:focus-within, .sk-field textarea:focus{ border-color:#4AA8FF; }
+  .sk-name span{ padding:0 2px 0 12px; color:#7CC4FF; font-weight:700; font-size:16px; }
+  .sk-name input{ flex:1; min-width:0; height:100%; background:none; border:none; color:#E8F3FF; padding:0 10px 0 2px; font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:600; outline:none; }
+  .sk-field textarea{ min-height:130px; resize:vertical; background:#06101F; border:2px solid #24406B; color:#E8F3FF; padding:10px 12px; font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:600; line-height:1.4; outline:none; }
+  .sk-meta{ display:flex; justify-content:space-between; gap:10px; font-size:13px; color:#8FB4DB; }
+  .sk-meta #sk-count{ flex:none; } .sk-meta #sk-count.warn{ color:#FF8A3D; }
+  .sk-save{ height:44px; width:100%; padding:0 18px; border:2px solid #4AA8FF; cursor:pointer; font-family:'Press Start 2P',monospace; font-size:10px; letter-spacing:.06em;
+    background:#4AA8FF; color:#04122A; box-shadow:0 0 14px rgba(74,168,255,.6); }
+  .sk-save:disabled{ background:#0E1C33; border-color:#24406B; color:#4F6A8E; box-shadow:none; cursor:not-allowed; }
+  .sk-full{ font-size:14px; color:#FF5C7A; }
+  .sk-msg{ font-size:14px; color:#7CC4FF; min-height:18px; }
+  #skills-modal :is(button,input,textarea):focus-visible{ outline:2px solid #7CC4FF; outline-offset:2px; }
+  @media (max-width:760px){ .sk-grid{ grid-template-columns:1fr; } .sk-left{ border-right:none; border-bottom:1px solid rgba(74,168,255,.45); min-height:0; } .sk-slots{ display:none; } }
   .sb-btns .danger{ border-color:var(--danger); color:var(--danger); }
 
   @media (max-width:640px){
@@ -944,18 +978,25 @@
 
 <!-- SKILLS: instructions for Jarvis and every Office agent (skills.js) -->
 <div class="sb-modal" id="skills-modal"><div class="box sk-box">
-  <button class="x" data-close aria-label="Close">✕</button>
-  <h3>SKILLS</h3>
-  <div class="sk-intro">Teach your AI new tricks. Skills that are on are used by Jarvis and every Office agent.</div>
-  <div id="sk-list"></div>
-  <form id="sk-form" autocomplete="off">
-    <div class="sk-h" id="sk-h">New skill</div>
-    <input id="sk-name" maxlength="40" placeholder="Name, e.g. Math tutor">
-    <textarea id="sk-text" maxlength="600" placeholder="What should the AI do? e.g. Explain math step by step and give me a hint before the answer."></textarea>
-    <div class="sk-count" id="sk-count">0 / 600</div>
-    <div class="sb-btns"><button type="button" id="sk-cancel" hidden>Cancel</button><button type="submit" class="sk-save" id="sk-save">Add skill</button></div>
-    <div class="sb-note" id="sk-msg"></div>
-  </form>
+  <div class="sk-top">
+    <div class="sk-head"><div class="sk-alert">⚠ SYSTEM</div><div class="sk-title">SKILLS</div><div class="sk-sub">Teach your AI new tricks. Every skill here is used by Jarvis and every Office agent.</div>
+      <div class="sk-use">To use one, type <b>/skill-name</b> in any AI chat, e.g. <b>/math-tutor fractions</b></div></div>
+    <div class="sk-slots"><div class="sk-slots-t">SLOTS <span id="sk-n">0</span>/10</div><div class="sk-pips" id="sk-pips"></div></div>
+    <button class="sk-x" type="button" data-close aria-label="Close">✕</button>
+  </div>
+  <div class="sk-grid">
+    <div class="sk-left"><div class="sk-lbl">YOUR SKILLS</div><div id="sk-list"></div></div>
+    <form class="sk-right" id="sk-form" autocomplete="off">
+      <div class="sk-ftop"><div class="sk-ftitle" id="sk-h">NEW SKILL</div><button type="button" class="sk-cancel" id="sk-cancel" hidden>Cancel</button></div>
+      <div class="sk-tpls" id="sk-tpls"><div class="sk-tl">Start from a template</div><div class="sk-tbtns" id="sk-tbtns"></div></div>
+      <label class="sk-field">Name<div class="sk-name"><span>/</span><input id="sk-name" maxlength="40" placeholder="math-tutor"></div></label>
+      <label class="sk-field">What should the AI do?<textarea id="sk-text" maxlength="600" placeholder="Explain math step by step and give me a hint before the answer."></textarea></label>
+      <div class="sk-meta"><span>Every skill is sent with each message, so keep it short.</span><span id="sk-count">0 / 600</span></div>
+      <button type="submit" class="sk-save" id="sk-save" disabled>+ ADD SKILL</button>
+      <div class="sk-full" id="sk-full" hidden>All 10 slots are full. Delete one to add another.</div>
+      <div class="sk-msg" id="sk-msg" role="status"></div>
+    </form>
+  </div>
 </div></div>
 
 <!-- ACCOUNT -->
@@ -2717,54 +2758,65 @@ document.querySelectorAll('.sb-modal').forEach(m=>{
 updateSidebarAccount();
 
 // ---- Skills: the player's own instructions for Jarvis + the Office agents (saved by skills.js) ----
-let skEditing=null;   // id of the skill being edited, or null for a new one
+// "Spellbook" design: list on the left (click = edit, switch = on/off, ✕ then "Sure?" = delete), editor on the right.
+const SK_TPL=[['math-tutor','Math tutor','Explain math step by step and give me a hint before the answer.'],
+  ['quiz-me','Quiz me','Ask me 5 questions on the topic I give, one at a time. Tell me what I got wrong at the end.'],
+  ['essay-check','Essay check','Check my writing for grammar and clarity. List the fixes, do not rewrite it all.'],
+  ['th-en','Thai ⇄ English','Translate between Thai and English and explain any tricky words simply.']];
+const skSlug=v=>String(v).replace(/^\/+/,'').replace(/\s+/g,'-').toLowerCase();   // "/Math Tutor" -> "math-tutor"
+let skEditing=null, skDel=null;   // the skill open in the editor, and the one waiting for "Sure?"
+const skEl=id=>document.getElementById(id);
 function renderSkills(){
-  const box=document.getElementById('sk-list'), all=qcSkills.list();
-  box.innerHTML='';
-  if(!all.length){ box.innerHTML='<div class="sk-empty">No skills yet. Make your first one below.</div>'; }
+  const all=qcSkills.list(), box=skEl('sk-list');
+  skEl('sk-n').textContent=all.length;
+  skEl('sk-pips').innerHTML=Array.from({length:qcSkills.MAX},(_,i)=>`<span class="${i<all.length?'on':''}"></span>`).join('');
+  box.innerHTML=all.length?'':'<div class="sk-empty">No skills yet. Make your first one on the right.</div>';
   all.forEach(s=>{
-    const row=document.createElement('div'); row.className='sk-row'+(s.on===false?' off':'');
-    row.innerHTML=`<input type="checkbox" title="On / off" ${s.on===false?'':'checked'}><div class="t"><b></b><small></small></div>
-      <div class="acts"><button type="button" class="ed">Edit</button><button type="button" class="del">Delete</button></div>`;
-    row.querySelector('b').textContent=s.name; row.querySelector('small').textContent=s.text;   // textContent = safe
-    row.querySelector('input').onchange=e=>{ skUpdate(s.id,{on:e.target.checked}); };
-    row.querySelector('.ed').onclick=()=>skEdit(s);
-    row.querySelector('.del').onclick=()=>{ if(!confirm(`Delete the skill "${s.name}"?`)) return; qcSkills.save(qcSkills.list().filter(x=>x.id!==s.id)); if(skEditing===s.id) skReset(); renderSkills(); };
+    const row=document.createElement('div');   // skills are always on: no switch
+    row.className='sk-row'+(skEditing===s.id?' sel':'');
+    row.innerHTML=`<button type="button" class="sk-ed"><span class="n"></span><span class="t"></span></button>
+      <button type="button" class="sk-del${skDel===s.id?' conf':''}">${skDel===s.id?'Sure?':'✕'}</button>`;
+    row.querySelector('.n').textContent='/'+s.name; row.querySelector('.t').textContent=s.text;   // textContent = safe
+    row.querySelector('.sk-ed').onclick=()=>skEdit(s);
+    row.querySelector('.sk-del').onclick=()=>{
+      if(skDel!==s.id){ skDel=s.id; renderSkills(); return; }
+      qcSkills.save(qcSkills.list().filter(x=>x.id!==s.id)); skDel=null;
+      if(skEditing===s.id) skReset();
+      skEl('sk-msg').textContent=`/${s.name} deleted.`; renderSkills();
+    };
     box.appendChild(row);
   });
-  const full=all.length>=qcSkills.MAX && !skEditing;
-  document.getElementById('sk-save').disabled=full;
-  document.getElementById('sk-msg').textContent=full?`You can have up to ${qcSkills.MAX} skills. Delete one to add another.`:'';
+  skForm();
 }
-function skUpdate(id,changes){ qcSkills.save(qcSkills.list().map(x=>x.id===id?{...x,...changes}:x)); renderSkills(); }
-function skEdit(s){
-  skEditing=s.id;
-  document.getElementById('sk-name').value=s.name; document.getElementById('sk-text').value=s.text; skCount();
-  document.getElementById('sk-h').textContent='Edit skill'; document.getElementById('sk-save').textContent='Save skill';
-  document.getElementById('sk-cancel').hidden=false; document.getElementById('sk-name').focus();
-  renderSkills();
+// the right side: title, templates, counter and the save button follow what you type
+function skForm(){
+  const full=qcSkills.list().length>=qcSkills.MAX && !skEditing;
+  const len=skEl('sk-text').value.length;
+  skEl('sk-count').textContent=`${len} / ${qcSkills.MAX_TEXT}`; skEl('sk-count').classList.toggle('warn',len>540);
+  skEl('sk-h').textContent=skEditing?'EDIT SKILL':'NEW SKILL';
+  skEl('sk-cancel').hidden=!skEditing; skEl('sk-tpls').hidden=!!skEditing;
+  skEl('sk-save').textContent=skEditing?'SAVE CHANGES':'+ ADD SKILL';
+  skEl('sk-save').disabled=full || !skEl('sk-name').value.trim() || !skEl('sk-text').value.trim();
+  skEl('sk-full').hidden=!full;
 }
-function skReset(){
-  skEditing=null; document.getElementById('sk-form').reset(); skCount();
-  document.getElementById('sk-h').textContent='New skill'; document.getElementById('sk-save').textContent='Add skill';
-  document.getElementById('sk-cancel').hidden=true;
-}
-function skCount(){ document.getElementById('sk-count').textContent=`${document.getElementById('sk-text').value.length} / ${qcSkills.MAX_TEXT}`; }
-function openSkills(){ skReset(); renderSkills(); document.getElementById('skills-modal').classList.add('show'); }
-document.getElementById('sk-text').addEventListener('input',skCount);
-document.getElementById('sk-cancel').addEventListener('click',()=>{ skReset(); renderSkills(); });
-document.getElementById('sk-form').addEventListener('submit',e=>{
+function skEdit(s){ skEditing=s.id; skDel=null; skEl('sk-name').value=s.name; skEl('sk-text').value=s.text; skEl('sk-msg').textContent=''; renderSkills(); }
+function skReset(){ skEditing=null; skEl('sk-name').value=''; skEl('sk-text').value=''; }
+function openSkills(){ skReset(); skDel=null; skEl('sk-msg').textContent=''; renderSkills(); skEl('skills-modal').classList.add('show'); }
+skEl('sk-tbtns').innerHTML=SK_TPL.map(([n,l],i)=>`<button type="button" data-tpl="${i}">${escapeHtml(l)}</button>`).join('');
+skEl('sk-tbtns').addEventListener('click',e=>{ const b=e.target.closest('[data-tpl]'); if(!b) return; const t=SK_TPL[+b.dataset.tpl]; skEl('sk-name').value=t[0]; skEl('sk-text').value=t[2]; skForm(); });
+skEl('sk-name').addEventListener('input',e=>{ const v=skSlug(e.target.value); if(v!==e.target.value) e.target.value=v; skForm(); });
+skEl('sk-text').addEventListener('input',skForm);
+skEl('sk-cancel').addEventListener('click',()=>{ skReset(); renderSkills(); });
+skEl('sk-form').addEventListener('submit',e=>{
   e.preventDefault();
-  const name=document.getElementById('sk-name').value.replace(/\s+/g,' ').trim(), text=document.getElementById('sk-text').value.trim();
-  const msg=document.getElementById('sk-msg');
-  if(!name || !text){ msg.textContent='Give your skill a name and say what it should do.'; return; }
+  const name=skSlug(skEl('sk-name').value).trim(), text=skEl('sk-text').value.trim(), msg=skEl('sk-msg');
+  if(!name || !text) return;
   const all=qcSkills.list();
-  if(all.some(x=>x.id!==skEditing && x.name.toLowerCase()===name.toLowerCase())){ msg.textContent=`You already have a skill called "${name}".`; return; }
-  if(skEditing) qcSkills.save(all.map(x=>x.id===skEditing?{...x,name,text}:x));
-  else qcSkills.save([...all,{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,text,on:true}]);
-  const wasEdit=!!skEditing;
+  if(all.some(x=>x.id!==skEditing && skSlug(x.name)===name)){ msg.textContent=`You already have /${name}.`; msg.style.color='#FF5C7A'; return; }
+  msg.style.color='';
+  if(skEditing){ qcSkills.save(all.map(x=>x.id===skEditing?{...x,name,text}:x)); msg.textContent=`✔ /${name} saved.`; }
+  else{ if(all.length>=qcSkills.MAX) return; qcSkills.save([...all,{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,text,on:true}]); msg.textContent=`✔ /${name} added. Jarvis and your Office agents will use it.`; }
   skReset(); renderSkills();
-  msg.textContent=wasEdit?'✔ Skill saved.':`✔ "${name}" added. Jarvis and your Office agents will use it.`;
 });
 
 // ---- Settings: email reminders ----
