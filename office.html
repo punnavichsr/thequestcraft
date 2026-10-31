@@ -60,9 +60,34 @@
   .msg.me .who{text-align:right;color:#c7d2fe}
   .typing{font-size:12px;color:var(--muted);min-height:16px;margin-top:6px}
   #info{font-size:14px;color:#ccc;margin-top:10px;line-height:1.6}
+  /* Office unlocks at LV 5 (admins skip it). Hidden page while we check, then the lock box. */
+  html.office-locked body>*:not(#office-lock){display:none !important}
+  #office-lock{display:none}
+  html.office-locked #office-lock{display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px}
+  html.office-locked:not(.office-checked) #office-lock{visibility:hidden}
+  #office-lock .box{max-width:360px;text-align:center;background:#1C1533;border:2px solid #3A2E63;padding:24px}
+  #office-lock h2{font-family:'Press Start 2P',monospace;font-size:12px;color:#FFD75E;line-height:1.7;margin:0 0 12px}
+  #office-lock p{font-size:15px;color:#ccc;line-height:1.5;margin:0 0 16px}
 </style>
 </head>
 <body>
+<div id="office-lock"><div class="box">
+  <h2>🔒 OFFICE LOCKED</h2>
+  <p>The Office unlocks at LV 5. Earn XP with quests and the Timer to get there.</p>
+  <button class="btn-back" id="lockBack">◀ HUB</button>
+</div></div>
+<script>
+// the hub checks this too; this stops a direct link to office.html skipping it
+(()=>{
+  let lv=1;
+  try{ const n=localStorage.getItem('questology_active'), s=n && JSON.parse(localStorage.getItem('questology_save_'+n)); lv=(s && s.hero && s.hero.level)||1; }catch(e){}
+  if(lv>=5) return;
+  const root=document.documentElement;
+  root.classList.add('office-locked');
+  window.qcOffice={ unlock:()=>root.classList.remove('office-locked'), checked:()=>root.classList.add('office-checked') };
+  document.getElementById('lockBack').onclick=()=>{ try{ sessionStorage.setItem('qc-back-to-hub','1'); }catch(e){} location.href='index.html'; };
+})();
+</script>
 <div class="wrap">
   <h1><span class="area-head"><button class="btn-back" id="backHub">◀ HUB</button><span class="area-title">🏢 OFFICE</span></span>
     <span class="stats">
@@ -1375,14 +1400,19 @@ requestAnimationFrame(loop);
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (()=>{
-  if(!window.supabase) return;                       // no internet to Supabase: Jarvis still works, just without memory
+  const lock=window.qcOffice;                         // only set when the hero is under LV 5
+  if(!window.supabase){ if(lock) lock.checked(); return; }   // no internet to Supabase: Jarvis still works, just without memory
   const sb=window.supabase.createClient('https://gndzjvgpydjchpqqhrns.supabase.co','sb_publishable_rCcAuXMJ92-IZU7Hs53QOQ_o53sslUa');
   window.qcSb=sb;   // for reminders.js
   let user=null;
   sb.auth.getSession().then(({data})=>{
     user=data&&data.session?data.session.user:null;   // same sign-in as the game
-    if(user) sb.rpc('is_questcraft_admin').then(({data})=>{ window.qcOwner=data===true; });
-  }).catch(()=>{});
+    if(!user){ if(lock) lock.checked(); return; }
+    sb.rpc('is_questcraft_admin').then(({data})=>{
+      window.qcOwner=data===true;
+      if(lock){ if(window.qcOwner) lock.unlock(); else lock.checked(); }   // admins skip the LV 5 lock
+    },()=>{ if(lock) lock.checked(); });
+  }).catch(()=>{ if(lock) lock.checked(); });
   window.questcraftBridge={
     sb,
     user:()=>user,
