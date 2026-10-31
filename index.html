@@ -589,6 +589,40 @@
   #unlock-fx .ufx-stage{ padding:22px 26px 26px; }
   #unlock-fx .ufx-title{ color:var(--sys-text); text-shadow:0 0 16px rgba(74,168,255,.9); }
 
+  /* ---------- SKILL TREE: 3 branches x 5 nodes, bought with skill points (SP) ---------- */
+  #tree-screen .area-wrap{ max-width:980px; }
+  .tr-card{ background:#151024; border:2px solid #FFD75E; box-shadow:0 0 32px rgba(255,215,94,.12); padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+  .tr-top{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .tr-title{ font-family:'Press Start 2P',monospace; font-size:11px; color:#FFD75E; flex:1; }
+  .tr-lv{ font-family:'Press Start 2P',monospace; font-size:9px; color:#8B87A6; }
+  .tr-sp{ font-family:'Press Start 2P',monospace; font-size:9px; background:#1C1533; border:2px solid #3EE486; color:#3EE486; padding:6px 8px; }
+  .tr-reset{ background:none; border:2px solid #3A2E63; color:#8B87A6; padding:5px 10px; cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:600; }
+  .tr-reset:hover{ border-color:#FF8A3D; color:#FF8A3D; } .tr-reset.conf{ border-color:#FF5C7A; color:#FF5C7A; }
+  .tr-body{ display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
+  .tr-branches{ flex:3 1 420px; display:flex; flex-direction:column; gap:14px; min-width:0; }
+  .tr-br{ display:flex; align-items:center; gap:12px; }
+  .tr-lbl{ flex:none; width:76px; display:flex; flex-direction:column; gap:3px; }
+  .tr-lbl b{ font-family:'Press Start 2P',monospace; font-size:9px; font-weight:400; }
+  .tr-lbl small{ font-size:13px; color:#8B87A6; }
+  .tr-nodes{ flex:1; min-width:0; display:flex; align-items:center; }
+  .tr-wire{ flex:1; min-width:10px; height:4px; background:#251E40; } .tr-wire.next{ background:#5A5478; }
+  .tr-node{ flex:0 1 62px; width:62px; min-width:44px; height:62px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; padding:0;
+    font-family:'Press Start 2P',monospace; font-size:11px; background:#100C1E; color:#5A5478; border:3px solid #251E40; opacity:.75; }
+  .tr-node span{ font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#5A5478; }
+  .tr-node.poor{ opacity:1; color:#F2EEDF; border-color:#5A5478; }
+  .tr-node.ready{ opacity:1; color:#F2EEDF; background:#1C1533; border-color:#FFD75E; box-shadow:0 0 18px rgba(255,215,94,.45); } .tr-node.ready span{ color:#FFD75E; }
+  .tr-node.own{ opacity:1; color:#0B0A14; } .tr-node.own span{ color:#0B0A14; }
+  .tr-node.sel{ outline:3px solid #F2EEDF; outline-offset:2px; }
+  .tr-legend{ display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:#8B87A6; padding-left:88px; }
+  .tr-legend span{ display:flex; gap:6px; align-items:center; } .tr-legend i{ display:inline-block; width:12px; height:12px; box-sizing:border-box; }
+  .tr-detail{ flex:1 1 240px; min-width:0; background:#120E22; border:2px solid #3A2E63; padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .tr-dk{ font-family:'Press Start 2P',monospace; font-size:9px; }
+  .tr-dn{ font-size:20px; font-weight:700; line-height:1.2; }
+  .tr-de{ font-size:15px; line-height:1.45; color:#C9C5DD; }
+  .tr-reqs{ display:flex; flex-direction:column; gap:4px; font-size:14px; font-weight:600; }
+  .tr-learn{ height:42px; border:none; cursor:default; font-family:'Press Start 2P',monospace; font-size:10px; background:#2A2440; color:#6E6A88; }
+  .tr-learn.can{ cursor:pointer; background:linear-gradient(#FFE58A,#F2C14E); color:#2a1d00; } .tr-learn.own{ background:#173A2A; color:#3EE486; }
+  @media (max-width:560px){ .tr-lbl{ width:60px; } .tr-legend{ padding-left:0; } .tr-node{ height:52px; min-width:36px; font-size:9px; } }
   /* ---------- BOTTOM XP BAR ---------- */
   #xp-bar{ position:fixed; left:0; right:0; bottom:0; z-index:38; height:56px; display:none; align-items:center; gap:14px; padding:0 18px;
     background:linear-gradient(180deg,#1A1330,#0D0A1C); border-top:2px solid var(--panel-border); box-shadow:0 -6px 24px rgba(0,0,0,.5); }
@@ -959,6 +993,7 @@
   <button class="sb-item" data-go="leaderboard" title="Leaderboard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M10 17h4v4h-4z"/></svg><span class="lb">Leaderboard</span></button>
   <button class="sb-item" data-go="office" title="Office"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7h1.5M13.5 7H15M9 11h1.5M13.5 11H15M9 15h1.5M13.5 15H15M10.5 21v-3h3v3"/></svg><span class="lb">Office</span></button>
   <button class="sb-item" data-go="skills" title="Skills"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg><span class="lb">Skills</span></button>
+  <button class="sb-item" data-go="tree" title="Skill Tree"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 21 19H3z"/><path d="M12 10v5"/></svg><span class="lb">Skill Tree</span></button>
   <button class="sb-item sb-gap" data-go="settings" title="Settings"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span class="lb">Settings</span></button>
   <button class="sb-item sb-acct" data-go="account" title="Account"><span class="av" id="sb-av"></span><span class="lb nm" id="sb-name">Account</span></button>
   <button class="sb-item" data-go="title" title="Back to title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/></svg><span class="lb">Title screen</span></button>
@@ -981,7 +1016,7 @@
   <div class="sk-top">
     <div class="sk-head"><div class="sk-alert">⚠ SYSTEM</div><div class="sk-title">SKILLS</div><div class="sk-sub">Teach your AI new tricks. Every skill here is used by Jarvis and every Office agent.</div>
       <div class="sk-use">To use one, type <b>/skill-name</b> in any AI chat, e.g. <b>/math-tutor fractions</b></div></div>
-    <div class="sk-slots"><div class="sk-slots-t">SLOTS <span id="sk-n">0</span>/10</div><div class="sk-pips" id="sk-pips"></div></div>
+    <div class="sk-slots"><div class="sk-slots-t">SLOTS <span id="sk-n">0</span>/<span id="sk-max">10</span></div><div class="sk-pips" id="sk-pips"></div></div>
     <button class="sk-x" type="button" data-close aria-label="Close">✕</button>
   </div>
   <div class="sk-grid">
@@ -993,7 +1028,7 @@
       <label class="sk-field">What should the AI do?<textarea id="sk-text" maxlength="600" placeholder="Explain math step by step and give me a hint before the answer."></textarea></label>
       <div class="sk-meta"><span>Every skill is sent with each message, so keep it short.</span><span id="sk-count">0 / 600</span></div>
       <button type="submit" class="sk-save" id="sk-save" disabled>+ ADD SKILL</button>
-      <div class="sk-full" id="sk-full" hidden>All 10 slots are full. Delete one to add another.</div>
+      <div class="sk-full" id="sk-full" hidden>All your slots are full. Delete one to add another, or learn MAGIC in the Skill Tree.</div>
       <div class="sk-msg" id="sk-msg" role="status"></div>
     </form>
   </div>
@@ -1244,6 +1279,26 @@
 </div>
 
 <!-- LEADERBOARD -->
+<!-- SKILL TREE: spend skill points (2 per level) on MASTERY, MANA and MAGIC -->
+<div class="screen area" id="tree-screen">
+  <div class="area-wrap">
+    <div class="area-head">
+      <button class="btn-back" data-back>◀ HUB</button>
+      <span class="area-title">SKILL TREE</span>
+    </div>
+    <div class="tr-card">
+      <div class="tr-top"><div class="tr-title">★ SKILL TREE</div><div class="tr-lv" id="tr-lv">LV 1</div><div class="tr-sp" id="tr-sp">0 SP</div><button class="tr-reset" id="tr-reset" type="button">↺ Reset</button></div>
+      <div class="tr-body">
+        <div class="tr-branches"><div id="tr-rows"></div>
+          <div class="tr-legend"><span><span style="display:flex;gap:2px"><i style="background:#FF8A3D"></i><i style="background:#5EC8FF"></i><i style="background:#9B6BFF"></i></span>Learned</span>
+            <span><i style="border:2px solid #FFD75E"></i>Ready to learn</span><span><i style="border:2px solid #3A2E63"></i>Locked</span></div>
+        </div>
+        <div class="tr-detail" id="tr-detail"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="screen area" id="leaderboard-screen">
   <div class="area-wrap">
     <div class="area-head">
@@ -1695,7 +1750,7 @@ function addXP(xp){
   hero.totalXP+=xp; hero.xpIntoLevel+=xp;
   let leveled=false;
   while(hero.xpIntoLevel>=xpNeeded()){hero.xpIntoLevel-=xpNeeded();hero.level++;hero.skillPoints+=SP_PER_LEVEL;leveled=true;}
-  if(leveled) showToast(`⬆ LEVEL UP!`,`You are now Level ${hero.level}.`);
+  if(leveled) showToast(`⬆ LEVEL UP!`,`You are now Level ${hero.level}. +${SP_PER_LEVEL} SP for the Skill Tree.`);
   if(levelBefore<5 && hero.level>=5 && !hero.officeUnlockSeen){ hero.officeUnlockSeen=true; setTimeout(()=>showOfficeUnlock(),1400); }   // after the level-up toast
   renderAll(); save();
 }
@@ -2317,7 +2372,7 @@ async function toggleTask(i,btn){
     if(error) throw error;
     dq=data;
     run.checklistTasks=dq.tasks.map((name,j)=>({name,done:(dq.done||[]).includes(j)}));
-    if(data.xp_delta>0){ addXP(data.xp_delta); showToast('✅ TASK DONE!',`+${data.xp_delta} XP`); }
+    if(data.xp_delta>0){ addXP(data.xp_delta); showToast('✅ TASK DONE!',`+${data.xp_delta} XP`); masteryTaskBonus(i,data.xp_delta,!!data.completed); }
     if(data.xp_delta<0){ removeXP(-data.xp_delta); showToast('↩ TASK UNTICKED',`${data.xp_delta} XP`); }
     if(data.completed && data.xp_delta>0){ questsDone.daily=true; showToast('🏆 DAILY QUEST COMPLETE!',`+${data.xp_delta} XP · all tasks done`); }
     syncLeaderboard(); save();
@@ -2562,6 +2617,8 @@ window.questcraftBridge={
   heroClass:()=>CLASSES[heroClass()].name,
   heroLevel:()=>hero.level,
   notify:(main,sub)=>showToast(main,sub),   // the Planner's SYSTEM ALERTs
+  gainXP:n=>addXP(Math.max(0,Math.round(n)||0)),   // Skill Tree: MASTERY Timer XP
+  openTree:()=>openTree(),
   user:()=>currentUser,
   isAdmin:()=>isAdmin(),
   async leaderboard(){
@@ -2738,6 +2795,7 @@ sidebar.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>
   const go=b.dataset.go; closeSidebar();
   if(go==='settings'){ openSettings(); return; }
   if(go==='skills'){ openSkills(); return; }
+  if(go==='tree'){ document.getElementById('quiz-overlay').classList.remove('active'); markSidebar('tree'); openTree(); return; }
   if(go==='account'){ openAccount(); return; }
   if(go==='title'){ document.getElementById('btn-home').click(); return; }
   document.getElementById('quiz-overlay').classList.remove('active');
@@ -2757,6 +2815,91 @@ document.querySelectorAll('.sb-modal').forEach(m=>{
 });
 updateSidebarAccount();
 
+// ---- Skill Tree: 3 branches x 5 nodes. Skill points: 2 per level above 1, minus what you've learned. ----
+// [name, effect, SP cost, level needed]. The effects are used by the Daily Quest (here), the Timer (planner.html),
+// the Office (office.html) and AI skill slots / Jarvis's memory (skills.js, planner.html) through qcTree.lv().
+const TREE=[
+  {k:'mastery',name:'MASTERY',c:'#FF8A3D',nodes:[
+    ['Strong Start','+1 bonus XP for every Daily Quest task you tick.',1,0],
+    ['Deep Focus','+1 XP for every 30 minutes you log on the Timer.',1,0],
+    ['Sharp Mind','Timer XP doubles: +2 XP for every 30 minutes.',2,0],
+    ['Combo','Finish every Daily Quest task in a day to get +5 XP.',2,8],
+    ['Overdrive','Your first Daily Quest task of the day gives double XP.',3,12]]},
+  {k:'mana',name:'MANA',c:'#5EC8FF',nodes:[
+    ['Mana Spark','+1 stat point the first time the Timer earns you points each day.',1,0],
+    ['Mana Flow','Timer minutes count 10% more toward your stat points.',1,0],
+    ['Mana Surge','Timer minutes count 25% more toward your stat points.',2,0],
+    ['Overflow','Timer minutes count 50% more toward your stat points.',2,8],
+    ['Archmage Focus','Timer minutes count double toward your stat points.',3,12]]},
+  {k:'magic',name:'MAGIC',c:'#9B6BFF',nodes:[
+    ['Extra Slot','+1 AI Skill slot for Jarvis and the Office (11 total).',1,0],
+    ['Payday','Clock out pays your Office team +$10 each instead of +$5.',1,0],
+    ['Deep Memory','Jarvis remembers 40 notes about you instead of 30.',2,0],
+    ['Spellbook','+2 more AI Skill slots (13 total).',2,8],
+    ['Sage','+3 more AI Skill slots (16 total).',3,12]]}
+];
+const TREE_RN=['I','II','III','IV','V'];
+const treeOwned=k=>Math.max(0,Math.min(5,(hero.tree&&hero.tree[k])||0));
+const treeSpent=()=>TREE.reduce((a,b)=>a+b.nodes.slice(0,treeOwned(b.k)).reduce((c,n)=>c+n[2],0),0);
+const treeSP=()=>Math.max(0,(hero.level-1)*SP_PER_LEVEL-treeSpent());   // can't be faked past your level
+let treeSel={b:'mastery',i:0}, treeResetAsk=false;
+function treeStatus(b,i){
+  const o=treeOwned(b.k), n=b.nodes[i];
+  if(i<o) return 'own';
+  if(i===o && hero.level>=n[3]) return treeSP()>=n[2]?'ready':'poor';
+  return 'locked';
+}
+function renderTree(){
+  if(!activeProfile) return;
+  document.getElementById('tr-lv').textContent='LV '+hero.level;
+  document.getElementById('tr-sp').textContent=treeSP()+' SP';
+  const rb=document.getElementById('tr-reset'); rb.textContent=treeResetAsk?'Sure? Reset':'↺ Reset'; rb.classList.toggle('conf',treeResetAsk);
+  document.getElementById('tr-rows').innerHTML=TREE.map(b=>{
+    const o=treeOwned(b.k);
+    return `<div class="tr-br"><div class="tr-lbl"><b style="color:${b.c}">${b.name}</b><small>${o}/5</small></div><div class="tr-nodes">`+
+      b.nodes.map((n,i)=>{ const st=treeStatus(b,i), sel=treeSel.b===b.k&&treeSel.i===i;
+        const sub=st==='own'?'✓':(st==='locked'&&n[3]>hero.level?'LV'+n[3]:n[2]+' SP');
+        const wire=i===0?'':`<div class="tr-wire${i<o?'':(i===o?' next':'')}" style="${i<o?'background:'+b.c:''}"></div>`;
+        return wire+`<button type="button" class="tr-node ${st}${sel?' sel':''}" data-b="${b.k}" data-i="${i}" aria-label="${b.name} ${TREE_RN[i]}: ${escapeHtml(n[0])}" style="${st==='own'?`background:${b.c};border-color:${b.c}`:''}">${TREE_RN[i]}<span>${sub}</span></button>`;
+      }).join('')+'</div></div>';
+  }).join('');
+  // the picked node, on the right
+  const b=TREE.find(x=>x.k===treeSel.b), i=treeSel.i, n=b.nodes[i], st=treeStatus(b,i), own=st==='own';
+  const reqs=[[treeSP()>=n[2],`Costs ${n[2]} skill point${n[2]>1?'s':''}`]];
+  if(i>0) reqs.push([treeOwned(b.k)>=i,`Needs ${b.name} ${TREE_RN[i-1]}`]);
+  if(n[3]) reqs.push([hero.level>=n[3],`Needs level ${n[3]}`]);
+  const d=document.getElementById('tr-detail'); d.style.borderColor=b.c;
+  d.innerHTML=`<div class="tr-dk" style="color:${b.c}">${b.name} ${TREE_RN[i]}</div><div class="tr-dn">${escapeHtml(n[0])}</div><div class="tr-de">${escapeHtml(n[1])}</div>
+    <div class="tr-reqs">${reqs.map(([ok,t])=>`<div style="color:${own||ok?'#3EE486':'#FF5C7A'}">${own||ok?'✓':'✕'} ${t}</div>`).join('')}</div>
+    <button type="button" class="tr-learn${st==='ready'?' can':''}${own?' own':''}" id="tr-learn">${own?'LEARNED':(st==='ready'?'LEARN':'LOCKED')}</button>`;
+  document.getElementById('tr-learn').onclick=()=>{
+    if(treeStatus(b,i)!=='ready') return;
+    hero.tree={...(hero.tree||{}),[b.k]:treeOwned(b.k)+1}; save();
+    showToast(`✦ SKILL LEARNED`,`${b.name} ${TREE_RN[i]} · ${n[0]}`);
+    if(treeOwned(b.k)<5) treeSel={b:b.k,i:treeOwned(b.k)};
+    renderTree();
+  };
+}
+function openTree(){ treeResetAsk=false; showScreen('tree-screen'); renderTree(); }
+document.getElementById('tr-rows').addEventListener('click',e=>{ const n=e.target.closest('.tr-node'); if(!n) return; treeSel={b:n.dataset.b,i:+n.dataset.i}; renderTree(); });
+document.getElementById('tr-reset').addEventListener('click',()=>{
+  if(!treeSpent()) return;
+  if(!treeResetAsk){ treeResetAsk=true; renderTree(); return; }
+  const back=treeSpent(); hero.tree={}; treeResetAsk=false; treeSel={b:'mastery',i:0}; save(); renderTree();
+  showToast('↺ SKILL TREE RESET',`${back} SP back to spend`);
+});
+// MASTERY on the Daily Quest. Each bonus is given once per task per day, so ticking and unticking can't farm XP.
+function masteryTaskBonus(i,baseXP,completed){
+  const m=treeOwned('mastery'); if(!m) return;
+  const today=new Date().toDateString();
+  if(!hero.treeDay || hero.treeDay.day!==today) hero.treeDay={day:today,tasks:[],first:false,combo:false};
+  const td=hero.treeDay; let bonus=0;
+  if(!td.tasks.includes(i)){ td.tasks.push(i); bonus+=1;                      // I · Strong Start
+    if(m>=5 && !td.first){ td.first=true; bonus+=baseXP; } }                  // V · Overdrive
+  if(m>=4 && completed && !td.combo){ td.combo=true; bonus+=5; }               // IV · Combo
+  if(bonus>0){ addXP(bonus); setTimeout(()=>showToast('✦ MASTERY',`+${bonus} bonus XP`),1300); }
+}
+
 // ---- Skills: the player's own instructions for Jarvis + the Office agents (saved by skills.js) ----
 // "Spellbook" design: list on the left (click = edit, switch = on/off, ✕ then "Sure?" = delete), editor on the right.
 const SK_TPL=[['math-tutor','Math tutor','Explain math step by step and give me a hint before the answer.'],
@@ -2768,7 +2911,7 @@ let skEditing=null, skDel=null;   // the skill open in the editor, and the one w
 const skEl=id=>document.getElementById(id);
 function renderSkills(){
   const all=qcSkills.list(), box=skEl('sk-list');
-  skEl('sk-n').textContent=all.length;
+  skEl('sk-n').textContent=all.length; skEl('sk-max').textContent=qcSkills.MAX;
   skEl('sk-pips').innerHTML=Array.from({length:qcSkills.MAX},(_,i)=>`<span class="${i<all.length?'on':''}"></span>`).join('');
   box.innerHTML=all.length?'':'<div class="sk-empty">No skills yet. Make your first one on the right.</div>';
   all.forEach(s=>{

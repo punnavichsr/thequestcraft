@@ -236,6 +236,9 @@
   /* in the game, STATS shows only the SYSTEM window (nothing of the Planner behind it) */
   body.system-only > *:not(#overlay) { display: none !important; }
   body.system-only, body.system-only #overlay { background: transparent; }
+  #treeBtn { display: none; margin-left: auto; margin-right: 10px; height: 34px; padding: 0 12px; cursor: pointer; background: #1C1533; border: 2px solid #FFD75E; color: #FFD75E;
+    font-family: "Press Start 2P", monospace; font-size: 9px; box-shadow: 0 0 16px rgba(255,215,94,.25); }
+  body.system-only #treeBtn { display: block; }   /* only inside the game, where the Skill Tree lives */
   .sys-lv { display: flex; justify-content: space-between; align-items: baseline; color: #A9C9EE; font-weight: 700; margin-bottom: 8px; }
   .sys-lv b { font-size: 26px; color: #E8F3FF; text-shadow: 0 0 10px rgba(74,168,255,.9); margin-left: 6px; }
   .fill { height: 100%; border-radius: 6px; transition: width .2s; }
@@ -404,6 +407,7 @@
   <div class="panel">
     <div class="head">
       <h2>SYSTEM</h2>
+      <button class="tree-btn" id="treeBtn" type="button" title="Spend your skill points">▲ SKILL TREE</button>
       <button class="close" id="closeBtn" aria-label="Close">✕</button>
     </div>
     <div class="sys-lv" id="classLine" style="display:none"><span>LEVEL <b id="heroLv">1</b></span><span id="heroCls"></span></div>
@@ -686,6 +690,12 @@
       start: hhmm(sessionStart), end: hhmm(end), type: mode,
     });
     const earned = earnFromTimer(mode, mins);
+    // Skill Tree MASTERY II/III: +1 / +2 XP for every 30 minutes on the Timer (leftover minutes are kept)
+    const mastery = window.qcTree ? qcTree.lv("mastery") : 0;
+    if (mastery >= 2 && game && game.gainXP) {
+      const t = (save.xpCarry || 0) + mins, chunks = Math.floor(t / 30); save.xpCarry = t % 30; store();
+      if (chunks) { try { game.gainXP(chunks * (mastery >= 3 ? 2 : 1)); } catch (e) {} }
+    }
     resetWatch();
     dayOffset = 0; renderDay();
     if (quick) { try { window.parent.qcTutorialLogged(); } catch (e) {} }
@@ -843,8 +853,14 @@
     const { mins: per, pts } = ruleOf(st);
     if (!pts) return null;                               // you set this stat to earn nothing
     save.timerCarry = save.timerCarry || {};
-    const total = (save.timerCarry[modeKey] || 0) + mins, got = Math.floor(total / per) * pts;
+    // Skill Tree MANA: minutes count extra (II 10%, III 25%, IV 50%, V double); I gives +1 on the first reward of the day
+    const mana = window.qcTree ? qcTree.lv("mana") : 0;
+    const eff = Math.floor(mins * [1, 1, 1.1, 1.25, 1.5, 2][mana]);
+    const total = (save.timerCarry[modeKey] || 0) + eff;
+    let got = Math.floor(total / per) * pts;
     save.timerCarry[modeKey] = total % per;
+    const today = new Date().toDateString();
+    if (got > 0 && mana >= 1 && save.manaSparkDay !== today) { got += 1; save.manaSparkDay = today; }
     if (got > 0) { st.earned = earnedOf(st) + got; st.value = st.earned; }
     renderStats();   // also saves
     return { stat: st, got, pts, left: per - save.timerCarry[modeKey] };
@@ -948,6 +964,8 @@
   };
 
   document.getElementById("openBtn").onclick  = () => document.getElementById("overlay").classList.add("show");
+  // Skill Tree (in the game): open it from the SYSTEM window
+  document.getElementById("treeBtn").onclick = () => { try { game.openTree(); } catch (e) {} };
   document.getElementById("closeBtn").onclick = () => {
     document.getElementById("overlay").classList.remove("show");
     if (document.body.classList.contains("system-only")) {   // in the game: ✕ goes back to the hub
@@ -1031,6 +1049,7 @@
 
   // ---- link to the QuestCraft game (only when this page runs inside the game) ----
   const game = (() => { try { return window.parent !== window ? window.parent.questcraftBridge || null : null; } catch (e) { return null; } })();
+  const noteLimit = () => (window.qcTree && qcTree.lv("magic") >= 3 ? 40 : 30);   // Skill Tree MAGIC III · Deep Memory (Supabase allows 40)
   const signedIn = () => Boolean(game && game.user());
   const isAdminUser = () => Boolean(game && game.isAdmin());
   // the page Jarvis is floating on (game, office...) can give him extra buttons to press
@@ -1043,7 +1062,7 @@
     try {
       const { data, error } = await game.sb.from("ai_memory").select("notes,history").maybeSingle();
       if (error) throw error;
-      if (data) { memory.notes = (data.notes || []).slice(-30); history = Array.isArray(data.history) ? data.history : []; trimHistory(); }
+      if (data) { memory.notes = (data.notes || []).slice(-noteLimit()); history = Array.isArray(data.history) ? data.history : []; trimHistory(); }
       memory.loaded = true;
       if (history.length) bubble(`(${ai.name} remembers your last chat and ${memory.notes.length} note${memory.notes.length === 1 ? "" : "s"}.)`, "note");
     } catch (e) { console.error("memory load failed", e); }
@@ -1052,7 +1071,7 @@
     if (!signedIn()) return;
     try {
       const { error } = await game.sb.from("ai_memory").upsert({
-        user_id: game.user().id, notes: memory.notes.slice(-30).map(n => String(n).slice(0, 200)),
+        user_id: game.user().id, notes: memory.notes.slice(-noteLimit()).map(n => String(n).slice(0, 200)),
         history: history.slice(-MEM_MSGS).map(shortMsg), updated_at: new Date().toISOString()
       }, { onConflict: "user_id" });
       if (error) throw error;
@@ -1171,7 +1190,7 @@ Only include actions the user asked for or agreed to. Never show this format oth
         else { deleteActivity(act.key); bubble(`🗑 Deleted the activity "${act.name}"`, "note"); }
       }
       if (a.action === "remember" && a.note && signedIn()) {
-        memory.notes.push(String(a.note).slice(0, 200)); memory.notes = memory.notes.slice(-30);
+        memory.notes.push(String(a.note).slice(0, 200)); memory.notes = memory.notes.slice(-noteLimit());
         bubble(`🧠 I'll remember: ${a.note}`, "note");
       }
       if (a.action === "forget" && a.note) {

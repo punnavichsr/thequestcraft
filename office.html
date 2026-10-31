@@ -815,7 +815,8 @@ document.getElementById('clockIn').onclick=()=>{
 document.getElementById('clockOut').onclick=()=>{
   dayEnded=true; closing=true;                       // the Guard locks up once everyone is gone; the office starts fresh next time
   let n=0;
-  people.forEach(p=>{ if(p.scene==='office'){p.earned+=5;cash-=5;payroll+=5;leave(p);n++;} });
+  const pay=window.qcTree&&qcTree.lv('magic')>=2?10:5;   // Skill Tree MAGIC II · Payday
+  people.forEach(p=>{ if(p.scene==='office'){p.earned+=pay;cash-=pay;payroll+=pay;leave(p);n++;} });
   log(n?`Clocking out ${n} people. +$5 bonus each 💵`:'Nobody is clocked in.');
   people.filter(p=>!p.manager&&p.status==='going home').forEach((p,i)=>chat(p,pick(['Bye boss, see you tomorrow! 👋','Thanks for the bonus! 💵','Good day today 😄']),i*1300,'meeting'));
 };
@@ -1700,6 +1701,7 @@ document.getElementById('office').addEventListener('click',e=>{
 })();
 </script>
 <script src="skills.js"></script>   <!-- read when an agent answers, so loading it last is fine -->
+<script>if(qcTree.lv('magic')>=2) document.getElementById('clockOut').textContent='⏱ Clock out (+$10 each)';   // Skill Tree MAGIC II · Payday</script>
 <script src="reminders.js"></script>
 <script src="jarvis.js"></script>
 </body>
