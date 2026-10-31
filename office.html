@@ -484,7 +484,7 @@ Rules: stay in character, be friendly, emojis are fine, keep everything kid-frie
 Length: for small talk, 1-2 sentences. When the CEO asks for help with YOUR job (code, a lesson, ideas, an email), give a complete, useful answer right here in the chat. Use new lines and \`\`\` code blocks when they help.
 If the question belongs to another coworker's job, help a little and tell him who is best for it.
 "task": only for office errands you go and do away from the chat (e.g. "check emails", "clean the meeting room"), as 2-5 words. If you answer the request right in the chat (help, code, a lesson, ideas, a draft) or he is just chatting, "task" is null.
-${p.name==='Assistant'?INBOX_HELP():''}${BUTTON_HELP(p)}`;
+${p.name==='Assistant'?INBOX_HELP():''}${BUTTON_HELP(p)}${window.qcSkills?qcSkills.prompt():''}`;
 }
 // The Assistant and the emails the CEO forwarded to him (see the Assistant inbox script near the end of this file)
 function INBOX_HELP(){
@@ -1569,6 +1569,132 @@ document.getElementById('ibNew').onclick=async()=>{
 };
 inboxShow(); setTimeout(inboxSetup,1000);   // after the sign-in above has loaded
 </script>
+
+<!-- ===== Click an agent on the office floor: open their private chat ===== -->
+<script>
+document.getElementById('office').addEventListener('click',e=>{
+  const c=e.currentTarget, r=c.getBoundingClientRect();
+  const x=(e.clientX-r.left)*c.width/r.width, y=(e.clientY-r.top)*c.height/r.height;
+  let best=null, bestD=34;
+  people.forEach(p=>{
+    if(p.manager || p.scene!=='office' || !chatBoxes[p.key]) return;
+    const d=Math.hypot(p.x-x,(p.y-12)-y); if(d<bestD){ best=p; bestD=d; }
+  });
+  if(!best) return;
+  agentSel.value=best.name; focusSel.value=best.name; renderChips(); callLabel();
+  showChat(best.key);
+  document.getElementById('chatInput').focus({preventScroll:true});
+  window.dispatchEvent(new CustomEvent('qc-otut',{detail:'tapagent'}));
+});
+</script>
+
+<!-- ===== Aurelius's Office tour (step 1 is on the hub; the hub's ? How to play can replay it) ===== -->
+<style>
+  #oguide{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:0 12px 12px;display:flex;justify-content:center;pointer-events:none}
+  #oguide[hidden]{display:none}
+  #oguide .box{pointer-events:auto;width:100%;max-width:720px;background:#1C1533;border:3px solid #FFD75E;box-shadow:0 0 0 3px #0B0A14,0 -8px 40px rgba(0,0,0,.6);
+    padding:12px 14px;display:flex;flex-direction:column;gap:8px;color:#F2EEDF}
+  #oguide .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  #oguide .nm{font-family:'Press Start 2P',monospace;font-size:9px;color:#B48CFF}
+  #oguide .st{font-size:13px;color:#9a9a9a}
+  #oguide .tx{font-size:16px;font-weight:600;line-height:1.45}
+  #oguide .bt{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+  #oguide .doit{font-size:14px;font-weight:700;color:#FFD75E;margin-right:auto}
+  #oguide button{font-family:'Press Start 2P',monospace;font-size:9px;padding:10px 14px;border-radius:0}
+  #oguide .next{background:linear-gradient(#FFE58A,#F2C14E);color:#2a1d00;border:none}
+  #oguide .skip{background:none;border:none;color:#9a9a9a;font-family:system-ui,sans-serif;font-size:14px;font-weight:600}
+  #oguide [hidden]{display:none}
+  .o-hl{outline:3px solid #FFD75E !important;outline-offset:4px;box-shadow:0 0 0 4px rgba(11,10,20,.9),0 0 32px 6px rgba(255,215,94,.45) !important}
+  body:has(#oguide:not([hidden])) .wrap{padding-bottom:240px}
+  body:has(#oguide:not([hidden])) #jvDot{bottom:auto;top:12px}   /* keep the AI button off Aurelius's buttons */
+</style>
+<div id="oguide" hidden><div class="box">
+  <div class="top"><span class="nm">AURELIUS · GUIDE</span><span class="st" id="og-step"></span></div>
+  <div class="tx" id="og-text"></div>
+  <div class="bt">
+    <span class="doit" id="og-doit"></span>
+    <button class="skip" id="og-skip"></button>
+    <button id="og-back"></button>
+    <button class="next" id="og-next"></button>
+  </div>
+</div></div>
+<script>
+(()=>{
+  const TH=(()=>{ try{ return localStorage.getItem('qc-lang')==='th'; }catch(e){ return false; } })();
+  const T=(en,th)=>TH?th:en;
+  let hero=''; try{ hero=localStorage.getItem('questology_active')||''; }catch(e){}
+  const KEY='qc-otut-'+hero;                         // the hub reads this too
+  const read=()=>{ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } };
+  const write=s=>{ try{ localStorage.setItem(KEY,JSON.stringify(s)); }catch(e){} };
+  const $=id=>document.getElementById(id);
+  const hasInbox=()=>!!(typeof inbox!=='undefined' && inbox.addr);
+  // hl: what glows · waits: you must do it (otherwise a Next button)
+  const STEPS=[null,   // step 1 is on the hub
+    {adv:'tapagent',hl:()=>$('office'),en:"Welcome to HQ, CEO! This is the office floor. Each desk is one of your AI agents. Click any agent to open a chat with them. When you talk to them, they walk over to your desk.",
+      th:'ยินดีต้อนรับสู่สำนักงานใหญ่ ท่านซีอีโอ! นี่คือพื้นที่ออฟฟิศ แต่ละโต๊ะคือเอเจนต์ AI ของเจ้า กดที่ใครก็ได้เพื่อเปิดแชต พอคุยด้วย เขาจะเดินมาหาเจ้าที่ห้องทำงาน'},
+    {adv:'next',hl:()=>$('cashStat'),en:'This is your Cash. Your team takes their wages from it every hour.',th:'นี่คือเงินของเจ้า ทีมจะรับค่าจ้างจากเงินนี้ทุกชั่วโมง'},
+    {adv:'tab',hl:()=>chatTabs.solver,en:'Meeting Chat is where the whole team talks. Each agent also has a private chat. Click the 💡 Problem Solver tab.',
+      th:'แชตประชุมคือที่ที่ทั้งทีมคุยกัน แต่ละคนยังมีแชตส่วนตัวด้วย กดแท็บ 💡 นักแก้ปัญหา'},
+    {adv:'send',hl:()=>$('chatInput').parentElement,en:'Ask him something, e.g. "give me 5 ideas for my science project", then press Send.',
+      th:'ลองถามอะไรสักอย่าง เช่น "ขอ 5 ไอเดียโปรเจกต์วิทย์" แล้วกด Send'},
+    {adv:'pickagent',hl:()=>$('agentSel'),en:'Manage agent: pick a teammate from the list to see what they do.',th:'จัดการเอเจนต์: เลือกเพื่อนร่วมทีมจากรายการเพื่อดูว่าเขาทำอะไร'},
+    {adv:'wander',hl:()=>$('wander').parentElement,en:'Press Walk freely to let them move around the office, or Call to my office to bring them to you.',
+      th:'กด Walk freely ให้เขาเดินรอบออฟฟิศ หรือ Call to my office ให้มาหาเจ้า'},
+    {adv:'pickjob',hl:()=>$('myAgentJob'),en:'This is your own agent. Pick a job for him from the list. Only 📋 Team Manager can hand out work to the team.',
+      th:'นี่คือเอเจนต์ของเจ้าเอง เลือกงานให้เขาจากรายการ มีแค่ 📋 ผู้จัดการทีม ที่แจกงานให้ทีมได้'},
+    {adv:'saveagent',hl:()=>$('myAgentSave').parentElement,en:'Now give him a name and press Save.',th:'ตั้งชื่อให้เขา แล้วกด Save'},
+    {adv:'clock',hl:()=>$('clockOut'),en:'At the end of the day, press Clock out. Every teammate earns +$5 and it shows in the Office log.',
+      th:'จบวันแล้วกด Clock out ทุกคนได้ +$5 และจะแสดงในบันทึกออฟฟิศ'},
+    {adv:'copy',hl:()=>$('ibCopy').parentElement,en:'This is the Assistant inbox. Copy your private address and forward emails to it. The Assistant reads them for you.',
+      th:'นี่คือกล่องจดหมายของผู้ช่วย คัดลอกที่อยู่ส่วนตัวแล้วส่งต่ออีเมลมา ผู้ช่วยจะอ่านให้',waits:hasInbox},
+    {adv:'finish',en:'Your HQ is ready, CEO. Give your team work any time. To replay this tour, press ? on the hub.',
+      th:'สำนักงานใหญ่พร้อมแล้ว ท่านซีอีโอ สั่งงานทีมได้ทุกเมื่อ และกด ? ที่ฮับเพื่อดูการสอนนี้อีกครั้ง'}
+  ];
+  const waits=st=>st.adv!=='next' && st.adv!=='finish' && (!st.waits || st.waits());
+  let s=read();
+  if(s.done || s.skipped) return;                    // finished or skipped: no tour
+  if(!(s.step>=1)) s.step=1;
+  write(s);
+  let lastHl=null, lastStep=-1;
+  function render(){
+    const g=$('oguide'); if(lastHl) lastHl.classList.remove('o-hl');
+    const st=STEPS[s.step]; if(!st){ g.hidden=true; return; }
+    g.hidden=false;
+    $('og-step').textContent=`${s.step+1} / ${STEPS.length}`;
+    $('og-text').textContent=T(st.en,st.th);
+    const w=waits(st);
+    $('og-next').hidden=w; $('og-next').textContent=st.adv==='finish'?T('FINISH','เสร็จสิ้น'):T('NEXT ▶','ต่อไป ▶');
+    $('og-doit').hidden=!w; $('og-doit').textContent=T('↑ Try it on the glowing part','↑ ลองทำตรงที่เรืองแสง');
+    $('og-back').hidden=!(s.step>1); $('og-back').textContent=T('◀ BACK','◀ ย้อนกลับ');
+    $('og-skip').textContent=T('Skip tour','ข้ามการสอน');
+    lastHl=st.hl?st.hl():null;
+    if(lastHl){ lastHl.classList.add('o-hl'); if(lastStep!==s.step) lastHl.scrollIntoView({behavior:'smooth',block:'center'}); }
+    lastStep=s.step;
+  }
+  function go(n){ s.step=n; if(n>=STEPS.length){ s={done:true}; } write(s); render(); }
+  function advance(k){ const st=STEPS[s.step]; if(st && st.adv===k) go(s.step+1); }
+  $('og-next').onclick=()=>{ const st=STEPS[s.step]; if(st.adv==='finish'){ s={done:true}; write(s); render(); log('★ Office tour finished!'); } else go(s.step+1); };
+  $('og-back').onclick=()=>{ if(s.step>1) go(s.step-1); };
+  $('og-skip').onclick=()=>{ s={skipped:true}; write(s); render(); };
+  // what you do in the office moves the tour on
+  window.addEventListener('qc-otut',e=>advance(e.detail));
+  $('chips').addEventListener('click',()=>advance('tapagent'));
+  chatTabs.solver.addEventListener('click',()=>advance('tab'));
+  const sending=()=>{ if(activeChat==='solver' && $('chatInput').value.trim()) advance('send'); };
+  $('chatSend').addEventListener('click',sending,true);   // capture: before Send clears the box
+  $('chatInput').addEventListener('keydown',e=>{ if(e.key==='Enter') sending(); },true);
+  agentSel.addEventListener('change',()=>advance('pickagent'));
+  $('wander').addEventListener('click',()=>advance('wander'));
+  $('callOffice').addEventListener('click',()=>advance('wander'));
+  $('myAgentJob').addEventListener('change',()=>advance('pickjob'));
+  $('myAgentSave').addEventListener('click',()=>{ if($('myAgentName').value.trim()) advance('saveagent'); },true);   // Save reloads the page, so move on first
+  $('clockOut').addEventListener('click',()=>advance('clock'));
+  $('ibCopy').addEventListener('click',()=>advance('copy'));
+  setInterval(()=>{ const st=STEPS[s.step]; if(st && st.adv==='copy') render(); },2000);   // the inbox loads a bit later
+  render();
+})();
+</script>
+<script src="skills.js"></script>   <!-- read when an agent answers, so loading it last is fine -->
 <script src="reminders.js"></script>
 <script src="jarvis.js"></script>
 </body>

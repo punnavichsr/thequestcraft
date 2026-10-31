@@ -406,6 +406,7 @@
   </div>
 </div>
 
+<script src="skills.js"></script>
 <script>
   // ---- JARVIS ONLY: planner.html?jarvis shows just the AI chat (for the orange button on other pages) ----
   const JARVIS_ONLY = new URLSearchParams(location.search).has("jarvis");
@@ -1108,7 +1109,7 @@ ${host.actions}` : ""}
 Use 24-hour times and category keys. Raising a stat spends unspent points, so never set stats higher than the points allow.
 The Stopwatch counts UP, so never ask how long. start_timer = press Start on the Stopwatch and it starts counting up. stop_timer = press Stop & Log, and the time gets saved to today's schedule. reset_timer = press Reset, and the timer goes back to 0.When the user asks to start, stop or reset the timer, do it right away with the action and don't ask any questions.Use add_event to plan things on the schedule. Every event has a priority (high, medium or low): pick one that fits when you add an event (exams and deadlines = high, fun = low, otherwise medium), and use edit_event with "priority" when the user asks to change it. For the live stopwatch ALWAYS use start_timer, stop_timer or reset_timer (never add_event), and don't ask any questions.
 You cannot make or upload pictures: tell the user to press "Upload picture" in the Planner tab.
-Only include actions the user asked for or agreed to. Never show this format otherwise.`;
+Only include actions the user asked for or agreed to. Never show this format otherwise.${window.qcSkills ? qcSkills.prompt() : ""}`;
   }
 
   // Apply the AI's changes
@@ -1241,6 +1242,7 @@ Only include actions the user asked for or agreed to. Never show this format oth
     if (!aiReady()) { openAiSettings(); return { needsSetup: true }; }
     if (askBusy) { bubble("One sec, I'm still answering your last message ⏳", "note"); return { error: "busy" }; }
     askBusy = true;
+    try { window.parent.qcTutorialAiSent && window.parent.qcTutorialAiSent(); } catch (e) {}   // Aurelius's "send a message" step
     await loadMemory();
     bubble(text, "me");
     history.push({ role: "user", content: text });

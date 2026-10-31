@@ -264,6 +264,10 @@
   body.lang-th #hub-screen .ts-k{ font-size:13px; }
   body.lang-th #hub-screen :is(.hub-card .desc,.ts-v,.fs-row), body.lang-th #help-screen :is(.loop-card,.loop-card .b,.help-page .ds,.help-page button,.faq-row .q,.faq-row .a,.loop-detail ul,.help-link), body.lang-th #guide :is(.g-text,.g-skip,.g-doit){ font-family:'Kanit',sans-serif; font-weight:400; }
   @media (max-width:900px){ #guide{ left:64px; } }
+  /* Jarvis steps: keep Aurelius readable while the Jarvis panel is open */
+  @media (min-width:901px){ body:has(#jvPanel.open) #guide{ right:380px; } }
+  @media (max-width:900px){ body:has(#jvPanel.open) #guide{ z-index:80; left:0; bottom:0; }
+    body[data-tut="aisend"]:has(#jvPanel.open) #guide{ bottom:auto; top:8px; } }   /* the message box is at the bottom */
   @media (max-width:560px){ #guide{ left:0; } .g-sprite{ width:48px; height:48px; } .g-text{ font-size:15px; } body.in-game #hub-screen{ padding-top:66px; }
     body:has(#guide:not([hidden])) #jvDot{ bottom:auto; top:12px; }   /* keep the AI button off Aurelius's buttons */
     body.is-admin:has(#guide:not([hidden])) #jvDot{ top:66px; } }   /* ...and under the ADMIN button */
@@ -769,6 +773,26 @@
   .sb-btns button{ flex:1; padding:11px; border-radius:8px; border:2px solid var(--panel-border); background:var(--panel-2); color:var(--text-light);
     font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:700; cursor:pointer; }
   .sb-btns button:hover{ border-color:var(--gold); }
+  body:has(.sb-modal.show) #jvDot{ display:none; }   /* Settings / Skills / Account windows sit on top */
+  .sk-box{ max-width:520px; max-height:90vh; overflow-y:auto; }
+  .sk-intro{ font-size:15px; color:var(--text-dim); margin:-6px 0 8px; }
+  .sk-row{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-top:1px solid var(--panel-border); }
+  .sk-row input[type=checkbox]{ width:22px; height:22px; margin-top:2px; accent-color:var(--gold); cursor:pointer; flex-shrink:0; }
+  .sk-row .t{ flex:1; min-width:0; }
+  .sk-row b{ display:block; font-size:16px; }
+  .sk-row small{ display:block; color:var(--text-dim); font-size:13px; white-space:pre-wrap; word-break:break-word; }
+  .sk-row.off b, .sk-row.off small{ opacity:.5; }
+  .sk-row .acts{ display:flex; gap:6px; flex-shrink:0; }
+  .sk-row .acts button{ background:none; border:1px solid var(--panel-border); color:var(--text-light); border-radius:6px; padding:4px 9px; cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; }
+  .sk-row .acts button:hover{ border-color:var(--gold); }
+  .sk-row .acts .del:hover{ border-color:var(--danger); color:var(--danger); }
+  .sk-empty{ font-size:14px; color:var(--text-dim); padding:10px 0; border-top:1px solid var(--panel-border); }
+  #sk-form{ border-top:1px solid var(--panel-border); padding-top:12px; }
+  .sk-h{ font-size:15px; font-weight:700; }
+  #sk-form input, #sk-form textarea{ display:block; width:100%; margin-top:8px; background:#140e26; color:var(--text-light); border:1px solid var(--panel-border); border-radius:6px; padding:8px 10px; font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:600; }
+  #sk-form textarea{ min-height:96px; resize:vertical; }
+  .sk-count{ font-size:12px; color:var(--text-dim); text-align:right; margin-top:4px; }
+  .sb-btns .sk-save{ background:var(--gold); color:#241703; border-color:var(--gold); }
   .sb-btns .danger{ border-color:var(--danger); color:var(--danger); }
 
   @media (max-width:640px){
@@ -874,6 +898,7 @@
   <button class="sb-item" data-go="timer" title="Timer"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="14" r="7"/><path d="M12 10v4l2.5 2M9 3h6"/></svg><span class="lb">Timer</span></button>
   <button class="sb-item" data-go="leaderboard" title="Leaderboard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M10 17h4v4h-4z"/></svg><span class="lb">Leaderboard</span></button>
   <button class="sb-item" data-go="office" title="Office"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7h1.5M13.5 7H15M9 11h1.5M13.5 11H15M9 15h1.5M13.5 15H15M10.5 21v-3h3v3"/></svg><span class="lb">Office</span></button>
+  <button class="sb-item" data-go="skills" title="Skills"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg><span class="lb">Skills</span></button>
   <button class="sb-item sb-gap" data-go="settings" title="Settings"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span class="lb">Settings</span></button>
   <button class="sb-item sb-acct" data-go="account" title="Account"><span class="av" id="sb-av"></span><span class="lb nm" id="sb-name">Account</span></button>
   <button class="sb-item" data-go="title" title="Back to title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/></svg><span class="lb">Title screen</span></button>
@@ -889,6 +914,22 @@
   <div class="sb-row"><label for="rem-before">Remind me</label>
     <select id="rem-before"><option value="5">5 min before</option><option value="10">10 min before</option><option value="15">15 min before</option><option value="30">30 min before</option><option value="60">1 hour before</option></select></div>
   <div class="sb-note" id="rem-note"></div>
+</div></div>
+
+<!-- SKILLS: instructions for Jarvis and every Office agent (skills.js) -->
+<div class="sb-modal" id="skills-modal"><div class="box sk-box">
+  <button class="x" data-close aria-label="Close">✕</button>
+  <h3>SKILLS</h3>
+  <div class="sk-intro">Teach your AI new tricks. Skills that are on are used by Jarvis and every Office agent.</div>
+  <div id="sk-list"></div>
+  <form id="sk-form" autocomplete="off">
+    <div class="sk-h" id="sk-h">New skill</div>
+    <input id="sk-name" maxlength="40" placeholder="Name, e.g. Math tutor">
+    <textarea id="sk-text" maxlength="600" placeholder="What should the AI do? e.g. Explain math step by step and give me a hint before the answer."></textarea>
+    <div class="sk-count" id="sk-count">0 / 600</div>
+    <div class="sb-btns"><button type="button" id="sk-cancel" hidden>Cancel</button><button type="submit" class="sk-save" id="sk-save">Add skill</button></div>
+    <div class="sb-note" id="sk-msg"></div>
+  </form>
 </div></div>
 
 <!-- ACCOUNT -->
@@ -2614,6 +2655,7 @@ function updateSidebarAccount(){
 sidebar.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   const go=b.dataset.go; closeSidebar();
   if(go==='settings'){ openSettings(); return; }
+  if(go==='skills'){ openSkills(); return; }
   if(go==='account'){ openAccount(); return; }
   if(go==='title'){ document.getElementById('btn-home').click(); return; }
   document.getElementById('quiz-overlay').classList.remove('active');
@@ -2632,6 +2674,57 @@ document.querySelectorAll('.sb-modal').forEach(m=>{
   m.addEventListener('click',e=>{ if(e.target===m || e.target.closest('[data-close]')) m.classList.remove('show'); });
 });
 updateSidebarAccount();
+
+// ---- Skills: the player's own instructions for Jarvis + the Office agents (saved by skills.js) ----
+let skEditing=null;   // id of the skill being edited, or null for a new one
+function renderSkills(){
+  const box=document.getElementById('sk-list'), all=qcSkills.list();
+  box.innerHTML='';
+  if(!all.length){ box.innerHTML='<div class="sk-empty">No skills yet. Make your first one below.</div>'; }
+  all.forEach(s=>{
+    const row=document.createElement('div'); row.className='sk-row'+(s.on===false?' off':'');
+    row.innerHTML=`<input type="checkbox" title="On / off" ${s.on===false?'':'checked'}><div class="t"><b></b><small></small></div>
+      <div class="acts"><button type="button" class="ed">Edit</button><button type="button" class="del">Delete</button></div>`;
+    row.querySelector('b').textContent=s.name; row.querySelector('small').textContent=s.text;   // textContent = safe
+    row.querySelector('input').onchange=e=>{ skUpdate(s.id,{on:e.target.checked}); };
+    row.querySelector('.ed').onclick=()=>skEdit(s);
+    row.querySelector('.del').onclick=()=>{ if(!confirm(`Delete the skill "${s.name}"?`)) return; qcSkills.save(qcSkills.list().filter(x=>x.id!==s.id)); if(skEditing===s.id) skReset(); renderSkills(); };
+    box.appendChild(row);
+  });
+  const full=all.length>=qcSkills.MAX && !skEditing;
+  document.getElementById('sk-save').disabled=full;
+  document.getElementById('sk-msg').textContent=full?`You can have up to ${qcSkills.MAX} skills. Delete one to add another.`:'';
+}
+function skUpdate(id,changes){ qcSkills.save(qcSkills.list().map(x=>x.id===id?{...x,...changes}:x)); renderSkills(); }
+function skEdit(s){
+  skEditing=s.id;
+  document.getElementById('sk-name').value=s.name; document.getElementById('sk-text').value=s.text; skCount();
+  document.getElementById('sk-h').textContent='Edit skill'; document.getElementById('sk-save').textContent='Save skill';
+  document.getElementById('sk-cancel').hidden=false; document.getElementById('sk-name').focus();
+  renderSkills();
+}
+function skReset(){
+  skEditing=null; document.getElementById('sk-form').reset(); skCount();
+  document.getElementById('sk-h').textContent='New skill'; document.getElementById('sk-save').textContent='Add skill';
+  document.getElementById('sk-cancel').hidden=true;
+}
+function skCount(){ document.getElementById('sk-count').textContent=`${document.getElementById('sk-text').value.length} / ${qcSkills.MAX_TEXT}`; }
+function openSkills(){ skReset(); renderSkills(); document.getElementById('skills-modal').classList.add('show'); }
+document.getElementById('sk-text').addEventListener('input',skCount);
+document.getElementById('sk-cancel').addEventListener('click',()=>{ skReset(); renderSkills(); });
+document.getElementById('sk-form').addEventListener('submit',e=>{
+  e.preventDefault();
+  const name=document.getElementById('sk-name').value.replace(/\s+/g,' ').trim(), text=document.getElementById('sk-text').value.trim();
+  const msg=document.getElementById('sk-msg');
+  if(!name || !text){ msg.textContent='Give your skill a name and say what it should do.'; return; }
+  const all=qcSkills.list();
+  if(all.some(x=>x.id!==skEditing && x.name.toLowerCase()===name.toLowerCase())){ msg.textContent=`You already have a skill called "${name}".`; return; }
+  if(skEditing) qcSkills.save(all.map(x=>x.id===skEditing?{...x,name,text}:x));
+  else qcSkills.save([...all,{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,text,on:true}]);
+  const wasEdit=!!skEditing;
+  skReset(); renderSkills();
+  msg.textContent=wasEdit?'✔ Skill saved.':`✔ "${name}" added. Jarvis and your Office agents will use it.`;
+});
 
 // ---- Settings: email reminders ----
 const remOn=document.getElementById('rem-on'), remBefore=document.getElementById('rem-before'), remNote=document.getElementById('rem-note');
@@ -2701,6 +2794,11 @@ const T={
     g7:'Step 4 · Compare. This is the Leaderboard. Find your hero, then click the glowing list.',
     g8:'This is the Office. Its AI helpers: the Problem Solver brainstorms ideas and solves problems, the Email Assistant checks your emails, the Manager is special because you can change his job and name, and the Presenter helps you make presentations. It unlocks at level 5, so no need to open it now.',
     g9:'Stuck on any page? Press ? any time to open How to play and replay a tutorial.',
+    gO0:'Level 5! You unlocked the Office, the HQ where your AI team works. Click the glowing Office tile to go in.',
+    gAi1:"See the orange AI button? That's Jarvis, your AI helper. He's on every page. Click it now.",
+    gAi2:'Your AI needs a brain first: a free Groq API key. Open console.groq.com in a new tab → Create API Key, give it a name and copy it. Then give your AI a name here, paste the key and press Create my AI. Never share your key.',
+    gAi3:'Tell your AI what you need, e.g. "Add Football tomorrow at 7:00 AM, Strength", then press ➤. He can add events, start the Timer, and answer general questions too.',
+    aiPage:'JARVIS (AI)', openAi:'↑ Click the glowing AI button',
     g10:'Good luck, Adventurer. The threads of fate are spinning. Let us see what destiny you got on this journey.',
     boardHelp:'Ranking by XP, shown with hero names.',
     howTitle:'HOW TO PLAY', howWorks:'HOW QUESTCRAFT WORKS', pages:'PAGES', faqTitle:'QUESTIONS', replayPage:'↻ Replay tutorial', goTo:'Go to', back:'◀ HUB', backTitle:'◀ BACK',
@@ -2723,6 +2821,11 @@ const T={
     g7:'ขั้น 4 · เปรียบเทียบ นี่คือกระดานอันดับ หาฮีโร่ของเจ้า แล้วกดรายชื่อที่เรืองแสง',
     g8:'นี่คือออฟฟิศ ผู้ช่วย AI ที่นี่: นักแก้ปัญหาช่วยระดมไอเดียและแก้ปัญหา ผู้ช่วยอีเมลช่วยเช็กอีเมล ผู้จัดการพิเศษตรงที่เจ้าเปลี่ยนงานและชื่อของเขาได้ และนักนำเสนอช่วยทำงานนำเสนอ ปลดล็อกที่เลเวล 5 ตอนนี้ยังไม่ต้องเปิด',
     g9:'ติดตรงไหน กด ? ได้ทุกเมื่อ เพื่อเปิดวิธีเล่นและดูสอนซ้ำ',
+    gO0:'เลเวล 5! เจ้าปลดล็อกออฟฟิศแล้ว สำนักงานใหญ่ที่ทีม AI ของเจ้าทำงาน กดช่องออฟฟิศที่เรืองแสงเพื่อเข้าไป',
+    gAi1:'เห็นปุ่ม AI สีส้มไหม นั่นคือ Jarvis ผู้ช่วย AI ของเจ้า กดได้ทุกหน้า ลองกดเลย',
+    gAi2:'Jarvis ต้องมีสมองก่อน คือคีย์ Groq API ฟรี รับได้ที่ console.groq.com → Create API Key แล้วคัดลอกมา ตั้งชื่อ AI วางคีย์ตรงนี้ แล้วกด Create my AI ห้ามบอกคีย์กับใคร',
+    gAi3:'บอก Jarvis ด้วยคำพูดธรรมดา เช่น "เพิ่มฟุตบอลพรุ่งนี้ 7 โมงเช้า" แล้วกด ➤ เขาเพิ่มกิจกรรม เริ่มจับเวลา และตอบคำถามทั่วไปได้ด้วย',
+    aiPage:'Jarvis (AI)', openAi:'↑ กดปุ่ม AI ที่เรืองแสง',
     g10:'โชคดีนะ นักผจญภัย ด้ายแห่งโชคชะตากำลังหมุนวน มาดูกันว่าเจ้าจะได้พบชะตาแบบใดในการเดินทางครั้งนี้',
     boardHelp:'อันดับตาม XP แสดงชื่อฮีโร่',
     howTitle:'วิธีเล่น', howWorks:'QuestCraft เล่นยังไง', pages:'หน้าต่างๆ', faqTitle:'คำถามที่พบบ่อย', replayPage:'↻ ดูสอนอีกครั้ง', goTo:'ไปที่', back:'◀ ฮับ', backTitle:'◀ กลับ',
@@ -2798,27 +2901,48 @@ const GUIDE_STEPS=[
   {adv:'next',t:'g0'}, {adv:'next',t:'g1',hl:'today-strip'}, {adv:'next',t:'g2',hl:'fs-box'},
   {adv:'plan',t:'g3',go:'schedule'}, {adv:'focus',t:'g4',go:'timer'}, {adv:'complete',t:'g5',go:'quests'},
   {adv:'board',t:'g7',go:'leaderboard'}, {adv:'next',t:'g8',hl:'office-card'},
-  {adv:'next',t:'g9',hl:'btn-help'}, {adv:'finish',t:'g10'}
+  {adv:'next',t:'g9',hl:'btn-help'},
+  {adv:'aiopen',t:'gAi1',hl:'jvDot'}, {adv:'aikey',t:'gAi2'}, {adv:'aisend',t:'gAi3'},
+  {adv:'finish',t:'g10'}
 ];
 const isObjective=st=>st && FS.some(([k])=>k===st.adv);
+// Jarvis steps: open him, give him a Groq key, send a first message
+const aiHasKey=()=>{ try{ const a=JSON.parse(localStorage.getItem('punn-levelup-ai')||'{}'); return !!(a.name && a.key); }catch(e){ return false; } };
+const aiWaits=st=>st.adv==='aiopen' || st.adv==='aisend' || (st.adv==='aikey' && !aiHasKey());
+function tutAdvance(k){
+  const st=GUIDE_STEPS[hero.tut]; if(!(hero.tut>=0 && st && st.adv===k)) return;
+  hero.tut++; save(); renderHub(); renderGuide();
+}
+document.addEventListener('click',e=>{ if(e.target.closest && e.target.closest('#jvDot')) tutAdvance('aiopen'); },true);
+window.addEventListener('storage',e=>{ if(e.key==='punn-levelup-ai' && aiHasKey()) tutAdvance('aikey'); });
+window.qcTutorialAiSent=()=>tutAdvance('aisend');   // planner.html (Jarvis) calls this when you send a message
+// Office tour: step 1 is here on the hub once the Office is open to you; office.html runs the rest
+// and keeps its progress in 'qc-otut-<hero>' (so going in, finishing or skipping ends this step)
+const OFFICE_INTRO={adv:'openoffice',t:'gO0',go:'office'}, OFFICE_TOUR_STEPS=12;
+const otutKey=()=>'qc-otut-'+activeProfile;
+const officeIntroOn=()=>{ if(officeLocked()) return false; try{ return !localStorage.getItem(otutKey()); }catch(e){ return false; } };
+function replayOfficeTour(){ try{ localStorage.removeItem(otutKey()); }catch(e){} showScreen('hub-screen'); renderGuide(); }
 function renderGuide(){
   const g=document.getElementById('guide');
   document.querySelectorAll('.g-hl').forEach(el=>el.classList.remove('g-hl'));
   const inGame=document.body.classList.contains('in-game');
-  if(!inGame || !activeProfile || !(hero.tut>=0)){ g.hidden=true; return; }
+  const intro=!(hero.tut>=0) && officeIntroOn();   // step 1 of the Office tour
+  if(!inGame || !activeProfile || !(hero.tut>=0 || intro)){ g.hidden=true; return; }
   const fs=fsState();
   if(hero.tut>=GUIDE_STEPS.length){ hero.tut=-1; hero.tutDone=true; save(); g.hidden=true; renderHub(); return; }
-  const st=GUIDE_STEPS[hero.tut], onHub=document.getElementById('hub-screen').classList.contains('active');
-  const task=(isObjective(st) && !fs[st.adv]) || st.adv==='board';   // waits for you to do something
+  const st=intro?OFFICE_INTRO:GUIDE_STEPS[hero.tut], onHub=document.getElementById('hub-screen').classList.contains('active');
+  document.body.dataset.tut=st.adv;   // lets the CSS place Aurelius around the Jarvis panel
+  const ai=aiWaits(st);
+  const task=(isObjective(st) && !fs[st.adv]) || st.adv==='board' || ai || intro;   // waits for you to do something
   g.hidden=false;
-  document.getElementById('g-step').textContent=`${hero.tut+1} / ${GUIDE_STEPS.length}`;
+  document.getElementById('g-step').textContent=intro?`1 / ${OFFICE_TOUR_STEPS}`:`${hero.tut+1} / ${GUIDE_STEPS.length}`;
   document.getElementById('g-text').textContent=tr(st.t);
   document.getElementById('g-next').hidden=task;
   document.getElementById('g-next').textContent=st.adv==='finish'?tr('finish'):tr('next')+' ▶';
-  document.getElementById('g-go').hidden=!(task&&onHub);
+  document.getElementById('g-go').hidden=!(task&&onHub&&st.go);
   document.getElementById('g-go').textContent=tr('takeMe');
-  document.getElementById('g-doit').hidden=!(task&&!onHub);
-  document.getElementById('g-doit').textContent=tr(st.adv==='board'?'tapGlow':'doIt');
+  document.getElementById('g-doit').hidden=!(task&&(!onHub||st.adv==='aiopen'));
+  document.getElementById('g-doit').textContent=tr(st.adv==='board'?'tapGlow':st.adv==='aiopen'?'openAi':'doIt');
   document.getElementById('g-back').hidden=!(hero.tut>0);
   document.getElementById('g-back').textContent=tr('gBack');
   if(onHub){
@@ -2843,9 +2967,11 @@ document.getElementById('g-next').addEventListener('click',()=>{
   save(); renderHub(); renderGuide();
 });
 document.getElementById('g-go').addEventListener('click',()=>{
-  const st=GUIDE_STEPS[hero.tut]; const card=st&&document.querySelector(`.hub-card[data-area="${st.go}"]`); if(card) card.click();
+  const st=!(hero.tut>=0)&&officeIntroOn()?OFFICE_INTRO:GUIDE_STEPS[hero.tut]; const card=st&&document.querySelector(`.hub-card[data-area="${st.go}"]`); if(card) card.click();
 });
-document.getElementById('g-skip').addEventListener('click',()=>{ hero.tut=-1; hero.tutSkipped=true; save(); renderHub(); renderGuide(); });
+document.getElementById('g-skip').addEventListener('click',()=>{
+  if(!(hero.tut>=0) && officeIntroOn()){ try{ localStorage.setItem(otutKey(),JSON.stringify({skipped:true})); }catch(e){} renderGuide(); return; }   // skip the Office tour
+  hero.tut=-1; hero.tutSkipped=true; save(); renderHub(); renderGuide(); });
 document.getElementById('fs-resume').addEventListener('click',()=>{
   hero.tut=0; hero.tutSkipped=false;   // always from step 1
   save(); renderHub(); renderGuide();
@@ -2912,6 +3038,8 @@ const HELP_PAGES=[['schedule',{en:'Add tasks with a time, category and priority.
   ['quests',{en:'Tick tasks in your Daily Quest to earn XP.',th:'ติ๊กงานในเควสต์ประจำวันเพื่อรับ XP'},5],
   ['stats',{en:'Your stats grow by 1 for every hour you log on the Timer.',th:'สเตตัสเพิ่ม 1 ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลา'},null],
   ['board',{en:'Ranking by XP, shown with hero names.',th:'อันดับตาม XP แสดงชื่อฮีโร่'},6],
+  ['aiPage',{en:'The orange AI button on every page opens Jarvis, your AI helper.',th:'ปุ่ม AI สีส้มทุกหน้าเปิด Jarvis ผู้ช่วย AI ของเจ้า'},9],
+  ['office',{en:'Your AI team: chat, manage agents, clock out, inbox. Unlocks at LV 5.',th:'ทีม AI ของเจ้า: แชต จัดการเอเจนต์ เลิกงาน กล่องจดหมาย ปลดล็อกที่ LV 5'},'office'],
   ['hubTitle',{en:'Your daily overview and the First Steps quest.',th:'ภาพรวมรายวันและเควสต์ก้าวแรก'},0]];
 const FAQ=[[{en:'How do I earn XP?',th:'ได้ XP ยังไง?'},{en:'Tick tasks in your Daily Quest, and finish First Steps (+5 XP each).',th:'ติ๊กงานในเควสต์ประจำวัน และทำก้าวแรกให้ครบ (ภารกิจละ +5 XP)'}],
   [{en:'How do I get skill points?',th:'ได้แต้มสกิลยังไง?'},{en:'Every hour you log on the Timer earns 1 skill point: study → IQ, exercise → Strength, sleep → Sleep. Gaming doesn’t count.',th:'ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลาได้ 1 แต้มสกิล: อ่านหนังสือ → IQ ออกกำลังกาย → Strength นอน → Sleep เวลาเล่นเกมไม่นับ'}],
@@ -2935,8 +3063,9 @@ function renderHelp(){
   }
   const pages=document.getElementById('help-pages');
   pages.innerHTML=HELP_PAGES.map(([k,d,step])=>`<div class="help-page"><div><div class="nm">${escapeHtml(tr(k))}</div><div class="ds">${escapeHtml(L(d))}</div></div>`+
-    (document.body.classList.contains('in-game')&&activeProfile&&step!=null?`<button data-replay="${step}">${escapeHtml(tr('replayPage'))}</button>`:'')+`</div>`).join('');
+    (document.body.classList.contains('in-game')&&activeProfile&&step!=null&&!(step==='office'&&officeLocked())?`<button data-replay="${step}">${escapeHtml(tr('replayPage'))}</button>`:'')+`</div>`).join('');
   pages.querySelectorAll('[data-replay]').forEach(b=>b.addEventListener('click',()=>{
+    if(b.dataset.replay==='office'){ replayOfficeTour(); return; }   // step 1 on the hub, then the Office page
     const i=Number(b.dataset.replay), st=GUIDE_STEPS[i]; hero.tut=i; save();
     const card=st&&st.go&&document.querySelector(`.hub-card[data-area="${st.go}"]`);
     showScreen('hub-screen'); if(card && i>0) card.click();   // go straight to that page
@@ -2960,6 +3089,7 @@ document.querySelectorAll('.lang-sw [data-lang]').forEach(b=>b.addEventListener(
 }));
 applyLang();
 </script>
+<script src="skills.js"></script>
 <script src="reminders.js"></script>
 <script src="jarvis.js"></script>
 </body>
