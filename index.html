@@ -1753,7 +1753,7 @@ async function moderate(id,action){
   const e=(lbCache||[]).find(r=>r.id===id)||{};
   if(action==='setxp'){
     if(!isAdmin()) return;
-    const v=prompt(`New XP for ${displayName(e)}\n(LV 5 = 50 XP, LV 10 = 225 XP)`, e.xp||0);
+    const v=prompt(`New XP for ${displayName(e)}\n(0 = reset · LV 5 = 50 XP · LV 10 = 225 XP)`, e.xp||0);
     if(v===null){ refreshModerationViews(); return; }
     if(!validXP(Number(v))){ showToast('❌ NOT A NUMBER','Type a whole number from 0 to 100000'); refreshModerationViews(); return; }
     const r=await setPlayerXP(e,Number(v));
@@ -1787,7 +1787,6 @@ function adminButtons(e){
     ${e.perma_banned?`<span class="perma-tag">FOREVER</span>`:e.banned?`<button class="b-unban" data-mod="unban" data-id="${e.id}">↩ UNBAN</button>`
               :`<button class="b-ban" data-mod="ban" data-id="${e.id}">🚫 BAN</button>`}
     <button class="b-clear" data-mod="clear" data-id="${e.id}">✅ CLEAR</button>
-    <button class="b-reset" data-mod="reset" data-id="${e.id}">🔄 RESET XP</button>
     <button class="b-setxp" data-mod="setxp" data-id="${e.id}">✏️ SET XP</button>
   </div>`;
 }
@@ -2272,7 +2271,6 @@ async function renderAdminPanel(useCache){
             <button class="btn-warn" data-mod="warn" data-id="${e.id}">⚠️ ${isLastWarning(e)?'LAST WARNING':'WARN'}</button>
             <button class="btn-ban" data-mod="ban" data-id="${e.id}">🚫 BAN</button>
             <button class="btn-clear" data-mod="clear" data-id="${e.id}">✅ CLEAR</button>
-            <button class="btn-reset" data-mod="reset" data-id="${e.id}">🔄 RESET XP</button>
             <button class="btn-setxp" data-mod="setxp" data-id="${e.id}">✏️ SET XP</button>
           </div>
         </div>`;
