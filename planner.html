@@ -233,6 +233,9 @@
   #overlay .head { border-bottom: 1px solid rgba(74,168,255,.45); padding-bottom: 10px; margin-bottom: 12px; }
   #overlay .head h2 { color: #E8F3FF; letter-spacing: 6px; text-shadow: 0 0 10px rgba(74,168,255,.9); }
   #overlay .points { color: #7CC4FF; font-weight: 600; font-size: 14px; }
+  /* in the game, STATS shows only the SYSTEM window (nothing of the Planner behind it) */
+  body.system-only > *:not(#overlay) { display: none !important; }
+  body.system-only, body.system-only #overlay { background: transparent; }
   .sys-lv { display: flex; justify-content: space-between; align-items: baseline; color: #A9C9EE; font-weight: 700; margin-bottom: 8px; }
   .sys-lv b { font-size: 26px; color: #E8F3FF; text-shadow: 0 0 10px rgba(74,168,255,.9); margin-left: 6px; }
   .fill { height: 100%; border-radius: 6px; transition: width .2s; }
@@ -945,7 +948,12 @@
   };
 
   document.getElementById("openBtn").onclick  = () => document.getElementById("overlay").classList.add("show");
-  document.getElementById("closeBtn").onclick = () => document.getElementById("overlay").classList.remove("show");
+  document.getElementById("closeBtn").onclick = () => {
+    document.getElementById("overlay").classList.remove("show");
+    if (document.body.classList.contains("system-only")) {   // in the game: ✕ goes back to the hub
+      try { window.parent.document.querySelector("#planner-screen [data-back]").click(); } catch (e) {}
+    }
+  };
 
   // ================= GROQ AI ASSISTANT =================
   const AI_KEY = "punn-levelup-ai";
@@ -1305,7 +1313,8 @@ reply = reply.replace(/```(?:actions|json)[\s\S]*?```/, "").trim();
   // The QuestCraft game calls this to jump straight to a tab: "timetable", "stopwatch", "planner" or "stats"
   function openTab(name) {
     const overlay = document.getElementById("overlay");
-    if (name === "stats") { showHeroClass(); overlay.classList.add("show"); return; }   // open the STATS popup
+    document.body.classList.toggle("system-only", name === "stats");   // the SYSTEM window on its own, no Planner behind it
+    if (name === "stats") { showHeroClass(); overlay.classList.add("show"); return; }   // open the SYSTEM popup
     overlay.classList.remove("show");
     const id = { timetable: "tableView", stopwatch: "watchView", planner: "plannerView" }[name];
     const btn = id && document.querySelector(`.mode[data-view="${id}"]`);

@@ -282,6 +282,8 @@
   #planner-screen .area-head{ padding-left:96px; }
   #planner-frame{ width:100%; height:calc(100vh - 190px); min-height:520px; border:2px solid var(--panel-border); border-radius:12px; background:#12141c; display:block; }
   body:has(#planner-screen.active) #btn-stats{ display:none !important; }
+  #planner-screen.sys-mode .area-head{ display:none; }   /* the SYSTEM window has its own title and ✕ */
+  #planner-screen.sys-mode #planner-frame{ border:none; background:transparent; }
   #sp-badge{ display:none !important; } /* old skill-point badge: no longer used */
   .c-quest{ --hc:#B98CFF; --hc-light:#DFC9FF; --hc-glow:rgba(155,107,255,.5); }
 
@@ -970,7 +972,7 @@
 </div></div>
 
 <!-- SIDE STATS BUTTON -->
-<button id="btn-stats" title="Your stats">⚔ STATS<span class="sp-badge" id="sp-badge" style="display:none;">0</span></button>
+<button id="btn-stats" title="SYSTEM: your level and stats">⚔ SYSTEM<span class="sp-badge" id="sp-badge" style="display:none;">0</span></button>
 
 <!-- STATS PANEL -->
 <div id="stats-panel">
@@ -1106,7 +1108,7 @@
       <button class="hub-card" data-area="schedule"><span class="hc-n">1</span><h3 data-t="schedule">SCHEDULE</h3><div class="desc" data-t="schedDesc">Plan your day, hour by hour.</div></button>
       <button class="hub-card" data-area="timer"><span class="hc-n">2</span><h3 data-t="timer">TIMER</h3><div class="desc" data-t="timerDesc">Time your study and log it.</div></button>
       <button class="hub-card" data-area="quests"><span class="hc-n">3</span><h3 data-t="quests">QUESTS</h3><div class="desc" data-t="questsDesc">Tick off today's tasks for XP.</div></button>
-      <button class="hub-card" data-area="stats"><span class="hc-n">4</span><h3 data-t="stats">HERO STATS</h3><div class="desc" data-t="statsDesc">Spend skill points.</div></button>
+      <button class="hub-card" data-area="stats"><span class="hc-n">4</span><h3 data-t="stats">SYSTEM</h3><div class="desc" data-t="statsDesc">Your level and stats.</div></button>
       <button class="hub-card" data-area="leaderboard"><span class="hc-n">★</span><h3 data-t="board">LEADERBOARD</h3><div class="desc" data-t="boardDesc">See how you rank.</div></button>
       <button class="hub-card" data-area="office" id="office-card"><span class="hc-n" id="office-n">★</span><h3 data-t="office">OFFICE</h3><div class="desc" id="office-desc">AI helpers at HQ.</div></button>
     </div>
@@ -1676,7 +1678,7 @@ document.querySelectorAll('.btn-up').forEach(btn=>btn.addEventListener('click',(
 
 const statsPanel=document.getElementById('stats-panel');
 // The STATS button now opens the planner's stats (IQ, Strength, ...) instead of the old Hero Stats panel
-document.getElementById('btn-stats').addEventListener('click',()=>{statsPanel.classList.remove('open');openPlanner('stats','📊 STATS');});
+document.getElementById('btn-stats').addEventListener('click',()=>{statsPanel.classList.remove('open');openPlanner('stats','SYSTEM');});
 document.getElementById('stats-close').addEventListener('click',()=>statsPanel.classList.remove('open'));
 
 // ========== SCHEDULE ==========
@@ -2291,6 +2293,7 @@ function openPlanner(tab,title){
   if(!f.getAttribute('src')){ f.addEventListener('load',go,{once:true}); f.src='planner.html'; }
   else go();
   document.getElementById('planner-title').textContent=title;
+  document.getElementById('planner-screen').classList.toggle('sys-mode',tab==='stats');   // SYSTEM: just the window, no Planner frame
   showScreen('planner-screen');
 }
 document.querySelectorAll('.hub-card').forEach(c=>{
@@ -2807,7 +2810,7 @@ document.getElementById('acct-signout').addEventListener('click',async()=>{
 const T={
   en:{ hubTitle:'ADVENTURER HUB', nextTask:'NEXT TASK', toLevel:'TO NEXT LEVEL', focused:'FOCUSED TODAY', nothingYet:'Nothing yet · open Schedule',
     schedule:'SCHEDULE', schedDesc:'Plan your day, hour by hour.', timer:'TIMER', timerDesc:'Time your study and log it.',
-    quests:'QUESTS', questsDesc:"Tick off today's tasks for XP.", stats:'HERO STATS', statsDesc:'IQ, Strength, Sleep and more.',
+    quests:'QUESTS', questsDesc:"Tick off today's tasks for XP.", stats:'SYSTEM', statsDesc:'Your level and stats.',
     board:'LEADERBOARD', boardDesc:'See how you rank.', office:'OFFICE', officeDesc:'AI helpers at HQ.', officeLocked:'AI helpers. Unlocks at LV 5.',
     fsTitle:'FIRST STEPS', fsPlan:'Plan a task in Schedule', fsFocus:'Log a focus session', fsComplete:'Open your Daily Quest',
     fsAllDone:'First Steps complete!', resume:'▶ START TUTORIAL', replay:'↻ REPLAY TUTORIAL',
@@ -2834,7 +2837,7 @@ const T={
     officeUnlocked:'OFFICE UNLOCKED!', officeUnlockedSub:'Your AI helpers are waiting at HQ.', goOffice:'GO TO OFFICE ▶', later:'Later' },
   th:{ hubTitle:'ฮับนักผจญภัย', nextTask:'งานถัดไป', toLevel:'อีกกี่ XP ถึงเลเวลถัดไป', focused:'โฟกัสวันนี้', nothingYet:'ยังไม่มี · ไปที่ตารางเวลา',
     schedule:'ตารางเวลา', schedDesc:'วางแผนวันของเจ้าเป็นรายชั่วโมง', timer:'จับเวลา', timerDesc:'จับเวลาการอ่านแล้วบันทึก',
-    quests:'เควสต์', questsDesc:'ติ๊กงานวันนี้เพื่อรับ XP', stats:'สเตตัสฮีโร่', statsDesc:'IQ, Strength, Sleep และอื่นๆ',
+    quests:'เควสต์', questsDesc:'ติ๊กงานวันนี้เพื่อรับ XP', stats:'ระบบ', statsDesc:'เลเวลและสเตตัสของเจ้า',
     board:'กระดานอันดับ', boardDesc:'ดูอันดับของเจ้า', office:'ออฟฟิศ', officeDesc:'ผู้ช่วย AI ที่สำนักงานใหญ่', officeLocked:'ผู้ช่วย AI ปลดล็อกที่ LV 5',
     fsTitle:'ก้าวแรก', fsPlan:'วางแผนงานในตารางเวลา', fsFocus:'บันทึกการจับเวลา', fsComplete:'เปิดเควสต์ประจำวัน',
     fsAllDone:'ก้าวแรกสำเร็จแล้ว!', resume:'▶ เริ่มการสอน', replay:'↻ ดูสอนอีกครั้ง',
