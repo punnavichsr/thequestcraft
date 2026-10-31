@@ -556,12 +556,15 @@
   #ace-pop .ace-note{ font-size:15px; color:var(--text-dim); margin:12px 0 20px; }
   #ace-pop button{ font-family:'Press Start 2P',monospace; font-size:11px; padding:12px 20px; background:var(--gold); color:#241703; border:none; cursor:pointer; }
   @keyframes acePop{ from{ transform:scale(.3); opacity:0; } to{ transform:scale(1); opacity:1; } }
-  #toast{ position:fixed; top:22px; left:50%; transform:translateX(-50%) translateY(-160%); z-index:60;
-    font-family:'Press Start 2P',monospace; font-size:11px; color:#241703; background:linear-gradient(180deg,#FFE79A,var(--gold) 60%,#E0A93C);
-    padding:15px 24px; box-shadow:0 0 30px rgba(255,215,94,.8); clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
-    transition:transform .35s cubic-bezier(.2,1.4,.4,1); text-align:center; letter-spacing:.05em; max-width:90vw; }
+  /* SYSTEM ALERT: every notification looks like the SYSTEM window (Solo Leveling style) */
+  #toast{ position:fixed; top:22px; left:50%; transform:translateX(-50%) translateY(-160%); z-index:60; min-width:260px; max-width:90vw;
+    background:rgba(8,18,40,.96); border:2px solid #4AA8FF; border-radius:6px; padding:12px 22px 14px; text-align:center; color:#E8F3FF;
+    box-shadow:0 0 18px rgba(74,168,255,.75), inset 0 0 18px rgba(74,168,255,.25); transition:transform .35s cubic-bezier(.2,1.4,.4,1); }
   #toast.show{ transform:translateX(-50%) translateY(0); }
-  #toast small{ display:block; margin-top:8px; font-size:8px; color:#5A3D08; }
+  #toast .sys-h{ font-family:'Press Start 2P',monospace; font-size:9px; color:#7CC4FF; letter-spacing:.12em; padding-bottom:8px; margin-bottom:8px;
+    border-bottom:1px solid rgba(74,168,255,.45); text-shadow:0 0 8px rgba(74,168,255,.9); }
+  #toast b{ display:block; font-family:'Press Start 2P',monospace; font-size:11px; letter-spacing:.05em; line-height:1.6; }
+  #toast small{ display:block; margin-top:6px; font-size:15px; font-weight:600; color:#A9C9EE; }
 
   /* ---------- BOTTOM XP BAR ---------- */
   #xp-bar{ position:fixed; left:0; right:0; bottom:0; z-index:38; height:56px; display:none; align-items:center; gap:14px; padding:0 18px;
@@ -979,7 +982,7 @@
 </div>
 
 <!-- TOAST -->
-<div id="toast">⬆ LEVEL UP!<small id="toast-sub"></small></div>
+<div id="toast" role="status"><div class="sys-h">⚠ SYSTEM ALERT</div><b id="toast-main">⬆ LEVEL UP!</b><small id="toast-sub"></small></div>
 
 <!-- HERO PANEL: create a new hero or switch to another one -->
 <div id="hero-panel">
@@ -1622,7 +1625,7 @@ function addXP(xp){
   renderAll(); save();
 }
 function showToast(main,sub){
-  const t=document.getElementById('toast');t.childNodes[0].nodeValue=main;document.getElementById('toast-sub').textContent=sub;
+  const t=document.getElementById('toast');document.getElementById('toast-main').textContent=main;document.getElementById('toast-sub').textContent=sub||'';
   t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);
 }
 function renderAll(){renderHeroUI();renderXPBar();}
@@ -2480,6 +2483,8 @@ setInterval(()=>{
 window.questcraftBridge={
   sb, agentName,
   heroClass:()=>CLASSES[heroClass()].name,
+  heroLevel:()=>hero.level,
+  notify:(main,sub)=>showToast(main,sub),   // the Planner's SYSTEM ALERTs
   user:()=>currentUser,
   isAdmin:()=>isAdmin(),
   async leaderboard(){
@@ -2796,7 +2801,7 @@ const T={
     g9:'Stuck on any page? Press ? any time to open How to play and replay a tutorial.',
     gO0:'Level 5! You unlocked the Office, the HQ where your AI team works. Click the glowing Office tile to go in.',
     gAi1:"See the orange AI button? That's Jarvis, your AI helper. He's on every page. Click it now.",
-    gAi2:'Your AI needs a brain first: a free Groq API key. Open console.groq.com in a new tab → Create API Key, give it a name and copy it. Then give your AI a name here, paste the key and press Create my AI. Never share your key.',
+    gAi2:'Your AI needs a brain first: a free Groq API key. Open console.groq.com in a new tab → Create API Key, give it a name and copy it. Then paste the key here and press Create my AI. Leave the name empty and your AI is called System. Never share your key.',
     gAi3:'Tell your AI what you need, e.g. "Add Football tomorrow at 7:00 AM, Strength", then press ➤. He can add events, start the Timer, and answer general questions too.',
     aiPage:'JARVIS (AI)', openAi:'↑ Click the glowing AI button',
     g10:'Good luck, Adventurer. The threads of fate are spinning. Let us see what destiny you got on this journey.',
@@ -2823,7 +2828,7 @@ const T={
     g9:'ติดตรงไหน กด ? ได้ทุกเมื่อ เพื่อเปิดวิธีเล่นและดูสอนซ้ำ',
     gO0:'เลเวล 5! เจ้าปลดล็อกออฟฟิศแล้ว สำนักงานใหญ่ที่ทีม AI ของเจ้าทำงาน กดช่องออฟฟิศที่เรืองแสงเพื่อเข้าไป',
     gAi1:'เห็นปุ่ม AI สีส้มไหม นั่นคือ Jarvis ผู้ช่วย AI ของเจ้า กดได้ทุกหน้า ลองกดเลย',
-    gAi2:'Jarvis ต้องมีสมองก่อน คือคีย์ Groq API ฟรี รับได้ที่ console.groq.com → Create API Key แล้วคัดลอกมา ตั้งชื่อ AI วางคีย์ตรงนี้ แล้วกด Create my AI ห้ามบอกคีย์กับใคร',
+    gAi2:'Jarvis ต้องมีสมองก่อน คือคีย์ Groq API ฟรี รับได้ที่ console.groq.com → Create API Key แล้วคัดลอกมา วางคีย์ตรงนี้ แล้วกด Create my AI ถ้าไม่ตั้งชื่อ AI จะชื่อว่า System ห้ามบอกคีย์กับใคร',
     gAi3:'บอก Jarvis ด้วยคำพูดธรรมดา เช่น "เพิ่มฟุตบอลพรุ่งนี้ 7 โมงเช้า" แล้วกด ➤ เขาเพิ่มกิจกรรม เริ่มจับเวลา และตอบคำถามทั่วไปได้ด้วย',
     aiPage:'Jarvis (AI)', openAi:'↑ กดปุ่ม AI ที่เรืองแสง',
     g10:'โชคดีนะ นักผจญภัย ด้ายแห่งโชคชะตากำลังหมุนวน มาดูกันว่าเจ้าจะได้พบชะตาแบบใดในการเดินทางครั้งนี้',
