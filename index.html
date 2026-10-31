@@ -3025,7 +3025,7 @@ const LOOPS=[
     {en:'Tick a task when it’s really done to earn its XP.',th:'ติ๊กงานเมื่อทำเสร็จจริงเพื่อรับ XP'},
     {en:'Finish all of them 5 days in a row to earn the 🏅 Ace title.',th:'ทำครบทุกงาน 5 วันติดเพื่อรับฉายา 🏅 Ace'}]],
   ['4',{en:'GROW',th:'เติบโต'},{en:'Every hour on the Timer earns a skill point.',th:'ทุก 1 ชั่วโมงที่จับเวลาได้ 1 แต้มสกิล'},'stats',[
-    {en:'Every hour you log on the Timer earns 1 skill point: study → IQ, exercise → Strength, sleep → Sleep.',th:'ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลาได้ 1 แต้มสกิล: อ่านหนังสือ → IQ ออกกำลังกาย → Strength นอน → Sleep'},
+    {en:'Time you log on the Timer earns skill points. You set the rule for each stat in Hero Stats, e.g. +1 every 60 min.',th:'เวลาที่บันทึกด้วยการจับเวลาได้แต้มสกิล เจ้าตั้งกติกาของแต่ละสเตตัสเองในสเตตัสฮีโร่ เช่น +1 ทุก 60 นาที'},
     {en:'Gaming time doesn’t earn points. Leftover minutes add up, so 40 min + 20 min = 1 point.',th:'เวลาเล่นเกมไม่ได้แต้ม นาทีที่เหลือจะสะสมไว้ เช่น 40 นาที + 20 นาที = 1 แต้ม'},
     {en:'See your stats with the STATS button on the right.',th:'ดูสเตตัสได้ที่ปุ่ม STATS ด้านขวา'}]],
   ['5',{en:'AI',th:'AI'},{en:'Let AI plan and change your day.',th:'ให้ AI ช่วยวางแผนและปรับวันของเจ้า'},'office',[
@@ -3036,13 +3036,13 @@ const LOOPS=[
 const HELP_PAGES=[['schedule',{en:'Add tasks with a time, category and priority.',th:'เพิ่มงานพร้อมเวลา หมวดหมู่ และความสำคัญ'},3],
   ['timer',{en:'Start when you work, Stop & Log when you are done.',th:'กด Start ตอนทำงาน กด Stop & Log เมื่อเสร็จ'},4],
   ['quests',{en:'Tick tasks in your Daily Quest to earn XP.',th:'ติ๊กงานในเควสต์ประจำวันเพื่อรับ XP'},5],
-  ['stats',{en:'Your stats grow by 1 for every hour you log on the Timer.',th:'สเตตัสเพิ่ม 1 ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลา'},null],
+  ['stats',{en:'You set how many points each stat earns for its time on the Timer.',th:'เจ้าตั้งเองว่าแต่ละสเตตัสได้กี่แต้มจากเวลาที่จับ'},null],
   ['board',{en:'Ranking by XP, shown with hero names.',th:'อันดับตาม XP แสดงชื่อฮีโร่'},6],
   ['aiPage',{en:'The orange AI button on every page opens Jarvis, your AI helper.',th:'ปุ่ม AI สีส้มทุกหน้าเปิด Jarvis ผู้ช่วย AI ของเจ้า'},9],
   ['office',{en:'Your AI team: chat, manage agents, clock out, inbox. Unlocks at LV 5.',th:'ทีม AI ของเจ้า: แชต จัดการเอเจนต์ เลิกงาน กล่องจดหมาย ปลดล็อกที่ LV 5'},'office'],
   ['hubTitle',{en:'Your daily overview and the First Steps quest.',th:'ภาพรวมรายวันและเควสต์ก้าวแรก'},0]];
 const FAQ=[[{en:'How do I earn XP?',th:'ได้ XP ยังไง?'},{en:'Tick tasks in your Daily Quest, and finish First Steps (+5 XP each).',th:'ติ๊กงานในเควสต์ประจำวัน และทำก้าวแรกให้ครบ (ภารกิจละ +5 XP)'}],
-  [{en:'How do I get skill points?',th:'ได้แต้มสกิลยังไง?'},{en:'Every hour you log on the Timer earns 1 skill point: study → IQ, exercise → Strength, sleep → Sleep. Gaming doesn’t count.',th:'ทุก 1 ชั่วโมงที่บันทึกด้วยการจับเวลาได้ 1 แต้มสกิล: อ่านหนังสือ → IQ ออกกำลังกาย → Strength นอน → Sleep เวลาเล่นเกมไม่นับ'}],
+  [{en:'How do I get skill points?',th:'ได้แต้มสกิลยังไง?'},{en:'Log time on the Timer. You set the rule for each stat in Hero Stats, e.g. +2 every 30 min. Gaming earns nothing until you change it.',th:'บันทึกเวลาด้วยการจับเวลา เจ้าตั้งกติกาของแต่ละสเตตัสเองในสเตตัสฮีโร่ เช่น +2 ทุก 30 นาที เกมจะไม่ได้แต้มจนกว่าเจ้าจะเปลี่ยน'}],
   [{en:'Is my hero saved?',th:'ฮีโร่ถูกบันทึกไหม?'},{en:'Sign in with your email on the title screen and your hero is saved to your account. Without signing in, it’s only saved on this device.',th:'เข้าสู่ระบบด้วยอีเมลที่หน้าแรก ฮีโร่จะถูกบันทึกในบัญชี ถ้าไม่เข้าสู่ระบบ จะบันทึกแค่ในเครื่องนี้'}],
   [{en:'I paid. Where is my code?',th:'จ่ายแล้ว โค้ดอยู่ไหน?'},{en:'Open "Buy 1 month" on the title screen to see your slip status. When it’s approved, your code shows up there.',th:'เปิด "Buy 1 month" ที่หน้าแรกเพื่อดูสถานะสลิป เมื่ออนุมัติแล้วโค้ดจะแสดงตรงนั้น'}],
   [{en:'What is Office?',th:'ออฟฟิศคืออะไร?'},{en:'Your HQ with AI helpers: an Email Assistant, a Problem Solver and a Presenter. It unlocks at level 5.',th:'สำนักงานใหญ่ที่มีผู้ช่วย AI: ผู้ช่วยอีเมล นักแก้ปัญหา และนักนำเสนอ ปลดล็อกที่เลเวล 5'}]];

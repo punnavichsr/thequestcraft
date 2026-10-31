@@ -226,6 +226,9 @@
   .icon { font-size: 24px; text-align: center; }
   .name { font-weight: 700; display: flex; justify-content: space-between; }
   .bar { height: 10px; background: #0006; border-radius: 6px; margin-top: 5px; overflow: hidden; }
+  .rule { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .rule input { width: 52px; padding: 3px 5px; border-radius: 6px; font-size: 13px; font-weight: 700; text-align: center;
+    background: #0006; color: var(--gold); border: 1px solid var(--edge); }
   .fill { height: 100%; border-radius: 6px; transition: width .2s; }
   .ctrl { display: flex; gap: 6px; }
   .ctrl button { width: 36px; height: 36px; border-radius: 8px; font-size: 20px; font-weight: 800;
@@ -678,7 +681,7 @@
     dayOffset = 0; renderDay();
     if (quick) { try { window.parent.qcTutorialLogged(); } catch (e) {} }
     flash("watchMsg", `Logged ${mins} min of ${MODES[mode].name} to today ✔` +
-      (earned ? (earned.got ? ` · +${earned.got} skill point${earned.got > 1 ? "s" : ""} to ${earned.stat.name}! 🎉` : ` · ${earned.left} more min for +1 ${earned.stat.name}`) : ""));
+      (earned ? (earned.got ? ` · +${earned.got} skill point${earned.got > 1 ? "s" : ""} to ${earned.stat.name}! 🎉` : ` · ${earned.left} more min for +${earned.pts} ${earned.stat.name}`) : ""));
   };
 
   // ================= TIMETABLE =================
@@ -777,24 +780,24 @@
     el.textContent = text; el.style.color = bad ? "var(--bad)" : "var(--good)";
   }
 
-  // ================= SCORE RULES (the same for everyone) =================
-  // How Timer minutes turn into stat points. Saved in Supabase (game_settings.sql); admins change it through the AI.
-  const RULES_KEY = "qc-score-rules";
-  const DEFAULT_RULES = { minutes_per_point: 60, modes: { IQ: "IQ", Strength: "Strength", Sleep: "Sleep" } };   // activity name → stat name
-  let rules = DEFAULT_RULES;
-  try { const c = JSON.parse(localStorage.getItem(RULES_KEY) || "null"); if (c && c.modes && c.minutes_per_point > 0) rules = c; } catch (e) {}
-  const qsb = (() => { try { return window.parent !== window ? (window.parent.qcSb || null) : null; } catch (e) { return null; } })();
-  const rulesText = () => {
-    const pairs = Object.entries(rules.modes).map(([act, st]) => `${act} → ${st}`);
-    return `every ${rules.minutes_per_point} min on the Timer = +1 point (${pairs.join(", ") || "nothing earns points right now"})`;
+  // ================= SCORE RULES (each player sets their own) =================
+  // Like the System in Solo Leveling, but YOU are the System: every stat has its own rule,
+  // "+pts points for every mins minutes logged on the Timer". Saved with your stats (s.rule).
+  // Defaults: +1 every 60 min, and Gaming earns nothing until you change it.
+  const ruleOf = s => {
+    const r = s.rule || {};
+    const mins = Math.max(1, Math.min(600, Math.round(Number(r.mins)) || 60));
+    const pts = r.pts === undefined ? (s.name === "Gaming" ? 0 : 1) : Math.max(0, Math.min(100, Math.round(Number(r.pts)) || 0));
+    return { mins, pts };
   };
-  async function loadRules() {
-    if (!qsb) return;
-    try {
-      const { data, error } = await qsb.from("game_settings").select("value").eq("key", "score_rules").maybeSingle();
-      if (error || !data || !data.value || !data.value.modes) return;
-      rules = data.value; localStorage.setItem(RULES_KEY, JSON.stringify(rules)); renderStats();
-    } catch (e) {}
+  const ruleText = s => { const r = ruleOf(s); return r.pts ? `+${r.pts} every ${r.mins} min` : "earns nothing"; };
+  const rulesText = () => stats.map(s => `${s.name}: ${ruleText(s)}`).join(", ");
+  function setRule(st, mins, pts) {
+    const r = ruleOf(st);
+    st.rule = { mins: mins === undefined || mins === null ? r.mins : mins, pts: pts === undefined || pts === null ? r.pts : pts };
+    st.rule = ruleOf(st);   // clamp to 1-600 min and 0-100 points
+    renderStats();
+    return st.rule;
   }
 
   // ================= STATS POPUP =================
@@ -818,23 +821,23 @@
   const spentPoints = () => stats.reduce((sum, s) => sum + Math.max(0, s.value - earnedOf(s)), 0);
   let points = Math.max(0, budget() - spentPoints());
 
-  // Every full hour (rules.minutes_per_point) logged on the Timer = +1 to the matching stat. Gaming earns nothing by default.
-  // Leftover minutes are kept, so 40 min + 20 min = 1 point.
+  // Time logged on the Timer goes to the stat with the same name as the activity, using that stat's own rule.
+  // Leftover minutes are kept, so with "every 60 min": 40 min + 20 min = one reward.
   function statFor(modeKey) {
     const actName = MODES[modeKey] && MODES[modeKey].name;
-    const statName = actName && Object.entries(rules.modes).find(([act]) => act.toLowerCase() === actName.toLowerCase());
-    return (statName && stats.find(x => x.name.toLowerCase() === String(statName[1]).toLowerCase())) || null;
+    return (actName && stats.find(x => x.name.toLowerCase() === actName.toLowerCase())) || null;
   }
   function earnFromTimer(modeKey, mins) {
     const st = statFor(modeKey);
     if (!st || !(mins > 0)) return null;
-    const per = Math.max(1, rules.minutes_per_point || 60);
+    const { mins: per, pts } = ruleOf(st);
+    if (!pts) return null;                               // you set this stat to earn nothing
     save.timerCarry = save.timerCarry || {};
-    const total = (save.timerCarry[modeKey] || 0) + mins, got = Math.floor(total / per);
+    const total = (save.timerCarry[modeKey] || 0) + mins, got = Math.floor(total / per) * pts;
     save.timerCarry[modeKey] = total % per;
     if (got > 0) { st.earned = earnedOf(st) + got; st.value = st.earned; }
     renderStats();   // also saves
-    return { stat: st, got, left: per - save.timerCarry[modeKey] };
+    return { stat: st, got, pts, left: per - save.timerCarry[modeKey] };
   }
 
   function getAmount() {
@@ -856,7 +859,7 @@
   function renderStats() {
     showHeroClass();
     save.stats = stats; save.points = points; store();
-    document.getElementById("ruleLine").textContent = `Earn points on the Timer: ${rulesText()}.`;
+    document.getElementById("ruleLine").textContent = "You're the System: set how many points each stat earns for its time on the Timer.";
     const top = Math.max(1, ...stats.map(x => x.value));
     const list = document.getElementById("list");
     list.innerHTML = "";
@@ -868,6 +871,8 @@
         <div>
           <div class="name"><span class="nm"></span><span>${s.value} / ∞</span></div>
           <div class="bar"><div class="fill" style="width:${s.value / top * 100}%; background:${s.color}"></div></div>
+          <label class="rule">+ <input class="r-pts" type="number" min="0" max="100" value="${ruleOf(s).pts}" aria-label="Points">
+            points every <input class="r-mins" type="number" min="1" max="600" value="${ruleOf(s).mins}" aria-label="Minutes"> min on the Timer</label>
         </div>
         <div class="ctrl">
           ${s.custom ? '<button class="del" title="Delete this stat">✕</button>' : ""}
@@ -891,6 +896,8 @@
         row.querySelector(".icon").textContent = s.icon;
         row.querySelector(".nm").textContent = s.name;
       }
+      row.querySelector(".r-pts").onchange = e => { const r = setRule(s, null, Number(e.target.value)); flash("statMsg", `${s.name}: ${r.pts ? `+${r.pts} every ${r.mins} min ✔` : "earns nothing now"}`); };
+      row.querySelector(".r-mins").onchange = e => { const r = setRule(s, Number(e.target.value), null); flash("statMsg", `${s.name}: ${r.pts ? `+${r.pts} every ${r.mins} min ✔` : "earns nothing now"}`); };
 
       list.appendChild(row);
     });
@@ -935,7 +942,6 @@
 
   document.getElementById("openBtn").onclick  = () => document.getElementById("overlay").classList.add("show");
   document.getElementById("closeBtn").onclick = () => document.getElementById("overlay").classList.remove("show");
-  loadRules();   // the latest rules from the server
 
   // ================= GROQ AI ASSISTANT =================
   const AI_KEY = "punn-levelup-ai";
@@ -1069,7 +1075,7 @@ For schoolwork: help them PLAN and understand, but don't just do homework for th
 Right now: ${today.toLocaleString("en-GB")}. Today's date key: ${dateKey(today)}. Tomorrow's: ${dateKey(tmr)}.
 Today's timetable: ${day(today)}
 Tomorrow's timetable: ${day(tmr)}
-Stats have no limit and can ONLY grow by logging time on the Stopwatch (nobody can set them by hand, not even you). Scoring rules, the same for every player: ${rulesText()}. Stats now: ${stats.map(s => s.name + " " + s.value).join(", ")}.${isAdminUser() ? ` The user is an admin, so you can change the scoring rules for EVERYONE with set_score_rule (minutes_per_point, and/or which activity earns which stat; "stat": null stops an activity from earning). Say clearly that it changes the rules for all players.` : ""}
+Stats have no limit and can ONLY grow by logging time on the Stopwatch (nobody can set the numbers by hand, not even you). The player sets their OWN scoring rule for each stat (it only changes their game): ${rulesText()}. Stats now: ${stats.map(s => s.name + " " + s.value).join(", ")}. When they ask to change how a stat earns points, use set_score_rule ("minutes" 1-600 and/or "points" 0-100; points 0 = earns nothing).
 Activity categories (key (name)): ${cats}.
 Your own stats you can rename/delete: ${stats.filter(s => s.custom).map(s => s.name).join(", ") || "none yet"} (IQ, Gaming, Strength and Sleep are built in and can't be deleted).
 Planner activities you can delete: ${save.activities.filter(a => !a.fromStat).map(a => a.name).join(", ") || "none"} (activities made from a stat are deleted by deleting the stat).
@@ -1083,7 +1089,7 @@ You can change the app. When you want to, add this at the very END of your reply
  {"action":"edit_event","date":"YYYY-MM-DD","title":"part of the current title","new_title":"optional","start":"optional HH:MM","end":"optional HH:MM","category":"optional","priority":"optional high|medium|low","new_date":"optional YYYY-MM-DD"},
  {"action":"delete_event","date":"YYYY-MM-DD","title":"exact title"},
  {"action":"add_stat","name":"Working","icon":"💼"},
-${isAdminUser() ? ` {"action":"set_score_rule","minutes_per_point":60,"activity":"Gaming","stat":"Gaming"},\n` : ""}
+ {"action":"set_score_rule","stat":"Gaming","minutes":30,"points":1},
  {"action":"rename_stat","name":"Working","new_name":"Job","icon":"optional emoji"},
  {"action":"delete_stat","name":"Job"},
  {"action":"add_activity","name":"Piano","icon":"🎹"},
@@ -1215,21 +1221,11 @@ Only include actions the user asked for or agreed to. Never show this format oth
         if (st) bubble(`✔ New stat "${st.name}" (+${BONUS_PER_STAT} points)`, "note");
       }
       if (a.action === "set_stat") { bubble("Stats can only grow by logging time on the Timer ⏱️", "err"); }
-      if (a.action === "set_score_rule") {
-        if (!isAdminUser() || !qsb) { bubble("Only admins can change how everyone earns points.", "err"); return; }
-        const next = { minutes_per_point: rules.minutes_per_point, modes: { ...rules.modes } };
-        if (a.minutes_per_point) next.minutes_per_point = Math.max(1, Math.min(600, Math.round(Number(a.minutes_per_point)) || 60));
-        if (a.activity) {
-          const act = Object.values(MODES).find(m => m.name.toLowerCase() === String(a.activity).toLowerCase());
-          const name = act ? act.name : String(a.activity).trim().slice(0, 20);
-          Object.keys(next.modes).forEach(k => { if (k.toLowerCase() === name.toLowerCase()) delete next.modes[k]; });
-          if (a.stat) next.modes[name] = String(a.stat).trim().slice(0, 20);
-        }
-        qsb.rpc("set_game_setting", { p_key: "score_rules", p_value: next }).then(({ error }) => {
-          if (error) throw error;
-          rules = next; localStorage.setItem(RULES_KEY, JSON.stringify(rules)); renderStats();
-          bubble(`⚙️ New scoring rules for everyone: ${rulesText()}`, "note");
-        }).catch(e => bubble("Couldn't change the rules: " + (e.message || e), "err"));
+      if (a.action === "set_score_rule") {   // the player's OWN rule for one stat
+        const st = stats.find(x => x.name.toLowerCase() === String(a.stat || "").toLowerCase());
+        if (!st) { bubble(`I can't find a stat called "${a.stat}".`, "err"); return; }
+        const r = setRule(st, a.minutes == null ? null : Number(a.minutes), a.points == null ? null : Number(a.points));
+        bubble(`⚙️ ${st.name}: ${r.pts ? `+${r.pts} point${r.pts > 1 ? "s" : ""} every ${r.mins} min on the Timer` : "earns nothing now"}`, "note");
       }
       if (a.action === "add_activity") {
         const act = addActivity(a.name, a.icon);
