@@ -565,6 +565,27 @@
     border-bottom:1px solid rgba(74,168,255,.45); text-shadow:0 0 8px rgba(74,168,255,.9); }
   #toast b{ display:block; font-family:'Press Start 2P',monospace; font-size:11px; letter-spacing:.05em; line-height:1.6; }
   #toast small{ display:block; margin-top:6px; font-size:15px; font-weight:600; color:#A9C9EE; }
+  /* Daily Quest, Ace title and Office Unlocked use the same SYSTEM window look */
+  :root{ --sys:#4AA8FF; --sys-hi:#7CC4FF; --sys-bg:rgba(8,18,40,.97); --sys-text:#E8F3FF; --sys-dim:#A9C9EE; }
+  #quiz-modal, #ace-pop .ace-card, #unlock-fx .ufx-stage{ background:var(--sys-bg); border:2px solid var(--sys); border-radius:6px; clip-path:none;
+    box-shadow:0 0 24px rgba(74,168,255,.7), inset 0 0 24px rgba(74,168,255,.2); color:var(--sys-text); }
+  .sys-head{ font-family:'Press Start 2P',monospace; font-size:10px; color:var(--sys-hi); letter-spacing:.14em; text-align:center; padding-bottom:10px; margin-bottom:14px;
+    border-bottom:1px solid rgba(74,168,255,.45); text-shadow:0 0 8px rgba(74,168,255,.9); align-self:stretch; }
+  #quiz-modal .modal-top .planet-tag{ color:var(--sys-hi); text-shadow:0 0 8px rgba(74,168,255,.9); }
+  #quiz-modal .progress-bar{ background:#0B1A33; border-color:rgba(74,168,255,.45); }
+  #quiz-modal .progress-fill{ background:linear-gradient(90deg,#2F7FD8,var(--sys-hi)); box-shadow:0 0 10px rgba(74,168,255,.8); }
+  #quiz-modal .qtext{ text-align:center; color:var(--sys-text); font-size:18px; text-shadow:0 0 10px rgba(74,168,255,.6); }
+  #quiz-modal .sys-goal{ font-family:'Press Start 2P',monospace; font-size:9px; color:var(--sys-hi); letter-spacing:.14em; margin:2px 0 10px; text-align:center; }
+  #quiz-modal .task-check.dq-task{ background:rgba(74,168,255,.06); border-color:rgba(74,168,255,.4); }
+  #quiz-modal .task-check.dq-task .check-box{ border-color:var(--sys); background:transparent; }
+  #quiz-modal .task-check.dq-task.on{ background:rgba(74,168,255,.14); border-color:var(--sys); }
+  #quiz-modal .task-check.dq-task.on .check-box{ border-color:var(--sys) !important; background:var(--sys) !important; }
+  #quiz-modal .task-check.dq-task .txp, #quiz-modal .dq-clock, #quiz-modal .dq-earned b{ color:var(--sys-hi); }
+  #ace-pop .ace-big{ color:var(--sys-text); text-shadow:0 0 16px rgba(74,168,255,.9); }
+  #ace-pop .ace-sub b{ color:var(--sys-hi); }
+  #ace-pop button, #unlock-fx .ufx-go{ background:var(--sys); color:#04122A; box-shadow:0 0 14px rgba(74,168,255,.6); }
+  #unlock-fx .ufx-stage{ padding:22px 26px 26px; }
+  #unlock-fx .ufx-title{ color:var(--sys-text); text-shadow:0 0 16px rgba(74,168,255,.9); }
 
   /* ---------- BOTTOM XP BAR ---------- */
   #xp-bar{ position:fixed; left:0; right:0; bottom:0; z-index:38; height:56px; display:none; align-items:center; gap:14px; padding:0 18px;
@@ -1100,6 +1121,7 @@
 <!-- OFFICE UNLOCKED: chained padlock that breaks open at level 5 -->
 <div id="unlock-fx" hidden>
   <div class="ufx-stage">
+    <div class="sys-head">⚠ SYSTEM ALERT</div>
     <div class="ufx-burst"></div>
     <svg class="ufx-svg" viewBox="0 0 240 240" aria-hidden="true">
       <g class="ufx-lock">
@@ -1620,7 +1642,7 @@ function addXP(xp){
   hero.totalXP+=xp; hero.xpIntoLevel+=xp;
   let leveled=false;
   while(hero.xpIntoLevel>=xpNeeded()){hero.xpIntoLevel-=xpNeeded();hero.level++;hero.skillPoints+=SP_PER_LEVEL;leveled=true;}
-  if(leveled) showToast(`⬆ LEVEL UP!`,`LV ${hero.level} · +${SP_PER_LEVEL} SKILL POINTS`);
+  if(leveled) showToast(`⬆ LEVEL UP!`,`You are now Level ${hero.level}.`);
   if(levelBefore<5 && hero.level>=5 && !hero.officeUnlockSeen){ hero.officeUnlockSeen=true; setTimeout(()=>showOfficeUnlock(),1400); }   // after the level-up toast
   renderAll(); save();
 }
@@ -2186,7 +2208,7 @@ function countdown(ms){
 }
 async function openQuiz(key){
   run.current='daily';
-  document.getElementById('quiz-planet-tag').textContent=QUESTS.daily.name;
+  document.getElementById('quiz-planet-tag').textContent='QUEST INFO';
   document.getElementById('quiz-qcount').textContent='';
   document.getElementById('quiz-progress').style.width='0%';
   document.getElementById('quiz-body').innerHTML='<div class="qtext">Loading your Daily Quest…</div>';
@@ -2215,9 +2237,10 @@ function renderChecklist(){
   const doneCount=tasks.filter(t=>t.done).length;
   document.getElementById('quiz-qcount').textContent=`${doneCount} / ${tasks.length}`;
   document.getElementById('quiz-progress').style.width=`${(doneCount/tasks.length)*100}%`;
-  document.getElementById('quiz-body').innerHTML=`<div class="qtext">${QUESTS.daily.name} CHECKLIST</div>
+  document.getElementById('quiz-body').innerHTML=`<div class="qtext">[Daily Quest has arrived.]</div>
     <div class="dq-clock" id="dq-clock"></div>
     <div class="login-hint" style="text-align:center;margin:-4px 0 10px">Tick a task when you finish it to earn its XP. Your ticks are saved, so you can leave and come back.</div>
+    <div class="sys-goal">GOAL</div>
     <div class="options" id="quiz-options" style="flex-direction:column; gap:12px;"></div>
     <div class="dq-earned">⭐ Earned today: <b>${doneCount*per}</b> / ${tasks.length*per} XP</div>`;
   const wrap=document.getElementById('quiz-options');
@@ -2594,10 +2617,10 @@ function showAcePop(title){
   let pop=document.getElementById('ace-pop');
   if(!pop){
     pop=document.createElement('div'); pop.id='ace-pop';
-    pop.innerHTML='<div class="ace-card"><div class="ace-medal">🏅</div><div class="ace-big"></div>'+
-      '<div class="ace-sub">New Title Unlocked: <b></b></div>'+
+    pop.innerHTML='<div class="ace-card"><div class="sys-head">⚠ SYSTEM ALERT</div><div class="ace-medal">🏅</div><div class="ace-big"></div>'+
+      '<div class="ace-sub">Title acquired: <b></b></div>'+
       '<div class="ace-note">5 Daily Quests in a row, done honestly. Everyone can see it on the leaderboard!</div>'+
-      '<button type="button">AWESOME!</button></div>';
+      '<button type="button">CONFIRM</button></div>';
     pop.querySelector('button').addEventListener('click',()=>{ pop.classList.remove('show'); if(typeof renderLeaderboard==='function') renderLeaderboard(); });
     document.body.appendChild(pop);
   }
